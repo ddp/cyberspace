@@ -15,428 +15,550 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0020: Sealed Archive Format) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies the Zstd+Age archive format for the Library of) show newline
-(Cyberspace: a modern archive format combining Zstd compression with Age) show newline
-(encryption, replacing gzip for cryptographic archives.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The legacy cryptographic archive format uses gzip compression without) show newline
-(encryption:) show newline
-() show newline
-() show newline
-(  Aspect              gzip \(legacy\)   zstd + age                      ) show newline
-(  Compression speed   Slow            Fast \(parallel\)                 ) show newline
-(  Compression ratio   Good            Better                          ) show newline
-(  Encryption          None            Built-in \(age\)                  ) show newline
-(  Key compatibility   N/A             X25519/Ed25519 \(SPKI aligned\)   ) show newline
-(  Streaming           Yes             Yes                             ) show newline
-() show newline
-(Why change?) show newline
-() show newline
-(  * Encryption at rest - Archives contain potentially sensitive data) show newline
-(  * Faster compression - Zstd is 3-5x faster than gzip) show newline
-(  * Better ratios - Zstd typically achieves 10-20% better compression) show newline
-(  * Key alignment - Age uses X25519/Ed25519, same curve family as SPKI) show newline
-(  * Parallel support - zstd -T0 uses all cores) show newline
-() show newline
-(Modern tooling should not leave data unencrypted when encryption is) show newline
-(effectively free in CPU time and key management complexity.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SPECIFICATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Archive Creation Pipeline) show newline
-(-------------------------) show newline
-() show newline
-() show newline
-(    git archive | tar --zstd | age -r <recipients> > archive.tar.zst.age) show newline
-() show newline
-(Or equivalently:) show newline
-() show newline
-() show newline
-(    tar --zstd -cf - <files> | age -r <recipient1> -r <recipient2> > archive.tar.zst.age) show newline
-() show newline
-() show newline
-(Archive Restoration Pipeline) show newline
-(----------------------------) show newline
-() show newline
-() show newline
-(    age -d -i <identity> < archive.tar.zst.age | zstd -d | tar -xf -) show newline
-() show newline
-() show newline
-(Manifest Format) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(sealed-archive) show newline
-(      \(version "1.0.0"\)) show newline
-(      \(format zstd-age\)) show newline
-(      \(archive "vault-1.0.0.archive.tar.zst.age"\)) show newline
-(      \(compression zstd\)) show newline
-(      \(encryption age\)) show newline
-(      \(recipients \("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"\)\)) show newline
-(      \(hash "sha512:..."\)) show newline
-(      \(signature "ed25519:..."\)\)) show newline
-() show newline
-() show newline
-(File Extensions) show newline
-(---------------) show newline
-() show newline
-() show newline
-(  Extension      Contents                        ) show newline
-(  .archive       S-expression manifest           ) show newline
-(  .tar.zst.age   Encrypted, compressed tarball   ) show newline
-() show newline
-() show newline
-(Configuration) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    ;; Set age recipients for encryption) show newline
-(    \(vault-config 'age-recipients) show newline
-(      '\("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p") show newline
-(        "age1..."\)\)) show newline
-(    ;; Set age identity for decryption) show newline
-(    \(vault-config 'age-identity "~/.config/age/identity.txt"\)) show newline
-(    ;; Set default archive format) show newline
-(    \(vault-config 'archive-format 'zstd-age\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PERFORMANCE CHARACTERISTICS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Compression) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    Zstd default \(-3\):) show newline
-(      Compression:   ~400 MB/s) show newline
-(      Decompression: ~800 MB/s) show newline
-(      Ratio:         ~3:1 \(typical source code\)) show newline
-(    Zstd parallel \(-T0\):) show newline
-(      Compression:   ~400 MB/s × cores) show newline
-(      Decompression: ~800 MB/s × cores) show newline
-(    Gzip comparison:) show newline
-(      Compression:   ~30 MB/s) show newline
-(      Decompression: ~200 MB/s) show newline
-(      Ratio:         ~2.5:1) show newline
-() show newline
-() show newline
-(Encryption) show newline
-(----------) show newline
-() show newline
-() show newline
-(    Age X25519:) show newline
-(      Encrypt:  ~1 GB/s \(ChaCha20-Poly1305\)) show newline
-(      Decrypt:  ~1 GB/s) show newline
-(      Key size: 32 bytes \(public\), 32 bytes \(private\)) show newline
-(    Age overhead:) show newline
-(      Header:   ~200 bytes per recipient) show newline
-(      MAC:      16 bytes) show newline
-() show newline
-() show newline
-(Signature) show newline
-(---------) show newline
-() show newline
-() show newline
-(    Ed25519:) show newline
-(      Sign:     ~10 μs) show newline
-(      Verify:   ~10 μs) show newline
-(      Signature: 64 bytes) show newline
-() show newline
-() show newline
-(Total Pipeline) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    10 MB archive:) show newline
-(      Compress \(zstd -T0\): ~25 ms) show newline
-(      Encrypt \(age\):       ~10 ms) show newline
-(      Hash \(SHA-512\):      ~1 ms) show newline
-(      Sign \(Ed25519\):      ~10 μs) show newline
-(      Total:               ~36 ms) show newline
-(    vs gzip legacy:) show newline
-(      Compress \(gzip\):     ~300 ms) show newline
-(      Hash \(SHA-512\):      ~1 ms) show newline
-(      Sign \(Ed25519\):      ~10 μs) show newline
-(      Total:               ~301 ms) show newline
-(    Speedup: ~8x) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY MODEL) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Encryption Layer \(Age\)) show newline
-(----------------------) show newline
-() show newline
-(  * Algorithm: X25519 + ChaCha20-Poly1305) show newline
-(  * Recipients: Multiple allowed \(each can decrypt\)) show newline
-(  * Forward secrecy: Ephemeral key per archive) show newline
-(  * Authenticity: Poly1305 MAC) show newline
-() show newline
-() show newline
-(Signature Layer \(SPKI\)) show newline
-(----------------------) show newline
-() show newline
-(  * Algorithm: Ed25519) show newline
-(  * Scope: Signs encrypted archive hash) show newline
-(  * Non-repudiation: Signer cannot deny creating archive) show newline
-() show newline
-() show newline
-(Verification Order) show newline
-(------------------) show newline
-() show newline
-(  * Verify signature - Before decryption \(fail fast on tampering\)) show newline
-(  * Verify hash - Encrypted archive integrity) show newline
-(  * Decrypt - Only after signature verified) show newline
-(  * Extract - Only after successful decryption) show newline
-() show newline
-() show newline
-(Threat Mitigations) show newline
-(------------------) show newline
-() show newline
-() show newline
-(  Threat              Mitigation                           ) show newline
-(  Eavesdropping       Age encryption \(X25519 + ChaCha20\)   ) show newline
-(  Tampering           SHA-512 hash + Ed25519 signature     ) show newline
-(  Replay attacks      Version + timestamp in manifest      ) show newline
-(  Key compromise      Multiple recipients, key rotation    ) show newline
-(  Chosen ciphertext   Poly1305 authentication              ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(COMPATIBILITY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Age Identity Types) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    # Native age key) show newline
-(    age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p) show newline
-(    # SSH key \(age supports ssh-ed25519 and ssh-rsa\)) show newline
-(    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...) show newline
-(    # GitHub key \(via age-plugin-github or ssh\)) show newline
-(    github:username) show newline
-() show newline
-() show newline
-(Platform Support) show newline
-(----------------) show newline
-() show newline
-() show newline
-(  Platform   zstd       age                 ) show newline
-(  macOS      Homebrew   Homebrew            ) show newline
-(  Linux      apt/yum    apt/yum or binary   ) show newline
-(  FreeBSD    pkg        pkg                 ) show newline
-(  Windows    winget     winget or binary    ) show newline
-() show newline
-() show newline
-(Fallback) show newline
-(--------) show newline
-() show newline
-(If zstd or age unavailable, fall back to cryptographic format:) show newline
-() show newline
-() show newline
-(    \(if \(and \(command-exists? "zstd"\) \(command-exists? "age"\)\)) show newline
-(        \(seal-archive version format: 'zstd-age\)) show newline
-(        \(seal-archive version format: 'cryptographic\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(seal-archive-zstd-age) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(    \(define \(seal-archive-zstd-age version output\)) show newline
-(      "Create zstd-compressed, age-encrypted archive with SPKI signature") show newline
-(      \(let \(\(recipients \(vault-config 'age-recipients\)\)) show newline
-(            \(signing-key \(vault-config 'signing-key\)\)) show newline
-(            \(encrypted-file \(sprintf "~a.tar.zst.age" output\)\)\)) show newline
-(        ;; Require recipients) show newline
-(        \(unless \(pair? recipients\)) show newline
-(          \(error "No age recipients configured"\)\)) show newline
-(        ;; Build recipient args: -r key1 -r key2 ...) show newline
-(        \(let \(\(recipient-args) show newline
-(               \(string-join \(map \(lambda \(r\) \(sprintf "-r ~a" r\)\) recipients\) " "\)\)\)) show newline
-(          ;; Create archive: git archive | zstd | age) show newline
-(          \(let \(\(temp-tar \(sprintf "/tmp/vault-~a.tar" version\)\)\)) show newline
-(            \(run-command "git" "archive" "--prefix=vault/") show newline
-(                         \(sprintf "--output=~a" temp-tar\) version\)) show newline
-(            \(system \(sprintf "zstd -T0 -c ~a | age ~a > ~a") show newline
-(                            temp-tar recipient-args encrypted-file\)\)) show newline
-(            \(delete-file temp-tar\)\)) show newline
-(          ;; Sign the encrypted archive) show newline
-(          \(when signing-key) show newline
-(            \(let* \(\(archive-bytes \(read-file-bytes encrypted-file\)\)) show newline
-(                   \(archive-hash \(sha512-hash archive-bytes\)\)) show newline
-(                   \(signature \(ed25519-sign signing-key archive-hash\)\)\)) show newline
-(              ;; Write manifest) show newline
-(              \(with-output-to-file output) show newline
-(                \(lambda \(\)) show newline
-(                  \(write `\(sealed-archive) show newline
-(                           \(version ,version\)) show newline
-(                           \(format zstd-age\)) show newline
-(                           \(archive ,encrypted-file\)) show newline
-(                           \(compression zstd\)) show newline
-(                           \(encryption age\)) show newline
-(                           \(recipients ,recipients\)) show newline
-(                           \(hash ,\(blob->hex archive-hash\)\)) show newline
-(                           \(signature ,\(blob->hex signature\)\)\)\)\)\)\)\)\)\)\)) show newline
-() show newline
-() show newline
-(seal-restore-zstd-age) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(    \(define \(seal-restore-zstd-age manifest verify-key target-dir identity\)) show newline
-(      "Restore zstd+age encrypted archive") show newline
-(      \(let \(\(version \(cadr \(assq 'version \(cdr manifest\)\)\)\)) show newline
-(            \(archive-file \(cadr \(assq 'archive \(cdr manifest\)\)\)\)) show newline
-(            \(hash-hex \(cadr \(assq 'hash \(cdr manifest\)\)\)\)) show newline
-(            \(sig-hex \(cadr \(assq 'signature \(cdr manifest\)\)\)\)) show newline
-(            \(id-file \(or identity \(vault-config 'age-identity\)\)\)\)) show newline
-(        ;; Require identity) show newline
-(        \(unless id-file) show newline
-(          \(error "No age identity configured"\)\)) show newline
-(        ;; Verify signature first \(before decryption\)) show newline
-(        \(when verify-key) show newline
-(          \(let* \(\(archive-bytes \(read-file-bytes archive-file\)\)) show newline
-(                 \(archive-hash \(sha512-hash archive-bytes\)\)) show newline
-(                 \(expected-hash \(hex->blob hash-hex\)\)) show newline
-(                 \(signature \(hex->blob sig-hex\)\)) show newline
-(                 \(pubkey \(read-key-from-file verify-key\)\)\)) show newline
-(            \(unless \(equal? archive-hash expected-hash\)) show newline
-(              \(error "Archive hash mismatch"\)\)) show newline
-(            \(unless \(ed25519-verify pubkey archive-hash signature\)) show newline
-(              \(error "Signature verification failed"\)\)\)\)) show newline
-(        ;; Decrypt and extract: age -d | zstd -d | tar -x) show newline
-(        \(system \(sprintf "age -d -i ~a < ~a | zstd -d | tar -xf - -C ~a") show newline
-(                        id-file archive-file target-dir\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(USAGE EXAMPLES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Create Encrypted Archive) show newline
-(------------------------) show newline
-() show newline
-() show newline
-(    ;; Configure recipients) show newline
-(    \(vault-config 'age-recipients) show newline
-(      '\("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"\)\)) show newline
-(    ;; Create archive) show newline
-(    \(seal-archive "1.0.0" format: 'zstd-age\)) show newline
-(    ;; => vault-1.0.0.archive) show newline
-(    ;; => vault-1.0.0.archive.tar.zst.age) show newline
-() show newline
-() show newline
-(Restore Encrypted Archive) show newline
-(-------------------------) show newline
-() show newline
-() show newline
-(    ;; Configure identity) show newline
-(    \(vault-config 'age-identity "~/.config/age/identity.txt"\)) show newline
-(    ;; Restore with verification) show newline
-(    \(seal-restore "vault-1.0.0.archive") show newline
-(                  verify-key: "publisher.public") show newline
-(                  target: "./restored"\)) show newline
-() show newline
-() show newline
-(Command Line Equivalents) show newline
-(------------------------) show newline
-() show newline
-() show newline
-(    # Create) show newline
-(    git archive --prefix=vault/ 1.0.0 | \\) show newline
-(      zstd -T0 | \\) show newline
-(      age -r age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p \\) show newline
-(      > vault-1.0.0.tar.zst.age) show newline
-(    # Restore) show newline
-(    age -d -i ~/.config/age/identity.txt < vault-1.0.0.tar.zst.age | \\) show newline
-(      zstd -d | \\) show newline
-(      tar -xf -) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MIGRATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(From Cryptographic to Zstd-Age) show newline
-(------------------------------) show newline
-() show newline
-() show newline
-(    ;; Re-archive existing releases with new format) show newline
-(    \(for-each) show newline
-(      \(lambda \(version\)) show newline
-(        \(seal-archive version format: 'zstd-age\)\)) show newline
-(      \(get-local-releases\)\)) show newline
-() show newline
-() show newline
-(Backward Compatibility) show newline
-(----------------------) show newline
-() show newline
-(Both formats can coexist. The manifest format field determines) show newline
-(restoration method: - \(format cryptographic\) →) show newline
-(seal-restore-cryptographic - \(format zstd-age\) → seal-restore-zstd-age) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * [Zstd]\(https://github.com/facebook/zstd\) - Facebook's compression algorithm) show newline
-(  * [Age]\(https://age-encryption.org/\) - Modern encryption tool) show newline
-(  * [Memo-006]\(memo-006-vault-architecture.html\) - Vault System Architecture) show newline
-(  * [Memo-004]\(memo-004-spki-authorization.html\) - SPKI Authorization) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-06) show newline
-(  * Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0020:) show ( ) show (Sealed) show ( ) show (Archive) show ( ) show (Format) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (the) show ( ) show (Zstd+Age) show ( ) show (archive) show ( ) show (format) show ( ) show (for) show ( ) show (the) show ( ) show (Library) show ( ) show (of) show  newline
+(Cyberspace:) show ( ) show (a) show ( ) show (modern) show ( ) show (archive) show ( ) show (format) show ( ) show (combining) show ( ) show (Zstd) show ( ) show (compression) show ( ) show (with) show ( ) show (Age) show  newline
+(encryption,) show ( ) show (replacing) show ( ) show (gzip) show ( ) show (for) show ( ) show (cryptographic) show ( ) show (archives.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (legacy) show ( ) show (cryptographic) show ( ) show (archive) show ( ) show (format) show ( ) show (uses) show ( ) show (gzip) show ( ) show (compression) show ( ) show (without) show  newline
+(encryption:) show  newline
+ newline
+ newline
+(Aspect) show ( ) show (gzip) show ( ) show (\(legacy\)) show ( ) show (zstd) show ( ) show (+) show ( ) show (age) show  newline
+(Compression) show ( ) show (speed) show ( ) show (Slow) show ( ) show (Fast) show ( ) show (\(parallel\)) show  newline
+(Compression) show ( ) show (ratio) show ( ) show (Good) show ( ) show (Better) show  newline
+(Encryption) show ( ) show (None) show ( ) show (Built-in) show ( ) show (\(age\)) show  newline
+(Key) show ( ) show (compatibility) show ( ) show (N/A) show ( ) show (X25519/Ed25519) show ( ) show (\(SPKI) show ( ) show (aligned\)) show  newline
+(Streaming) show ( ) show (Yes) show ( ) show (Yes) show  newline
+ newline
+(Why) show ( ) show (change?) show  newline
+ newline
+(*) show ( ) show (Encryption) show ( ) show (at) show ( ) show (rest) show ( ) show (-) show ( ) show (Archives) show ( ) show (contain) show ( ) show (potentially) show ( ) show (sensitive) show ( ) show (data) show  newline
+(*) show ( ) show (Faster) show ( ) show (compression) show ( ) show (-) show ( ) show (Zstd) show ( ) show (is) show ( ) show (3-5x) show ( ) show (faster) show ( ) show (than) show ( ) show (gzip) show  newline
+(*) show ( ) show (Better) show ( ) show (ratios) show ( ) show (-) show ( ) show (Zstd) show ( ) show (typically) show ( ) show (achieves) show ( ) show (10-20%) show ( ) show (better) show ( ) show (compression) show  newline
+(*) show ( ) show (Key) show ( ) show (alignment) show ( ) show (-) show ( ) show (Age) show ( ) show (uses) show ( ) show (X25519/Ed25519,) show ( ) show (same) show ( ) show (curve) show ( ) show (family) show ( ) show (as) show ( ) show (SPKI) show  newline
+(*) show ( ) show (Parallel) show ( ) show (support) show ( ) show (-) show ( ) show (zstd) show ( ) show (-T0) show ( ) show (uses) show ( ) show (all) show ( ) show (cores) show  newline
+ newline
+(Modern) show ( ) show (tooling) show ( ) show (should) show ( ) show (not) show ( ) show (leave) show ( ) show (data) show ( ) show (unencrypted) show ( ) show (when) show ( ) show (encryption) show ( ) show (is) show  newline
+(effectively) show ( ) show (free) show ( ) show (in) show ( ) show (CPU) show ( ) show (time) show ( ) show (and) show ( ) show (key) show ( ) show (management) show ( ) show (complexity.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SPECIFICATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Archive) show ( ) show (Creation) show ( ) show (Pipeline) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+ newline
+(git) show ( ) show (archive) show ( ) show (|) show ( ) show (tar) show ( ) show (--zstd) show ( ) show (|) show ( ) show (age) show ( ) show (-r) show ( ) show (<recipients>) show ( ) show (>) show ( ) show (archive.tar.zst.age) show  newline
+ newline
+(Or) show ( ) show (equivalently:) show  newline
+ newline
+ newline
+(tar) show ( ) show (--zstd) show ( ) show (-cf) show ( ) show (-) show ( ) show (<files>) show ( ) show (|) show ( ) show (age) show ( ) show (-r) show ( ) show (<recipient1>) show ( ) show (-r) show ( ) show (<recipient2>) show ( ) show (>) show ( ) show (archive.tar.zst.age) show  newline
+ newline
+ newline
+(Archive) show ( ) show (Restoration) show ( ) show (Pipeline) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+ newline
+(age) show ( ) show (-d) show ( ) show (-i) show ( ) show (<identity>) show ( ) show (<) show ( ) show (archive.tar.zst.age) show ( ) show (|) show ( ) show (zstd) show ( ) show (-d) show ( ) show (|) show ( ) show (tar) show ( ) show (-xf) show ( ) show (-) show  newline
+ newline
+ newline
+(Manifest) show ( ) show (Format) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(sealed-archive) show  newline
+(\(version) show ( ) show ("1.0.0"\)) show  newline
+(\(format) show ( ) show (zstd-age\)) show  newline
+(\(archive) show ( ) show ("vault-1.0.0.archive.tar.zst.age"\)) show  newline
+(\(compression) show ( ) show (zstd\)) show  newline
+(\(encryption) show ( ) show (age\)) show  newline
+(\(recipients) show ( ) show (\("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"\)\)) show  newline
+(\(hash) show ( ) show ("sha512:..."\)) show  newline
+(\(signature) show ( ) show ("ed25519:..."\)\)) show  newline
+ newline
+ newline
+(File) show ( ) show (Extensions) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(Extension) show ( ) show (Contents) show  newline
+(.archive) show ( ) show (S-expression) show ( ) show (manifest) show  newline
+(.tar.zst.age) show ( ) show (Encrypted,) show ( ) show (compressed) show ( ) show (tarball) show  newline
+ newline
+ newline
+(Configuration) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Set) show ( ) show (age) show ( ) show (recipients) show ( ) show (for) show ( ) show (encryption) show  newline
+(\(vault-config) show ( ) show ('age-recipients) show  newline
+('\("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p") show  newline
+("age1..."\)\)) show  newline
+(;;) show ( ) show (Set) show ( ) show (age) show ( ) show (identity) show ( ) show (for) show ( ) show (decryption) show  newline
+(\(vault-config) show ( ) show ('age-identity) show ( ) show ("~/.config/age/identity.txt"\)) show  newline
+(;;) show ( ) show (Set) show ( ) show (default) show ( ) show (archive) show ( ) show (format) show  newline
+(\(vault-config) show ( ) show ('archive-format) show ( ) show ('zstd-age\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PERFORMANCE) show ( ) show (CHARACTERISTICS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Compression) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(Zstd) show ( ) show (default) show ( ) show (\(-3\):) show  newline
+(Compression:) show ( ) show (~400) show ( ) show (MB/s) show  newline
+(Decompression:) show ( ) show (~800) show ( ) show (MB/s) show  newline
+(Ratio:) show ( ) show (~3:1) show ( ) show (\(typical) show ( ) show (source) show ( ) show (code\)) show  newline
+(Zstd) show ( ) show (parallel) show ( ) show (\(-T0\):) show  newline
+gsave
+margin 36 add ypos moveto (Compression:) show
+margin 126 add ypos moveto (~400) show
+margin 156 add ypos moveto (MB/s) show
+margin 186 add ypos moveto (\327) show
+margin 198 add ypos moveto (cores) show
+grestore
+newline
+gsave
+margin 36 add ypos moveto (Decompression:) show
+margin 126 add ypos moveto (~800) show
+margin 156 add ypos moveto (MB/s) show
+margin 186 add ypos moveto (\327) show
+margin 198 add ypos moveto (cores) show
+grestore
+newline
+(Gzip) show ( ) show (comparison:) show  newline
+(Compression:) show ( ) show (~30) show ( ) show (MB/s) show  newline
+(Decompression:) show ( ) show (~200) show ( ) show (MB/s) show  newline
+(Ratio:) show ( ) show (~2.5:1) show  newline
+ newline
+ newline
+(Encryption) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+ newline
+(Age) show ( ) show (X25519:) show  newline
+(Encrypt:) show ( ) show (~1) show ( ) show (GB/s) show ( ) show (\(ChaCha20-Poly1305\)) show  newline
+(Decrypt:) show ( ) show (~1) show ( ) show (GB/s) show  newline
+(Key) show ( ) show (size:) show ( ) show (32) show ( ) show (bytes) show ( ) show (\(public\),) show ( ) show (32) show ( ) show (bytes) show ( ) show (\(private\)) show  newline
+(Age) show ( ) show (overhead:) show  newline
+(Header:) show ( ) show (~200) show ( ) show (bytes) show ( ) show (per) show ( ) show (recipient) show  newline
+(MAC:) show ( ) show (16) show ( ) show (bytes) show  newline
+ newline
+ newline
+(Signature) show  newline
+newpath margin ypos moveto margin 54 add ypos lineto stroke
+newline
+ newline
+ newline
+(Ed25519:) show  newline
+gsave
+margin 36 add ypos moveto (Sign:) show
+margin 96 add ypos moveto (~10) show
+margin 120 add ypos moveto (s) show
+grestore
+newline
+gsave
+margin 36 add ypos moveto (Verify:) show
+margin 96 add ypos moveto (~10) show
+margin 120 add ypos moveto (s) show
+grestore
+newline
+(Signature:) show ( ) show (64) show ( ) show (bytes) show  newline
+ newline
+ newline
+(Total) show ( ) show (Pipeline) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(10) show ( ) show (MB) show ( ) show (archive:) show  newline
+(Compress) show ( ) show (\(zstd) show ( ) show (-T0\):) show ( ) show (~25) show ( ) show (ms) show  newline
+(Encrypt) show ( ) show (\(age\):) show ( ) show (~10) show ( ) show (ms) show  newline
+(Hash) show ( ) show (\(SHA-512\):) show ( ) show (~1) show ( ) show (ms) show  newline
+gsave
+margin 36 add ypos moveto (Sign) show
+margin 66 add ypos moveto (\(Ed25519\):) show
+margin 162 add ypos moveto (~10) show
+margin 186 add ypos moveto (s) show
+grestore
+newline
+(Total:) show ( ) show (~36) show ( ) show (ms) show  newline
+(vs) show ( ) show (gzip) show ( ) show (legacy:) show  newline
+(Compress) show ( ) show (\(gzip\):) show ( ) show (~300) show ( ) show (ms) show  newline
+(Hash) show ( ) show (\(SHA-512\):) show ( ) show (~1) show ( ) show (ms) show  newline
+gsave
+margin 36 add ypos moveto (Sign) show
+margin 66 add ypos moveto (\(Ed25519\):) show
+margin 162 add ypos moveto (~10) show
+margin 186 add ypos moveto (s) show
+grestore
+newline
+(Total:) show ( ) show (~301) show ( ) show (ms) show  newline
+(Speedup:) show ( ) show (~8x) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (MODEL) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Encryption) show ( ) show (Layer) show ( ) show (\(Age\)) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Algorithm:) show ( ) show (X25519) show ( ) show (+) show ( ) show (ChaCha20-Poly1305) show  newline
+(*) show ( ) show (Recipients:) show ( ) show (Multiple) show ( ) show (allowed) show ( ) show (\(each) show ( ) show (can) show ( ) show (decrypt\)) show  newline
+(*) show ( ) show (Forward) show ( ) show (secrecy:) show ( ) show (Ephemeral) show ( ) show (key) show ( ) show (per) show ( ) show (archive) show  newline
+(*) show ( ) show (Authenticity:) show ( ) show (Poly1305) show ( ) show (MAC) show  newline
+ newline
+ newline
+(Signature) show ( ) show (Layer) show ( ) show (\(SPKI\)) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Algorithm:) show ( ) show (Ed25519) show  newline
+(*) show ( ) show (Scope:) show ( ) show (Signs) show ( ) show (encrypted) show ( ) show (archive) show ( ) show (hash) show  newline
+(*) show ( ) show (Non-repudiation:) show ( ) show (Signer) show ( ) show (cannot) show ( ) show (deny) show ( ) show (creating) show ( ) show (archive) show  newline
+ newline
+ newline
+(Verification) show ( ) show (Order) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Verify) show ( ) show (signature) show ( ) show (-) show ( ) show (Before) show ( ) show (decryption) show ( ) show (\(fail) show ( ) show (fast) show ( ) show (on) show ( ) show (tampering\)) show  newline
+(*) show ( ) show (Verify) show ( ) show (hash) show ( ) show (-) show ( ) show (Encrypted) show ( ) show (archive) show ( ) show (integrity) show  newline
+(*) show ( ) show (Decrypt) show ( ) show (-) show ( ) show (Only) show ( ) show (after) show ( ) show (signature) show ( ) show (verified) show  newline
+(*) show ( ) show (Extract) show ( ) show (-) show ( ) show (Only) show ( ) show (after) show ( ) show (successful) show ( ) show (decryption) show  newline
+ newline
+ newline
+(Threat) show ( ) show (Mitigations) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(Threat) show ( ) show (Mitigation) show  newline
+(Eavesdropping) show ( ) show (Age) show ( ) show (encryption) show ( ) show (\(X25519) show ( ) show (+) show ( ) show (ChaCha20\)) show  newline
+(Tampering) show ( ) show (SHA-512) show ( ) show (hash) show ( ) show (+) show ( ) show (Ed25519) show ( ) show (signature) show  newline
+(Replay) show ( ) show (attacks) show ( ) show (Version) show ( ) show (+) show ( ) show (timestamp) show ( ) show (in) show ( ) show (manifest) show  newline
+(Key) show ( ) show (compromise) show ( ) show (Multiple) show ( ) show (recipients,) show ( ) show (key) show ( ) show (rotation) show  newline
+(Chosen) show ( ) show (ciphertext) show ( ) show (Poly1305) show ( ) show (authentication) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(COMPATIBILITY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Age) show ( ) show (Identity) show ( ) show (Types) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Native) show ( ) show (age) show ( ) show (key) show  newline
+(age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p) show  newline
+(#) show ( ) show (SSH) show ( ) show (key) show ( ) show (\(age) show ( ) show (supports) show ( ) show (ssh-ed25519) show ( ) show (and) show ( ) show (ssh-rsa\)) show  newline
+(ssh-ed25519) show ( ) show (AAAAC3NzaC1lZDI1NTE5AAAAI...) show  newline
+(#) show ( ) show (GitHub) show ( ) show (key) show ( ) show (\(via) show ( ) show (age-plugin-github) show ( ) show (or) show ( ) show (ssh\)) show  newline
+(github:username) show  newline
+ newline
+ newline
+(Platform) show ( ) show (Support) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(Platform) show ( ) show (zstd) show ( ) show (age) show  newline
+(macOS) show ( ) show (Homebrew) show ( ) show (Homebrew) show  newline
+(Linux) show ( ) show (apt/yum) show ( ) show (apt/yum) show ( ) show (or) show ( ) show (binary) show  newline
+(FreeBSD) show ( ) show (pkg) show ( ) show (pkg) show  newline
+(Windows) show ( ) show (winget) show ( ) show (winget) show ( ) show (or) show ( ) show (binary) show  newline
+ newline
+ newline
+(Fallback) show  newline
+newpath margin ypos moveto margin 48 add ypos lineto stroke
+newline
+ newline
+(If) show ( ) show (zstd) show ( ) show (or) show ( ) show (age) show ( ) show (unavailable,) show ( ) show (fall) show ( ) show (back) show ( ) show (to) show ( ) show (cryptographic) show ( ) show (format:) show  newline
+ newline
+ newline
+(\(if) show ( ) show (\(and) show ( ) show (\(command-exists?) show ( ) show ("zstd"\)) show ( ) show (\(command-exists?) show ( ) show ("age"\)\)) show  newline
+(\(seal-archive) show ( ) show (version) show ( ) show (format:) show ( ) show ('zstd-age\)) show  newline
+(\(seal-archive) show ( ) show (version) show ( ) show (format:) show ( ) show ('cryptographic\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(seal-archive-zstd-age) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(seal-archive-zstd-age) show ( ) show (version) show ( ) show (output\)) show  newline
+("Create) show ( ) show (zstd-compressed,) show ( ) show (age-encrypted) show ( ) show (archive) show ( ) show (with) show ( ) show (SPKI) show ( ) show (signature") show  newline
+(\(let) show ( ) show (\(\(recipients) show ( ) show (\(vault-config) show ( ) show ('age-recipients\)\)) show  newline
+(\(signing-key) show ( ) show (\(vault-config) show ( ) show ('signing-key\)\)) show  newline
+(\(encrypted-file) show ( ) show (\(sprintf) show ( ) show ("~a.tar.zst.age") show ( ) show (output\)\)\)) show  newline
+(;;) show ( ) show (Require) show ( ) show (recipients) show  newline
+(\(unless) show ( ) show (\(pair?) show ( ) show (recipients\)) show  newline
+(\(error) show ( ) show ("No) show ( ) show (age) show ( ) show (recipients) show ( ) show (configured"\)\)) show  newline
+(;;) show ( ) show (Build) show ( ) show (recipient) show ( ) show (args:) show ( ) show (-r) show ( ) show (key1) show ( ) show (-r) show ( ) show (key2) show ( ) show (...) show  newline
+(\(let) show ( ) show (\(\(recipient-args) show  newline
+(\(string-join) show ( ) show (\(map) show ( ) show (\(lambda) show ( ) show (\(r\)) show ( ) show (\(sprintf) show ( ) show ("-r) show ( ) show (~a") show ( ) show (r\)\)) show ( ) show (recipients\)) show ( ) show (") show ( ) show ("\)\)\)) show  newline
+(;;) show ( ) show (Create) show ( ) show (archive:) show ( ) show (git) show ( ) show (archive) show ( ) show (|) show ( ) show (zstd) show ( ) show (|) show ( ) show (age) show  newline
+(\(let) show ( ) show (\(\(temp-tar) show ( ) show (\(sprintf) show ( ) show ("/tmp/vault-~a.tar") show ( ) show (version\)\)\)) show  newline
+(\(run-command) show ( ) show ("git") show ( ) show ("archive") show ( ) show ("--prefix=vault/") show  newline
+(\(sprintf) show ( ) show ("--output=~a") show ( ) show (temp-tar\)) show ( ) show (version\)) show  newline
+(\(system) show ( ) show (\(sprintf) show ( ) show ("zstd) show ( ) show (-T0) show ( ) show (-c) show ( ) show (~a) show ( ) show (|) show ( ) show (age) show ( ) show (~a) show ( ) show (>) show ( ) show (~a") show  newline
+(temp-tar) show ( ) show (recipient-args) show ( ) show (encrypted-file\)\)) show  newline
+(\(delete-file) show ( ) show (temp-tar\)\)) show  newline
+(;;) show ( ) show (Sign) show ( ) show (the) show ( ) show (encrypted) show ( ) show (archive) show  newline
+(\(when) show ( ) show (signing-key) show  newline
+(\(let*) show ( ) show (\(\(archive-bytes) show ( ) show (\(read-file-bytes) show ( ) show (encrypted-file\)\)) show  newline
+(\(archive-hash) show ( ) show (\(sha512-hash) show ( ) show (archive-bytes\)\)) show  newline
+(\(signature) show ( ) show (\(ed25519-sign) show ( ) show (signing-key) show ( ) show (archive-hash\)\)\)) show  newline
+(;;) show ( ) show (Write) show ( ) show (manifest) show  newline
+(\(with-output-to-file) show ( ) show (output) show  newline
+(\(lambda) show ( ) show (\(\)) show  newline
+(\(write) show ( ) show (`\(sealed-archive) show  newline
+(\(version) show ( ) show (,version\)) show  newline
+(\(format) show ( ) show (zstd-age\)) show  newline
+(\(archive) show ( ) show (,encrypted-file\)) show  newline
+(\(compression) show ( ) show (zstd\)) show  newline
+(\(encryption) show ( ) show (age\)) show  newline
+(\(recipients) show ( ) show (,recipients\)) show  newline
+(\(hash) show ( ) show (,\(blob->hex) show ( ) show (archive-hash\)\)) show  newline
+(\(signature) show ( ) show (,\(blob->hex) show ( ) show (signature\)\)\)\)\)\)\)\)\)\)\)) show  newline
+ newline
+ newline
+(seal-restore-zstd-age) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(seal-restore-zstd-age) show ( ) show (manifest) show ( ) show (verify-key) show ( ) show (target-dir) show ( ) show (identity\)) show  newline
+("Restore) show ( ) show (zstd+age) show ( ) show (encrypted) show ( ) show (archive") show  newline
+(\(let) show ( ) show (\(\(version) show ( ) show (\(cadr) show ( ) show (\(assq) show ( ) show ('version) show ( ) show (\(cdr) show ( ) show (manifest\)\)\)\)) show  newline
+(\(archive-file) show ( ) show (\(cadr) show ( ) show (\(assq) show ( ) show ('archive) show ( ) show (\(cdr) show ( ) show (manifest\)\)\)\)) show  newline
+(\(hash-hex) show ( ) show (\(cadr) show ( ) show (\(assq) show ( ) show ('hash) show ( ) show (\(cdr) show ( ) show (manifest\)\)\)\)) show  newline
+(\(sig-hex) show ( ) show (\(cadr) show ( ) show (\(assq) show ( ) show ('signature) show ( ) show (\(cdr) show ( ) show (manifest\)\)\)\)) show  newline
+(\(id-file) show ( ) show (\(or) show ( ) show (identity) show ( ) show (\(vault-config) show ( ) show ('age-identity\)\)\)\)) show  newline
+(;;) show ( ) show (Require) show ( ) show (identity) show  newline
+(\(unless) show ( ) show (id-file) show  newline
+(\(error) show ( ) show ("No) show ( ) show (age) show ( ) show (identity) show ( ) show (configured"\)\)) show  newline
+(;;) show ( ) show (Verify) show ( ) show (signature) show ( ) show (first) show ( ) show (\(before) show ( ) show (decryption\)) show  newline
+(\(when) show ( ) show (verify-key) show  newline
+(\(let*) show ( ) show (\(\(archive-bytes) show ( ) show (\(read-file-bytes) show ( ) show (archive-file\)\)) show  newline
+(\(archive-hash) show ( ) show (\(sha512-hash) show ( ) show (archive-bytes\)\)) show  newline
+(\(expected-hash) show ( ) show (\(hex->blob) show ( ) show (hash-hex\)\)) show  newline
+(\(signature) show ( ) show (\(hex->blob) show ( ) show (sig-hex\)\)) show  newline
+(\(pubkey) show ( ) show (\(read-key-from-file) show ( ) show (verify-key\)\)\)) show  newline
+(\(unless) show ( ) show (\(equal?) show ( ) show (archive-hash) show ( ) show (expected-hash\)) show  newline
+(\(error) show ( ) show ("Archive) show ( ) show (hash) show ( ) show (mismatch"\)\)) show  newline
+(\(unless) show ( ) show (\(ed25519-verify) show ( ) show (pubkey) show ( ) show (archive-hash) show ( ) show (signature\)) show  newline
+(\(error) show ( ) show ("Signature) show ( ) show (verification) show ( ) show (failed"\)\)\)\)) show  newline
+(;;) show ( ) show (Decrypt) show ( ) show (and) show ( ) show (extract:) show ( ) show (age) show ( ) show (-d) show ( ) show (|) show ( ) show (zstd) show ( ) show (-d) show ( ) show (|) show ( ) show (tar) show ( ) show (-x) show  newline
+(\(system) show ( ) show (\(sprintf) show ( ) show ("age) show ( ) show (-d) show ( ) show (-i) show ( ) show (~a) show ( ) show (<) show ( ) show (~a) show ( ) show (|) show ( ) show (zstd) show ( ) show (-d) show ( ) show (|) show ( ) show (tar) show ( ) show (-xf) show ( ) show (-) show ( ) show (-C) show ( ) show (~a") show  newline
+(id-file) show ( ) show (archive-file) show ( ) show (target-dir\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(USAGE) show ( ) show (EXAMPLES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Create) show ( ) show (Encrypted) show ( ) show (Archive) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Configure) show ( ) show (recipients) show  newline
+(\(vault-config) show ( ) show ('age-recipients) show  newline
+('\("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"\)\)) show  newline
+(;;) show ( ) show (Create) show ( ) show (archive) show  newline
+(\(seal-archive) show ( ) show ("1.0.0") show ( ) show (format:) show ( ) show ('zstd-age\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (vault-1.0.0.archive) show  newline
+(;;) show ( ) show (=>) show ( ) show (vault-1.0.0.archive.tar.zst.age) show  newline
+ newline
+ newline
+(Restore) show ( ) show (Encrypted) show ( ) show (Archive) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Configure) show ( ) show (identity) show  newline
+(\(vault-config) show ( ) show ('age-identity) show ( ) show ("~/.config/age/identity.txt"\)) show  newline
+(;;) show ( ) show (Restore) show ( ) show (with) show ( ) show (verification) show  newline
+(\(seal-restore) show ( ) show ("vault-1.0.0.archive") show  newline
+(verify-key:) show ( ) show ("publisher.public") show  newline
+(target:) show ( ) show ("./restored"\)) show  newline
+ newline
+ newline
+(Command) show ( ) show (Line) show ( ) show (Equivalents) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Create) show  newline
+(git) show ( ) show (archive) show ( ) show (--prefix=vault/) show ( ) show (1.0.0) show ( ) show (|) show ( ) show (\\) show  newline
+(zstd) show ( ) show (-T0) show ( ) show (|) show ( ) show (\\) show  newline
+(age) show ( ) show (-r) show ( ) show (age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p) show ( ) show (\\) show  newline
+(>) show ( ) show (vault-1.0.0.tar.zst.age) show  newline
+(#) show ( ) show (Restore) show  newline
+(age) show ( ) show (-d) show ( ) show (-i) show ( ) show (~/.config/age/identity.txt) show ( ) show (<) show ( ) show (vault-1.0.0.tar.zst.age) show ( ) show (|) show ( ) show (\\) show  newline
+(zstd) show ( ) show (-d) show ( ) show (|) show ( ) show (\\) show  newline
+(tar) show ( ) show (-xf) show ( ) show (-) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MIGRATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(From) show ( ) show (Cryptographic) show ( ) show (to) show ( ) show (Zstd-Age) show  newline
+newpath margin ypos moveto margin 180 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Re-archive) show ( ) show (existing) show ( ) show (releases) show ( ) show (with) show ( ) show (new) show ( ) show (format) show  newline
+(\(for-each) show  newline
+(\(lambda) show ( ) show (\(version\)) show  newline
+(\(seal-archive) show ( ) show (version) show ( ) show (format:) show ( ) show ('zstd-age\)\)) show  newline
+(\(get-local-releases\)\)) show  newline
+ newline
+ newline
+(Backward) show ( ) show (Compatibility) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(Both) show ( ) show (formats) show ( ) show (can) show ( ) show (coexist.) show ( ) show (The) show ( ) show (manifest) show ( ) show (format) show ( ) show (field) show ( ) show (determines) show  newline
+gsave
+margin 0 add ypos moveto (restoration) show
+margin 72 add ypos moveto (method:) show
+margin 120 add ypos moveto (-) show
+margin 132 add ypos moveto (\(format) show
+margin 180 add ypos moveto (cryptographic\)) show
+% box char 2192 at col 45
+newpath margin 273 add 3 sub ypos 2 add moveto margin 273 add 3 add ypos lineto margin 273 add 3 sub ypos 2 sub lineto closepath fill
+grestore
+newline
+gsave
+margin 0 add ypos moveto (seal-restore-cryptographic) show
+margin 162 add ypos moveto (-) show
+margin 174 add ypos moveto (\(format) show
+margin 222 add ypos moveto (zstd-age\)) show
+% box char 2192 at col 47
+newpath margin 285 add 3 sub ypos 2 add moveto margin 285 add 3 add ypos lineto margin 285 add 3 sub ypos 2 sub lineto closepath fill
+margin 294 add ypos moveto (seal-restore-zstd-age) show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show ([Zstd]\(https://github.com/facebook/zstd\)) show ( ) show (-) show ( ) show (Facebook's) show ( ) show (compression) show ( ) show (algorithm) show  newline
+(*) show ( ) show ([Age]\(https://age-encryption.org/\)) show ( ) show (-) show ( ) show (Modern) show ( ) show (encryption) show ( ) show (tool) show  newline
+(*) show ( ) show ([Memo-006]\(memo-006-vault-architecture.html\)) show ( ) show (-) show ( ) show (Vault) show ( ) show (System) show ( ) show (Architecture) show  newline
+(*) show ( ) show ([Memo-004]\(memo-004-spki-authorization.html\)) show ( ) show (-) show ( ) show (SPKI) show ( ) show (Authorization) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-06) show  newline
+(*) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

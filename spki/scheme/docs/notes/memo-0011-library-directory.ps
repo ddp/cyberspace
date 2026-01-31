@@ -15,441 +15,1300 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0011: Library Directory System) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies the Library Directory System for the Library of) show newline
-(Cyberspace: a searchable catalog of research papers with natural) show newline
-(language queries, fuzzy matching, and beautiful output. Finding) show newline
-(knowledge should be delightful.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(E PLURIBUS UNUM) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    ╔═══════════════════════════════════════════════════════════════╗) show newline
-(    ║  📚 Cyberspace Library Directory                               ║) show newline
-(    ║  Finding knowledge should be joyful                            ║) show newline
-(    ╚═══════════════════════════════════════════════════════════════╝) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The Library of Cyberspace contains 421+ research papers spanning 50) show newline
-(years of computing history. Without a catalog:) show newline
-() show newline
-(  * Discoverability: How to find Lamport's clock paper?) show newline
-(  * Connections: What relates to Simple Public Key Infrastructure \(SPKI\)?) show newline
-(  * Context: When was this written? By whom?) show newline
-() show newline
-(The Directory System provides:) show newline
-() show newline
-(  * Natural language search - "papers by Lampson about protection") show newline
-(  * Multi-index access - By author, topic, year, collection) show newline
-(  * Fuzzy matching - "Lamp" finds Lampson and Lamport) show newline
-(  * Beautiful output - Unicode, emoji, formatted results) show newline
-(  * S-expression export - Machine-readable catalogs) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DATA MODEL) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Document Record) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(define-record-type <document>) show newline
-(      \(make-document title authors year topics file-path) show newline
-(                     collection source-url description\)) show newline
-(      document?) show newline
-(      \(title document-title\)) show newline
-(      \(authors document-authors\)      ; List of strings) show newline
-(      \(year document-year\)            ; Integer or #f) show newline
-(      \(topics document-topics\)        ; List of strings) show newline
-(      \(file-path document-file-path\)) show newline
-(      \(collection document-collection\)) show newline
-(      \(source-url document-source-url\)) show newline
-(      \(description document-description\)\)) show newline
-() show newline
-() show newline
-(Collection Record) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    \(define-record-type <collection>) show newline
-(      \(make-collection name path documents description\)) show newline
-(      collection?) show newline
-(      \(name collection-name\)) show newline
-(      \(path collection-path\)) show newline
-(      \(documents collection-documents\)  ; List of documents) show newline
-(      \(description collection-description\)\)) show newline
-() show newline
-() show newline
-(Library Record) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    \(define-record-type <library>) show newline
-(      \(make-library collections documents) show newline
-(                    author-index topic-index year-index collection-index\)) show newline
-(      library?) show newline
-(      \(collections library-collections\)) show newline
-(      \(documents library-documents\)) show newline
-(      \(author-index library-author-index\)     ; Hash table) show newline
-(      \(topic-index library-topic-index\)       ; Hash table) show newline
-(      \(year-index library-year-index\)         ; Hash table) show newline
-(      \(collection-index library-collection-index\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(INDEX SYSTEM) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Four hash table indexes for O\(1\) lookup:) show newline
-() show newline
-() show newline
-(    author-index:     "Lamport" → [doc1, doc2, doc5, ...]) show newline
-(    topic-index:      "cryptography" → [doc3, doc7, doc12, ...]) show newline
-(    year-index:       1978 → [doc1, doc4, ...]) show newline
-(    collection-index: "lampson" → <collection>) show newline
-() show newline
-() show newline
-(Building Indexes) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    \(define \(build-author-index documents\)) show newline
-(      \(let \(\(index \(make-hash-table equal?\)\)\)) show newline
-(        \(for-each) show newline
-(          \(lambda \(doc\)) show newline
-(            \(for-each) show newline
-(              \(lambda \(author\)) show newline
-(                \(hash-table-update!/default) show newline
-(                  index) show newline
-(                  \(normalize-author author\)) show newline
-(                  \(lambda \(docs\) \(cons doc docs\)\)) show newline
-(                  '\(\)\)\)) show newline
-(              \(document-authors doc\)\)\)) show newline
-(          documents\)) show newline
-(        index\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(QUERY INTERFACE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Natural Language Parsing) show newline
-(------------------------) show newline
-() show newline
-() show newline
-(    \(parse-query "papers by Lampson about protection"\)) show newline
-(    ;; => \(query \(author "Lampson"\) \(topic "protection"\)\)) show newline
-(    \(parse-query "from 1978"\)) show newline
-(    ;; => \(query \(year 1978\)\)) show newline
-(    \(parse-query "SPKI certificates"\)) show newline
-(    ;; => \(query \(topic "SPKI"\) \(topic "certificates"\)\)) show newline
-() show newline
-(Recognized Patterns: - by <name> → author search - about <topic> →) show newline
-(topic search - from <year> → year search - in <collection> →) show newline
-(collection filter - Bare words → topic search) show newline
-() show newline
-() show newline
-(Fuzzy Matching) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    \(fuzzy-match "Lamp" author-list\)) show newline
-(    ;; => \("Lampson" "Lamport"\)) show newline
-(    \(fuzzy-match "crypto" topic-list\)) show newline
-(    ;; => \("cryptography" "cryptographic" "encryption"\)) show newline
-() show newline
-(Matching strategies:) show newline
-() show newline
-(  * Exact match \(highest priority\)) show newline
-(  * Case-insensitive match) show newline
-(  * Prefix match) show newline
-(  * Substring match) show newline
-() show newline
-() show newline
-(Query Functions) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(find-by-author library "Lampson"\)) show newline
-(    \(find-by-topic library "SPKI"\)) show newline
-(    \(find-by-year library 1978\)) show newline
-(    \(find-by-collection library "lampson"\)) show newline
-(    \(find-related library document\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REPL INTERFACE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Interactive Session) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    $ csi -s directory-repl.scm) show newline
-(    ╔═══════════════════════════════════════════════════════════════╗) show newline
-(    ║  📚 Cyberspace Library Directory                               ║) show newline
-(    ║  "E Pluribus Unum" - Finding knowledge should be joyful        ║) show newline
-(    ╚═══════════════════════════════════════════════════════════════╝) show newline
-(    Loaded 312 documents from 18 collections) show newline
-(    Type 'help' for search tips, 'quit' to exit) show newline
-(    📖 > papers by Rivest) show newline
-(    📚 Found 3 documents:) show newline
-(     [1] SDSI: A Simple Distributed Security Infrastructure) show newline
-(         👤 R. Rivest, B. Lampson) show newline
-(         📅 1996  📁 lampson) show newline
-(     [2] SPKI Certificate Theory) show newline
-(         👤 C. Ellison, B. Frantz, B. Lampson, R. Rivest, ...) show newline
-(         📅 1999  📁 lampson) show newline
-(    📖 > about SPKI) show newline
-(    📚 Found 8 documents:) show newline
-(    ...) show newline
-(    📖 > stats) show newline
-(    Library Statistics:) show newline
-(      📚 Documents: 312) show newline
-(      📁 Collections: 18) show newline
-(      👤 Authors: 245) show newline
-(      🏷️ Topics: 89) show newline
-(      📅 Years: 1971-2024) show newline
-(    📖 > quit) show newline
-(    Happy exploring! 📚✨) show newline
-() show newline
-() show newline
-(Commands) show newline
-(--------) show newline
-() show newline
-() show newline
-(  Command       Description              ) show newline
-(  help          Show search tips         ) show newline
-(  stats         Library statistics       ) show newline
-(  collections   List all collections     ) show newline
-(  authors       Show author index        ) show newline
-(  topics        Show topic index         ) show newline
-(  years         Show year distribution   ) show newline
-(  quit          Exit REPL                ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(INDEX.MD PARSER) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Each collection contains an INDEX.md with paper listings:) show newline
-() show newline
-() show newline
-(    # Lampson Collection) show newline
-(    Butler Lampson's papers on protection, capability systems, and distributed computing.) show newline
-(    ## Papers) show newline
-(    1. Protection \(1971\)) show newline
-(       - Author: Butler Lampson) show newline
-(       - Topics: capability, protection, access control) show newline
-(       - Source: ACM Operating Systems Review) show newline
-(    2. Hints for Computer System Design \(1983\)) show newline
-(       - Author: Butler Lampson) show newline
-(       - Topics: systems design, engineering) show newline
-(       - Source: ACM Operating Systems Review) show newline
-() show newline
-() show newline
-(Parser Output) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    \(parse-index-file "lampson/INDEX.md"\)) show newline
-(    ;; =>) show newline
-(    \(collection) show newline
-(      \(name "lampson"\)) show newline
-(      \(description "Butler Lampson's papers..."\)) show newline
-(      \(documents) show newline
-(        \(\(title "Protection"\)) show newline
-(         \(authors "Butler Lampson"\)) show newline
-(         \(year 1971\)) show newline
-(         \(topics "capability" "protection" "access control"\)\)) show newline
-(        ...\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(EXPORT FORMATS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(S-expression Export) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    \(export-to-sexp library "catalog.sexp"\)) show newline
-() show newline
-(Output:) show newline
-() show newline
-() show newline
-(    \(library) show newline
-(      \(metadata) show newline
-(        \(document-count 312\)) show newline
-(        \(collection-count 18\)) show newline
-(        \(generated "2026-01-06"\)\)) show newline
-(      \(collections) show newline
-(        \(collection) show newline
-(          \(name "lampson"\)) show newline
-(          \(documents) show newline
-(            \(document) show newline
-(              \(title "Protection"\)) show newline
-(              \(authors \("Butler Lampson"\)\)) show newline
-(              \(year 1971\)) show newline
-(              \(topics \("capability" "protection"\)\)\)) show newline
-(            ...\)\)) show newline
-(        ...\)\)) show newline
-() show newline
-() show newline
-(HTML Export) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    \(export-to-html library "catalog.html"\)) show newline
-() show newline
-(Generates browsable web catalog with: - Alphabetical author index -) show newline
-(Topic tag cloud - Year timeline - Search functionality) show newline
-() show newline
-() show newline
-(Markdown Export) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(export-to-markdown library "catalog.md"\)) show newline
-() show newline
-(Documentation-friendly format for README files.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DESIGN PHILOSOPHY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Super Nice and Helpful) show newline
-(----------------------) show newline
-() show newline
-(  * Natural language understanding) show newline
-(  * Fuzzy matching catches typos) show newline
-(  * Suggestions for empty results) show newline
-(  * Encouraging prompts) show newline
-() show newline
-(Research discovery should lower barriers, not raise them; the interface) show newline
-(should anticipate what users need rather than demanding precise query) show newline
-(syntax.) show newline
-() show newline
-() show newline
-(Beautiful Output) show newline
-(----------------) show newline
-() show newline
-(  * Unicode box drawing \(╔═══╗\)) show newline
-(  * Emoji visual markers \(📖 📚 👤 📅\)) show newline
-(  * Consistent formatting) show newline
-(  * Progressive disclosure) show newline
-() show newline
-() show newline
-(Hone In On What You Need) show newline
-(------------------------) show newline
-() show newline
-(  * Multi-strategy search) show newline
-(  * Progressive filtering) show newline
-(  * Cross-references) show newline
-(  * Related paper discovery) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(No Execution) show newline
-(------------) show newline
-() show newline
-(The directory system is read-only: - Parses INDEX.md files \(trusted\) -) show newline
-(No code execution - No network access - No file modification) show newline
-() show newline
-() show newline
-(Path Traversal) show newline
-(--------------) show newline
-() show newline
-(File paths validated: - Must be within library root - No .. components -) show newline
-(Normalized before use) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION NOTES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Dependencies) show newline
-(------------) show newline
-() show newline
-(  * srfi-1) show newline
-(  * List utilities - srfi-13) show newline
-(  * String utilities - srfi-69) show newline
-(  * Hash tables - chicken file) show newline
-(  * Directory scanning) show newline
-() show newline
-() show newline
-(Performance) show newline
-(-----------) show newline
-() show newline
-(  * Index building: O\(N\) documents) show newline
-(  * Query: O\(1\) hash lookup + O\(M\) result filtering) show newline
-(  * Fuzzy match: O\(K\) candidates) show newline
-() show newline
-() show newline
-(Extensibility) show newline
-(-------------) show newline
-() show newline
-(Future enhancements: - Full-text search \(PostScript/Text extraction\) -) show newline
-(Citation graph visualization - BibTeX export - Web API server - Semantic) show newline
-(search with embeddings) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Dublin Core Metadata Initiative) show newline
-(  * Library of Congress Subject Headings) show newline
-(  * BibTeX format specification) show newline
-(  * Unicode Standard for box drawing) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-06) show newline
-(  * Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0011:) show ( ) show (Library) show ( ) show (Directory) show ( ) show (System) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (the) show ( ) show (Library) show ( ) show (Directory) show ( ) show (System) show ( ) show (for) show ( ) show (the) show ( ) show (Library) show ( ) show (of) show  newline
+(Cyberspace:) show ( ) show (a) show ( ) show (searchable) show ( ) show (catalog) show ( ) show (of) show ( ) show (research) show ( ) show (papers) show ( ) show (with) show ( ) show (natural) show  newline
+(language) show ( ) show (queries,) show ( ) show (fuzzy) show ( ) show (matching,) show ( ) show (and) show ( ) show (beautiful) show ( ) show (output.) show ( ) show (Finding) show  newline
+(knowledge) show ( ) show (should) show ( ) show (be) show ( ) show (delightful.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(E) show ( ) show (PLURIBUS) show ( ) show (UNUM) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+% box char 2554 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2550 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2550 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2550 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2550 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2550 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2550 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2550 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2550 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2550 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2550 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2550 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2550 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2550 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2550 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2550 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2550 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2550 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2550 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2550 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2550 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2550 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2550 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2550 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2550 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2550 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2550 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2550 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2550 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2550 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2550 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2550 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2550 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2550 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2550 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2550 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2550 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2550 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2550 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2550 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2550 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2550 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2550 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2550 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2550 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2550 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2550 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2550 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2550 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2550 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2550 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2550 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2550 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2550 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2550 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2550 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2550 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2550 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add 3 add ypos lineto stroke
+% box char 2550 at col 62
+newpath margin 375 add 3 sub ypos moveto margin 375 add 3 add ypos lineto stroke
+% box char 2550 at col 63
+newpath margin 381 add 3 sub ypos moveto margin 381 add 3 add ypos lineto stroke
+% box char 2550 at col 64
+newpath margin 387 add 3 sub ypos moveto margin 387 add 3 add ypos lineto stroke
+% box char 2550 at col 65
+newpath margin 393 add 3 sub ypos moveto margin 393 add 3 add ypos lineto stroke
+% box char 2550 at col 66
+newpath margin 399 add 3 sub ypos moveto margin 399 add 3 add ypos lineto stroke
+% box char 2550 at col 67
+newpath margin 405 add 3 sub ypos moveto margin 405 add 3 add ypos lineto stroke
+% box char 2557 at col 68
+newpath margin 411 add 3 sub ypos moveto margin 411 add ypos lineto stroke
+newpath margin 411 add ypos moveto margin 411 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2551 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 42 add ypos moveto () show
+margin 54 add ypos moveto (Cyberspace) show
+margin 120 add ypos moveto (Library) show
+margin 168 add ypos moveto (Directory) show
+% box char 2551 at col 68
+newpath margin 411 add ypos 6 sub moveto margin 411 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2551 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 42 add ypos moveto (Finding) show
+margin 90 add ypos moveto (knowledge) show
+margin 150 add ypos moveto (should) show
+margin 192 add ypos moveto (be) show
+margin 210 add ypos moveto (joyful) show
+% box char 2551 at col 69
+newpath margin 417 add ypos 6 sub moveto margin 417 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 255a at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2550 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2550 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2550 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2550 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2550 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2550 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2550 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2550 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2550 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2550 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2550 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2550 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2550 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2550 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2550 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2550 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2550 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2550 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2550 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2550 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2550 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2550 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2550 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2550 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2550 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2550 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2550 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2550 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2550 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2550 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2550 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2550 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2550 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2550 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2550 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2550 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2550 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2550 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2550 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2550 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2550 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2550 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2550 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2550 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2550 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2550 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2550 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2550 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2550 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2550 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2550 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2550 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2550 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2550 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2550 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2550 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2550 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add 3 add ypos lineto stroke
+% box char 2550 at col 62
+newpath margin 375 add 3 sub ypos moveto margin 375 add 3 add ypos lineto stroke
+% box char 2550 at col 63
+newpath margin 381 add 3 sub ypos moveto margin 381 add 3 add ypos lineto stroke
+% box char 2550 at col 64
+newpath margin 387 add 3 sub ypos moveto margin 387 add 3 add ypos lineto stroke
+% box char 2550 at col 65
+newpath margin 393 add 3 sub ypos moveto margin 393 add 3 add ypos lineto stroke
+% box char 2550 at col 66
+newpath margin 399 add 3 sub ypos moveto margin 399 add 3 add ypos lineto stroke
+% box char 2550 at col 67
+newpath margin 405 add 3 sub ypos moveto margin 405 add 3 add ypos lineto stroke
+% box char 255d at col 68
+newpath margin 411 add 3 sub ypos moveto margin 411 add ypos lineto stroke
+newpath margin 411 add ypos 6 add moveto margin 411 add ypos lineto stroke
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (Library) show ( ) show (of) show ( ) show (Cyberspace) show ( ) show (contains) show ( ) show (421+) show ( ) show (research) show ( ) show (papers) show ( ) show (spanning) show ( ) show (50) show  newline
+(years) show ( ) show (of) show ( ) show (computing) show ( ) show (history.) show ( ) show (Without) show ( ) show (a) show ( ) show (catalog:) show  newline
+ newline
+(*) show ( ) show (Discoverability:) show ( ) show (How) show ( ) show (to) show ( ) show (find) show ( ) show (Lamport's) show ( ) show (clock) show ( ) show (paper?) show  newline
+(*) show ( ) show (Connections:) show ( ) show (What) show ( ) show (relates) show ( ) show (to) show ( ) show (Simple) show ( ) show (Public) show ( ) show (Key) show ( ) show (Infrastructure) show ( ) show (\(SPKI\)?) show  newline
+(*) show ( ) show (Context:) show ( ) show (When) show ( ) show (was) show ( ) show (this) show ( ) show (written?) show ( ) show (By) show ( ) show (whom?) show  newline
+ newline
+(The) show ( ) show (Directory) show ( ) show (System) show ( ) show (provides:) show  newline
+ newline
+(*) show ( ) show (Natural) show ( ) show (language) show ( ) show (search) show ( ) show (-) show ( ) show ("papers) show ( ) show (by) show ( ) show (Lampson) show ( ) show (about) show ( ) show (protection") show  newline
+(*) show ( ) show (Multi-index) show ( ) show (access) show ( ) show (-) show ( ) show (By) show ( ) show (author,) show ( ) show (topic,) show ( ) show (year,) show ( ) show (collection) show  newline
+(*) show ( ) show (Fuzzy) show ( ) show (matching) show ( ) show (-) show ( ) show ("Lamp") show ( ) show (finds) show ( ) show (Lampson) show ( ) show (and) show ( ) show (Lamport) show  newline
+(*) show ( ) show (Beautiful) show ( ) show (output) show ( ) show (-) show ( ) show (Unicode,) show ( ) show (emoji,) show ( ) show (formatted) show ( ) show (results) show  newline
+(*) show ( ) show (S-expression) show ( ) show (export) show ( ) show (-) show ( ) show (Machine-readable) show ( ) show (catalogs) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DATA) show ( ) show (MODEL) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Document) show ( ) show (Record) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<document>) show  newline
+(\(make-document) show ( ) show (title) show ( ) show (authors) show ( ) show (year) show ( ) show (topics) show ( ) show (file-path) show  newline
+(collection) show ( ) show (source-url) show ( ) show (description\)) show  newline
+(document?) show  newline
+(\(title) show ( ) show (document-title\)) show  newline
+(\(authors) show ( ) show (document-authors\)) show ( ) show (;) show ( ) show (List) show ( ) show (of) show ( ) show (strings) show  newline
+(\(year) show ( ) show (document-year\)) show ( ) show (;) show ( ) show (Integer) show ( ) show (or) show ( ) show (#f) show  newline
+(\(topics) show ( ) show (document-topics\)) show ( ) show (;) show ( ) show (List) show ( ) show (of) show ( ) show (strings) show  newline
+(\(file-path) show ( ) show (document-file-path\)) show  newline
+(\(collection) show ( ) show (document-collection\)) show  newline
+(\(source-url) show ( ) show (document-source-url\)) show  newline
+(\(description) show ( ) show (document-description\)\)) show  newline
+ newline
+ newline
+(Collection) show ( ) show (Record) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<collection>) show  newline
+(\(make-collection) show ( ) show (name) show ( ) show (path) show ( ) show (documents) show ( ) show (description\)) show  newline
+(collection?) show  newline
+(\(name) show ( ) show (collection-name\)) show  newline
+(\(path) show ( ) show (collection-path\)) show  newline
+(\(documents) show ( ) show (collection-documents\)) show ( ) show (;) show ( ) show (List) show ( ) show (of) show ( ) show (documents) show  newline
+(\(description) show ( ) show (collection-description\)\)) show  newline
+ newline
+ newline
+(Library) show ( ) show (Record) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<library>) show  newline
+(\(make-library) show ( ) show (collections) show ( ) show (documents) show  newline
+(author-index) show ( ) show (topic-index) show ( ) show (year-index) show ( ) show (collection-index\)) show  newline
+(library?) show  newline
+(\(collections) show ( ) show (library-collections\)) show  newline
+(\(documents) show ( ) show (library-documents\)) show  newline
+(\(author-index) show ( ) show (library-author-index\)) show ( ) show (;) show ( ) show (Hash) show ( ) show (table) show  newline
+(\(topic-index) show ( ) show (library-topic-index\)) show ( ) show (;) show ( ) show (Hash) show ( ) show (table) show  newline
+(\(year-index) show ( ) show (library-year-index\)) show ( ) show (;) show ( ) show (Hash) show ( ) show (table) show  newline
+(\(collection-index) show ( ) show (library-collection-index\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(INDEX) show ( ) show (SYSTEM) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Four) show ( ) show (hash) show ( ) show (table) show ( ) show (indexes) show ( ) show (for) show ( ) show (O\(1\)) show ( ) show (lookup:) show  newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto (author-index:) show
+margin 132 add ypos moveto ("Lamport") show
+% box char 2192 at col 32
+newpath margin 195 add 3 sub ypos 2 add moveto margin 195 add 3 add ypos lineto margin 195 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto ([doc1,) show
+margin 246 add ypos moveto (doc2,) show
+margin 282 add ypos moveto (doc5,) show
+margin 318 add ypos moveto (...]) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (topic-index:) show
+margin 132 add ypos moveto ("cryptography") show
+% box char 2192 at col 37
+newpath margin 225 add 3 sub ypos 2 add moveto margin 225 add 3 add ypos lineto margin 225 add 3 sub ypos 2 sub lineto closepath fill
+margin 234 add ypos moveto ([doc3,) show
+margin 276 add ypos moveto (doc7,) show
+margin 312 add ypos moveto (doc12,) show
+margin 354 add ypos moveto (...]) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (year-index:) show
+margin 132 add ypos moveto (1978) show
+% box char 2192 at col 27
+newpath margin 165 add 3 sub ypos 2 add moveto margin 165 add 3 add ypos lineto margin 165 add 3 sub ypos 2 sub lineto closepath fill
+margin 174 add ypos moveto ([doc1,) show
+margin 216 add ypos moveto (doc4,) show
+margin 252 add ypos moveto (...]) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (collection-index:) show
+margin 132 add ypos moveto ("lampson") show
+% box char 2192 at col 32
+newpath margin 195 add 3 sub ypos 2 add moveto margin 195 add 3 add ypos lineto margin 195 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (<collection>) show
+grestore
+newline
+ newline
+ newline
+(Building) show ( ) show (Indexes) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(build-author-index) show ( ) show (documents\)) show  newline
+(\(let) show ( ) show (\(\(index) show ( ) show (\(make-hash-table) show ( ) show (equal?\)\)\)) show  newline
+(\(for-each) show  newline
+(\(lambda) show ( ) show (\(doc\)) show  newline
+(\(for-each) show  newline
+(\(lambda) show ( ) show (\(author\)) show  newline
+(\(hash-table-update!/default) show  newline
+(index) show  newline
+(\(normalize-author) show ( ) show (author\)) show  newline
+(\(lambda) show ( ) show (\(docs\)) show ( ) show (\(cons) show ( ) show (doc) show ( ) show (docs\)\)) show  newline
+('\(\)\)\)) show  newline
+(\(document-authors) show ( ) show (doc\)\)\)) show  newline
+(documents\)) show  newline
+(index\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(QUERY) show ( ) show (INTERFACE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Natural) show ( ) show (Language) show ( ) show (Parsing) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(parse-query) show ( ) show ("papers) show ( ) show (by) show ( ) show (Lampson) show ( ) show (about) show ( ) show (protection"\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (\(query) show ( ) show (\(author) show ( ) show ("Lampson"\)) show ( ) show (\(topic) show ( ) show ("protection"\)\)) show  newline
+(\(parse-query) show ( ) show ("from) show ( ) show (1978"\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (\(query) show ( ) show (\(year) show ( ) show (1978\)\)) show  newline
+(\(parse-query) show ( ) show ("SPKI) show ( ) show (certificates"\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (\(query) show ( ) show (\(topic) show ( ) show ("SPKI"\)) show ( ) show (\(topic) show ( ) show ("certificates"\)\)) show  newline
+ newline
+gsave
+margin 0 add ypos moveto (Recognized) show
+margin 66 add ypos moveto (Patterns:) show
+margin 126 add ypos moveto (-) show
+margin 138 add ypos moveto (by) show
+margin 156 add ypos moveto (<name>) show
+% box char 2192 at col 33
+newpath margin 201 add 3 sub ypos 2 add moveto margin 201 add 3 add ypos lineto margin 201 add 3 sub ypos 2 sub lineto closepath fill
+margin 210 add ypos moveto (author) show
+margin 252 add ypos moveto (search) show
+margin 294 add ypos moveto (-) show
+margin 306 add ypos moveto (about) show
+margin 342 add ypos moveto (<topic>) show
+% box char 2192 at col 65
+newpath margin 393 add 3 sub ypos 2 add moveto margin 393 add 3 add ypos lineto margin 393 add 3 sub ypos 2 sub lineto closepath fill
+grestore
+newline
+gsave
+margin 0 add ypos moveto (topic) show
+margin 36 add ypos moveto (search) show
+margin 78 add ypos moveto (-) show
+margin 90 add ypos moveto (from) show
+margin 120 add ypos moveto (<year>) show
+% box char 2192 at col 27
+newpath margin 165 add 3 sub ypos 2 add moveto margin 165 add 3 add ypos lineto margin 165 add 3 sub ypos 2 sub lineto closepath fill
+margin 174 add ypos moveto (year) show
+margin 204 add ypos moveto (search) show
+margin 246 add ypos moveto (-) show
+margin 258 add ypos moveto (in) show
+margin 276 add ypos moveto (<collection>) show
+% box char 2192 at col 59
+newpath margin 357 add 3 sub ypos 2 add moveto margin 357 add 3 add ypos lineto margin 357 add 3 sub ypos 2 sub lineto closepath fill
+grestore
+newline
+gsave
+margin 0 add ypos moveto (collection) show
+margin 66 add ypos moveto (filter) show
+margin 108 add ypos moveto (-) show
+margin 120 add ypos moveto (Bare) show
+margin 150 add ypos moveto (words) show
+% box char 2192 at col 31
+newpath margin 189 add 3 sub ypos 2 add moveto margin 189 add 3 add ypos lineto margin 189 add 3 sub ypos 2 sub lineto closepath fill
+margin 198 add ypos moveto (topic) show
+margin 234 add ypos moveto (search) show
+grestore
+newline
+ newline
+ newline
+(Fuzzy) show ( ) show (Matching) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(fuzzy-match) show ( ) show ("Lamp") show ( ) show (author-list\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (\("Lampson") show ( ) show ("Lamport"\)) show  newline
+(\(fuzzy-match) show ( ) show ("crypto") show ( ) show (topic-list\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (\("cryptography") show ( ) show ("cryptographic") show ( ) show ("encryption"\)) show  newline
+ newline
+(Matching) show ( ) show (strategies:) show  newline
+ newline
+(*) show ( ) show (Exact) show ( ) show (match) show ( ) show (\(highest) show ( ) show (priority\)) show  newline
+(*) show ( ) show (Case-insensitive) show ( ) show (match) show  newline
+(*) show ( ) show (Prefix) show ( ) show (match) show  newline
+(*) show ( ) show (Substring) show ( ) show (match) show  newline
+ newline
+ newline
+(Query) show ( ) show (Functions) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(find-by-author) show ( ) show (library) show ( ) show ("Lampson"\)) show  newline
+(\(find-by-topic) show ( ) show (library) show ( ) show ("SPKI"\)) show  newline
+(\(find-by-year) show ( ) show (library) show ( ) show (1978\)) show  newline
+(\(find-by-collection) show ( ) show (library) show ( ) show ("lampson"\)) show  newline
+(\(find-related) show ( ) show (library) show ( ) show (document\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REPL) show ( ) show (INTERFACE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Interactive) show ( ) show (Session) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+($) show ( ) show (csi) show ( ) show (-s) show ( ) show (directory-repl.scm) show  newline
+gsave
+% box char 2554 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2550 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2550 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2550 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2550 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2550 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2550 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2550 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2550 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2550 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2550 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2550 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2550 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2550 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2550 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2550 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2550 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2550 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2550 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2550 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2550 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2550 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2550 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2550 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2550 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2550 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2550 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2550 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2550 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2550 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2550 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2550 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2550 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2550 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2550 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2550 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2550 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2550 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2550 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2550 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2550 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2550 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2550 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2550 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2550 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2550 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2550 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2550 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2550 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2550 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2550 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2550 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2550 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2550 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2550 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2550 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2550 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2550 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add 3 add ypos lineto stroke
+% box char 2550 at col 62
+newpath margin 375 add 3 sub ypos moveto margin 375 add 3 add ypos lineto stroke
+% box char 2550 at col 63
+newpath margin 381 add 3 sub ypos moveto margin 381 add 3 add ypos lineto stroke
+% box char 2550 at col 64
+newpath margin 387 add 3 sub ypos moveto margin 387 add 3 add ypos lineto stroke
+% box char 2550 at col 65
+newpath margin 393 add 3 sub ypos moveto margin 393 add 3 add ypos lineto stroke
+% box char 2550 at col 66
+newpath margin 399 add 3 sub ypos moveto margin 399 add 3 add ypos lineto stroke
+% box char 2550 at col 67
+newpath margin 405 add 3 sub ypos moveto margin 405 add 3 add ypos lineto stroke
+% box char 2557 at col 68
+newpath margin 411 add 3 sub ypos moveto margin 411 add ypos lineto stroke
+newpath margin 411 add ypos moveto margin 411 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2551 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 42 add ypos moveto () show
+margin 54 add ypos moveto (Cyberspace) show
+margin 120 add ypos moveto (Library) show
+margin 168 add ypos moveto (Directory) show
+% box char 2551 at col 68
+newpath margin 411 add ypos 6 sub moveto margin 411 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2551 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 42 add ypos moveto ("E) show
+margin 60 add ypos moveto (Pluribus) show
+margin 114 add ypos moveto (Unum") show
+margin 150 add ypos moveto (-) show
+margin 162 add ypos moveto (Finding) show
+margin 210 add ypos moveto (knowledge) show
+margin 270 add ypos moveto (should) show
+margin 312 add ypos moveto (be) show
+margin 330 add ypos moveto (joyful) show
+% box char 2551 at col 69
+newpath margin 417 add ypos 6 sub moveto margin 417 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 255a at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2550 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2550 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2550 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2550 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2550 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2550 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2550 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2550 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2550 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2550 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2550 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2550 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2550 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2550 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2550 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2550 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2550 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2550 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2550 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2550 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2550 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2550 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2550 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2550 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2550 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2550 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2550 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2550 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2550 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2550 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2550 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2550 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2550 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2550 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2550 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2550 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2550 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2550 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2550 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2550 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2550 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2550 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2550 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2550 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2550 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2550 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2550 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2550 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2550 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2550 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2550 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2550 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2550 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2550 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2550 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2550 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2550 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add 3 add ypos lineto stroke
+% box char 2550 at col 62
+newpath margin 375 add 3 sub ypos moveto margin 375 add 3 add ypos lineto stroke
+% box char 2550 at col 63
+newpath margin 381 add 3 sub ypos moveto margin 381 add 3 add ypos lineto stroke
+% box char 2550 at col 64
+newpath margin 387 add 3 sub ypos moveto margin 387 add 3 add ypos lineto stroke
+% box char 2550 at col 65
+newpath margin 393 add 3 sub ypos moveto margin 393 add 3 add ypos lineto stroke
+% box char 2550 at col 66
+newpath margin 399 add 3 sub ypos moveto margin 399 add 3 add ypos lineto stroke
+% box char 2550 at col 67
+newpath margin 405 add 3 sub ypos moveto margin 405 add 3 add ypos lineto stroke
+% box char 255d at col 68
+newpath margin 411 add 3 sub ypos moveto margin 411 add ypos lineto stroke
+newpath margin 411 add ypos 6 add moveto margin 411 add ypos lineto stroke
+grestore
+newline
+(Loaded) show ( ) show (312) show ( ) show (documents) show ( ) show (from) show ( ) show (18) show ( ) show (collections) show  newline
+(Type) show ( ) show ('help') show ( ) show (for) show ( ) show (search) show ( ) show (tips,) show ( ) show ('quit') show ( ) show (to) show ( ) show (exit) show  newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (>) show
+margin 48 add ypos moveto (papers) show
+margin 90 add ypos moveto (by) show
+margin 108 add ypos moveto (Rivest) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Found) show
+margin 72 add ypos moveto (3) show
+margin 84 add ypos moveto (documents:) show
+grestore
+newline
+([1]) show ( ) show (SDSI:) show ( ) show (A) show ( ) show (Simple) show ( ) show (Distributed) show ( ) show (Security) show ( ) show (Infrastructure) show  newline
+gsave
+margin 54 add ypos moveto () show
+margin 66 add ypos moveto (R.) show
+margin 84 add ypos moveto (Rivest,) show
+margin 132 add ypos moveto (B.) show
+margin 150 add ypos moveto (Lampson) show
+grestore
+newline
+gsave
+margin 54 add ypos moveto () show
+margin 66 add ypos moveto (1996) show
+margin 102 add ypos moveto () show
+margin 114 add ypos moveto (lampson) show
+grestore
+newline
+([2]) show ( ) show (SPKI) show ( ) show (Certificate) show ( ) show (Theory) show  newline
+gsave
+margin 54 add ypos moveto () show
+margin 66 add ypos moveto (C.) show
+margin 84 add ypos moveto (Ellison,) show
+margin 138 add ypos moveto (B.) show
+margin 156 add ypos moveto (Frantz,) show
+margin 204 add ypos moveto (B.) show
+margin 222 add ypos moveto (Lampson,) show
+margin 276 add ypos moveto (R.) show
+margin 294 add ypos moveto (Rivest,) show
+margin 342 add ypos moveto (...) show
+grestore
+newline
+gsave
+margin 54 add ypos moveto () show
+margin 66 add ypos moveto (1999) show
+margin 102 add ypos moveto () show
+margin 114 add ypos moveto (lampson) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (>) show
+margin 48 add ypos moveto (about) show
+margin 84 add ypos moveto (SPKI) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Found) show
+margin 72 add ypos moveto (8) show
+margin 84 add ypos moveto (documents:) show
+grestore
+newline
+(...) show  newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (>) show
+margin 48 add ypos moveto (stats) show
+grestore
+newline
+(Library) show ( ) show (Statistics:) show  newline
+gsave
+margin 36 add ypos moveto () show
+margin 48 add ypos moveto (Documents:) show
+margin 114 add ypos moveto (312) show
+grestore
+newline
+gsave
+margin 36 add ypos moveto () show
+margin 48 add ypos moveto (Collections:) show
+margin 126 add ypos moveto (18) show
+grestore
+newline
+gsave
+margin 36 add ypos moveto () show
+margin 48 add ypos moveto (Authors:) show
+margin 102 add ypos moveto (245) show
+grestore
+newline
+gsave
+margin 36 add ypos moveto () show
+margin 54 add ypos moveto (Topics:) show
+margin 102 add ypos moveto (89) show
+grestore
+newline
+gsave
+margin 36 add ypos moveto () show
+margin 48 add ypos moveto (Years:) show
+margin 90 add ypos moveto (1971-2024) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (>) show
+margin 48 add ypos moveto (quit) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (Happy) show
+margin 60 add ypos moveto (exploring!) show
+margin 126 add ypos moveto () show
+grestore
+newline
+ newline
+ newline
+(Commands) show  newline
+newpath margin ypos moveto margin 48 add ypos lineto stroke
+newline
+ newline
+ newline
+(Command) show ( ) show (Description) show  newline
+(help) show ( ) show (Show) show ( ) show (search) show ( ) show (tips) show  newline
+(stats) show ( ) show (Library) show ( ) show (statistics) show  newline
+(collections) show ( ) show (List) show ( ) show (all) show ( ) show (collections) show  newline
+(authors) show ( ) show (Show) show ( ) show (author) show ( ) show (index) show  newline
+(topics) show ( ) show (Show) show ( ) show (topic) show ( ) show (index) show  newline
+(years) show ( ) show (Show) show ( ) show (year) show ( ) show (distribution) show  newline
+(quit) show ( ) show (Exit) show ( ) show (REPL) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(INDEX.MD) show ( ) show (PARSER) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Each) show ( ) show (collection) show ( ) show (contains) show ( ) show (an) show ( ) show (INDEX.md) show ( ) show (with) show ( ) show (paper) show ( ) show (listings:) show  newline
+ newline
+ newline
+(#) show ( ) show (Lampson) show ( ) show (Collection) show  newline
+(Butler) show ( ) show (Lampson's) show ( ) show (papers) show ( ) show (on) show ( ) show (protection,) show ( ) show (capability) show ( ) show (systems,) show ( ) show (and) show ( ) show (distributed) show ( ) show (computing.) show  newline
+(##) show ( ) show (Papers) show  newline
+(1.) show ( ) show (Protection) show ( ) show (\(1971\)) show  newline
+(-) show ( ) show (Author:) show ( ) show (Butler) show ( ) show (Lampson) show  newline
+(-) show ( ) show (Topics:) show ( ) show (capability,) show ( ) show (protection,) show ( ) show (access) show ( ) show (control) show  newline
+(-) show ( ) show (Source:) show ( ) show (ACM) show ( ) show (Operating) show ( ) show (Systems) show ( ) show (Review) show  newline
+(2.) show ( ) show (Hints) show ( ) show (for) show ( ) show (Computer) show ( ) show (System) show ( ) show (Design) show ( ) show (\(1983\)) show  newline
+(-) show ( ) show (Author:) show ( ) show (Butler) show ( ) show (Lampson) show  newline
+(-) show ( ) show (Topics:) show ( ) show (systems) show ( ) show (design,) show ( ) show (engineering) show  newline
+(-) show ( ) show (Source:) show ( ) show (ACM) show ( ) show (Operating) show ( ) show (Systems) show ( ) show (Review) show  newline
+ newline
+ newline
+(Parser) show ( ) show (Output) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(parse-index-file) show ( ) show ("lampson/INDEX.md"\)) show  newline
+(;;) show ( ) show (=>) show  newline
+(\(collection) show  newline
+(\(name) show ( ) show ("lampson"\)) show  newline
+(\(description) show ( ) show ("Butler) show ( ) show (Lampson's) show ( ) show (papers..."\)) show  newline
+(\(documents) show  newline
+(\(\(title) show ( ) show ("Protection"\)) show  newline
+(\(authors) show ( ) show ("Butler) show ( ) show (Lampson"\)) show  newline
+(\(year) show ( ) show (1971\)) show  newline
+(\(topics) show ( ) show ("capability") show ( ) show ("protection") show ( ) show ("access) show ( ) show (control"\)\)) show  newline
+(...\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(EXPORT) show ( ) show (FORMATS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(S-expression) show ( ) show (Export) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(export-to-sexp) show ( ) show (library) show ( ) show ("catalog.sexp"\)) show  newline
+ newline
+(Output:) show  newline
+ newline
+ newline
+(\(library) show  newline
+(\(metadata) show  newline
+(\(document-count) show ( ) show (312\)) show  newline
+(\(collection-count) show ( ) show (18\)) show  newline
+(\(generated) show ( ) show ("2026-01-06"\)\)) show  newline
+(\(collections) show  newline
+(\(collection) show  newline
+(\(name) show ( ) show ("lampson"\)) show  newline
+(\(documents) show  newline
+(\(document) show  newline
+(\(title) show ( ) show ("Protection"\)) show  newline
+(\(authors) show ( ) show (\("Butler) show ( ) show (Lampson"\)\)) show  newline
+(\(year) show ( ) show (1971\)) show  newline
+(\(topics) show ( ) show (\("capability") show ( ) show ("protection"\)\)\)) show  newline
+(...\)\)) show  newline
+(...\)\)) show  newline
+ newline
+ newline
+(HTML) show ( ) show (Export) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(export-to-html) show ( ) show (library) show ( ) show ("catalog.html"\)) show  newline
+ newline
+(Generates) show ( ) show (browsable) show ( ) show (web) show ( ) show (catalog) show ( ) show (with:) show ( ) show (-) show ( ) show (Alphabetical) show ( ) show (author) show ( ) show (index) show ( ) show (-) show  newline
+(Topic) show ( ) show (tag) show ( ) show (cloud) show ( ) show (-) show ( ) show (Year) show ( ) show (timeline) show ( ) show (-) show ( ) show (Search) show ( ) show (functionality) show  newline
+ newline
+ newline
+(Markdown) show ( ) show (Export) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(export-to-markdown) show ( ) show (library) show ( ) show ("catalog.md"\)) show  newline
+ newline
+(Documentation-friendly) show ( ) show (format) show ( ) show (for) show ( ) show (README) show ( ) show (files.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DESIGN) show ( ) show (PHILOSOPHY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Super) show ( ) show (Nice) show ( ) show (and) show ( ) show (Helpful) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Natural) show ( ) show (language) show ( ) show (understanding) show  newline
+(*) show ( ) show (Fuzzy) show ( ) show (matching) show ( ) show (catches) show ( ) show (typos) show  newline
+(*) show ( ) show (Suggestions) show ( ) show (for) show ( ) show (empty) show ( ) show (results) show  newline
+(*) show ( ) show (Encouraging) show ( ) show (prompts) show  newline
+ newline
+(Research) show ( ) show (discovery) show ( ) show (should) show ( ) show (lower) show ( ) show (barriers,) show ( ) show (not) show ( ) show (raise) show ( ) show (them;) show ( ) show (the) show ( ) show (interface) show  newline
+(should) show ( ) show (anticipate) show ( ) show (what) show ( ) show (users) show ( ) show (need) show ( ) show (rather) show ( ) show (than) show ( ) show (demanding) show ( ) show (precise) show ( ) show (query) show  newline
+(syntax.) show  newline
+ newline
+ newline
+(Beautiful) show ( ) show (Output) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Unicode) show
+margin 72 add ypos moveto (box) show
+margin 96 add ypos moveto (drawing) show
+margin 144 add ypos moveto (\() show
+% box char 2554 at col 25
+newpath margin 153 add ypos moveto margin 153 add 3 add ypos lineto stroke
+newpath margin 153 add ypos moveto margin 153 add ypos 6 sub lineto stroke
+% box char 2550 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2550 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2550 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2557 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add ypos lineto stroke
+newpath margin 177 add ypos moveto margin 177 add ypos 6 sub lineto stroke
+margin 180 add ypos moveto (\)) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Emoji) show
+margin 60 add ypos moveto (visual) show
+margin 102 add ypos moveto (markers) show
+margin 150 add ypos moveto (\() show
+margin 168 add ypos moveto () show
+margin 180 add ypos moveto () show
+margin 192 add ypos moveto (\)) show
+grestore
+newline
+(*) show ( ) show (Consistent) show ( ) show (formatting) show  newline
+(*) show ( ) show (Progressive) show ( ) show (disclosure) show  newline
+ newline
+ newline
+(Hone) show ( ) show (In) show ( ) show (On) show ( ) show (What) show ( ) show (You) show ( ) show (Need) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Multi-strategy) show ( ) show (search) show  newline
+(*) show ( ) show (Progressive) show ( ) show (filtering) show  newline
+(*) show ( ) show (Cross-references) show  newline
+(*) show ( ) show (Related) show ( ) show (paper) show ( ) show (discovery) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(No) show ( ) show (Execution) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (directory) show ( ) show (system) show ( ) show (is) show ( ) show (read-only:) show ( ) show (-) show ( ) show (Parses) show ( ) show (INDEX.md) show ( ) show (files) show ( ) show (\(trusted\)) show ( ) show (-) show  newline
+(No) show ( ) show (code) show ( ) show (execution) show ( ) show (-) show ( ) show (No) show ( ) show (network) show ( ) show (access) show ( ) show (-) show ( ) show (No) show ( ) show (file) show ( ) show (modification) show  newline
+ newline
+ newline
+(Path) show ( ) show (Traversal) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(File) show ( ) show (paths) show ( ) show (validated:) show ( ) show (-) show ( ) show (Must) show ( ) show (be) show ( ) show (within) show ( ) show (library) show ( ) show (root) show ( ) show (-) show ( ) show (No) show ( ) show (..) show ( ) show (components) show ( ) show (-) show  newline
+(Normalized) show ( ) show (before) show ( ) show (use) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show ( ) show (NOTES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Dependencies) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (srfi-1) show  newline
+(*) show ( ) show (List) show ( ) show (utilities) show ( ) show (-) show ( ) show (srfi-13) show  newline
+(*) show ( ) show (String) show ( ) show (utilities) show ( ) show (-) show ( ) show (srfi-69) show  newline
+(*) show ( ) show (Hash) show ( ) show (tables) show ( ) show (-) show ( ) show (chicken) show ( ) show (file) show  newline
+(*) show ( ) show (Directory) show ( ) show (scanning) show  newline
+ newline
+ newline
+(Performance) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Index) show ( ) show (building:) show ( ) show (O\(N\)) show ( ) show (documents) show  newline
+(*) show ( ) show (Query:) show ( ) show (O\(1\)) show ( ) show (hash) show ( ) show (lookup) show ( ) show (+) show ( ) show (O\(M\)) show ( ) show (result) show ( ) show (filtering) show  newline
+(*) show ( ) show (Fuzzy) show ( ) show (match:) show ( ) show (O\(K\)) show ( ) show (candidates) show  newline
+ newline
+ newline
+(Extensibility) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+(Future) show ( ) show (enhancements:) show ( ) show (-) show ( ) show (Full-text) show ( ) show (search) show ( ) show (\(PostScript/Text) show ( ) show (extraction\)) show ( ) show (-) show  newline
+(Citation) show ( ) show (graph) show ( ) show (visualization) show ( ) show (-) show ( ) show (BibTeX) show ( ) show (export) show ( ) show (-) show ( ) show (Web) show ( ) show (API) show ( ) show (server) show ( ) show (-) show ( ) show (Semantic) show  newline
+(search) show ( ) show (with) show ( ) show (embeddings) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Dublin) show ( ) show (Core) show ( ) show (Metadata) show ( ) show (Initiative) show  newline
+(*) show ( ) show (Library) show ( ) show (of) show ( ) show (Congress) show ( ) show (Subject) show ( ) show (Headings) show  newline
+(*) show ( ) show (BibTeX) show ( ) show (format) show ( ) show (specification) show  newline
+(*) show ( ) show (Unicode) show ( ) show (Standard) show ( ) show (for) show ( ) show (box) show ( ) show (drawing) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-06) show  newline
+(*) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

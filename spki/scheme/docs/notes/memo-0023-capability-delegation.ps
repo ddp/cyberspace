@@ -15,727 +15,853 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0023: Capability Delegation Patterns) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies capability delegation patterns for the Library of) show newline
-(Cyberspace: how principals grant, attenuate, and revoke capabilities) show newline
-(using SPKI certificates, content-addressed objects, and the soup) show newline
-(metadata layer. Capabilities flow through delegation chains with) show newline
-(monotonically decreasing authority.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Authorization in distributed systems is hard:) show newline
-() show newline
-(- ACLs don't scale - Central lists become bottlenecks - Identity is) show newline
-(fragile - Names change, keys rotate - Ambient authority is dangerous -) show newline
-("Run as root" is not a security model - Revocation is an afterthought -) show newline
-(Usually bolted on badly) show newline
-() show newline
-(Simple Distributed Security Infrastructure/Simple Public Key) show newline
-(Infrastructure \(SDSI/SPKI\) solved this decades ago:) show newline
-() show newline
-(  * Capabilities, not identities) show newline
-(  * What you can do, not who you are) show newline
-(  * Local names) show newline
-(  * No global namespace required) show newline
-(  * Delegation chains) show newline
-(  * Authority flows from source to delegate) show newline
-(  * Threshold signatures) show newline
-(  * M-of-N for critical operations) show newline
-() show newline
-(These principles eliminate the central authority problem: authorization) show newline
-(decisions are local, verifiable, and require no trusted third party.) show newline
-() show newline
-(The Library integrates SPKI with content-addressed storage, creating) show newline
-(capabilities that are themselves content-addressed and introspectable.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CAPABILITY MODEL) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Principals) show newline
-(----------) show newline
-() show newline
-(A principal is anything that can hold authority:) show newline
-() show newline
-() show newline
-(    ;; Key principal - most common) show newline
-(    \(make-principal) show newline
-(      \(type key\)) show newline
-(      \(algorithm ed25519\)) show newline
-(      \(public-key #${...32 bytes...}\)\)) show newline
-(    ;; Hash principal - content-addressed object) show newline
-(    \(make-principal) show newline
-(      \(type hash\)) show newline
-(      \(algorithm sha256\)) show newline
-(      \(digest #${...32 bytes...}\)\)) show newline
-(    ;; Threshold principal - M-of-N group) show newline
-(    \(make-principal) show newline
-(      \(type threshold\)) show newline
-(      \(threshold 3\)) show newline
-(      \(members \(key1 key2 key3 key4 key5\)\)\)) show newline
-(    ;; Name principal - local binding) show newline
-(    \(make-principal) show newline
-(      \(type name\)) show newline
-(      \(issuer parent-key\)) show newline
-(      \(name "alice"\)\)) show newline
-() show newline
-() show newline
-(Capabilities) show newline
-(------------) show newline
-() show newline
-(A capability is a transferable right to perform an action:) show newline
-() show newline
-() show newline
-(    \(capability) show newline
-(      \(action read\)) show newline
-(      \(object \(hash sha256 "content-hash..."\)\)\)) show newline
-(    \(capability) show newline
-(      \(action write\)) show newline
-(      \(object \(tree sha256 "subtree-root..."\)\)\)) show newline
-(    \(capability) show newline
-(      \(action sign\)) show newline
-(      \(object \(tag "releases/*"\)\)\)) show newline
-(    \(capability) show newline
-(      \(action delegate\)) show newline
-(      \(object \(capability ...\)\)\)  ; Meta-capability) show newline
-() show newline
-() show newline
-(Certificates) show newline
-(------------) show newline
-() show newline
-(SPKI certificates bind capabilities to principals:) show newline
-() show newline
-() show newline
-(    \(spki-cert) show newline
-(      \(issuer vault-master-key\)) show newline
-(      \(subject alice-key\)) show newline
-(      \(capability) show newline
-(        \(action read\)) show newline
-(        \(object \(tree sha256 "docs-root..."\)\)\)) show newline
-(      \(validity) show newline
-(        \(not-before "2026-01-01"\)) show newline
-(        \(not-after "2027-01-01"\)\)) show newline
-(      \(delegation #t\)\)  ; Alice can re-delegate) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DELEGATION CHAINS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Chain Structure) show newline
-(---------------) show newline
-() show newline
-(Authority flows through certificate chains:) show newline
-() show newline
-() show newline
-(    Master Key) show newline
-(        │) show newline
-(        ▼ \(cert: full access to vault\)) show newline
-(    Admin Key) show newline
-(        │) show newline
-(        ▼ \(cert: read/write to docs/, can delegate\)) show newline
-(    Developer Key) show newline
-(        │) show newline
-(        ▼ \(cert: read-only to docs/public/, cannot delegate\)) show newline
-(    Contractor Key) show newline
-() show newline
-() show newline
-(Chain Validation) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    \(define \(validate-chain chain target-capability\)) show newline
-(      "Validate delegation chain grants capability") show newline
-(      \(let loop \(\(certs chain\)) show newline
-(                 \(current-authority 'unlimited\)\)) show newline
-(        \(if \(null? certs\)) show newline
-(            \(capability-subset? target-capability current-authority\)) show newline
-(            \(let \(\(cert \(car certs\)\)\)) show newline
-(              \(and \(verify-signature cert\)) show newline
-(                   \(valid-time? cert\)) show newline
-(                   \(not-revoked? cert\)) show newline
-(                   \(capability-subset? \(cert-capability cert\) current-authority\)) show newline
-(                   \(if \(cert-delegation? cert\)) show newline
-(                       \(loop \(cdr certs\) \(cert-capability cert\)\)) show newline
-(                       \(and \(null? \(cdr certs\)\)) show newline
-(                            \(capability-subset? target-capability) show newline
-(                                               \(cert-capability cert\)\)\)\)\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Monotonic Attenuation) show newline
-(---------------------) show newline
-() show newline
-(Delegated capabilities can only decrease:) show newline
-() show newline
-() show newline
-(    ;; Alice has read/write to entire vault) show newline
-(    \(spki-cert) show newline
-(      \(issuer master\)) show newline
-(      \(subject alice\)) show newline
-(      \(capability \(action \(read write\)\) \(object vault-root\)\)) show newline
-(      \(delegation #t\)\)) show newline
-(    ;; Alice delegates read-only to Bob \(valid - attenuation\)) show newline
-(    \(spki-cert) show newline
-(      \(issuer alice\)) show newline
-(      \(subject bob\)) show newline
-(      \(capability \(action read\) \(object vault-root\)\)) show newline
-(      \(delegation #t\)\)) show newline
-(    ;; Bob tries to delegate write to Carol \(INVALID - amplification\)) show newline
-(    \(spki-cert) show newline
-(      \(issuer bob\)) show newline
-(      \(subject carol\)) show newline
-(      \(capability \(action write\) \(object vault-root\)\)  ; REJECTED) show newline
-(      \(delegation #f\)\)) show newline
-(    ;; Bob delegates read to subtree only \(valid - further attenuation\)) show newline
-(    \(spki-cert) show newline
-(      \(issuer bob\)) show newline
-(      \(subject carol\)) show newline
-(      \(capability \(action read\) \(object docs-subtree\)\)) show newline
-(      \(delegation #f\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DELEGATION PATTERNS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Pattern 1: Direct Delegation) show newline
-(----------------------------) show newline
-() show newline
-(Simplest form - one hop:) show newline
-() show newline
-() show newline
-(    \(define \(delegate-direct issuer-key subject-key capability) show newline
-(                             #!key validity can-delegate\)) show newline
-(      \(sign-cert issuer-key) show newline
-(        `\(spki-cert) show newline
-(          \(issuer ,\(key->principal issuer-key\)\)) show newline
-(          \(subject ,\(key->principal subject-key\)\)) show newline
-(          \(capability ,capability\)) show newline
-(          \(validity ,validity\)) show newline
-(          \(delegation ,can-delegate\)\)\)\)) show newline
-() show newline
-() show newline
-(Pattern 2: Role-Based Delegation) show newline
-(--------------------------------) show newline
-() show newline
-(Delegate to roles, bind keys to roles:) show newline
-() show newline
-() show newline
-(    ;; Define role) show newline
-(    \(spki-cert) show newline
-(      \(issuer vault-admin\)) show newline
-(      \(subject \(name vault-admin "reviewer"\)\)) show newline
-(      \(capability \(action read\) \(object \(tag "pending/*"\)\)\)) show newline
-(      \(delegation #f\)\)) show newline
-(    ;; Bind key to role) show newline
-(    \(spki-cert) show newline
-(      \(issuer vault-admin\)) show newline
-(      \(subject alice-key\)) show newline
-(      \(capability \(name vault-admin "reviewer"\)\)) show newline
-(      \(validity \(not-after "2026-06-01"\)\)\)) show newline
-(    ;; Alice now has reviewer capability via role binding) show newline
-() show newline
-() show newline
-(Pattern 3: Threshold Delegation) show newline
-(-------------------------------) show newline
-() show newline
-(Require multiple parties:) show newline
-() show newline
-() show newline
-(    ;; Critical operation requires 3-of-5) show newline
-(    \(spki-cert) show newline
-(      \(issuer root-key\)) show newline
-(      \(subject \(threshold 3 \(key1 key2 key3 key4 key5\)\)\)) show newline
-(      \(capability \(action delete\) \(object vault-root\)\)) show newline
-(      \(delegation #f\)\)) show newline
-(    ;; Exercise requires gathering signatures) show newline
-(    \(define \(threshold-exercise capability signers\)) show newline
-(      \(let \(\(signatures \(map \(lambda \(key\) \(sign key capability\)\) signers\)\)\)) show newline
-(        \(if \(>= \(length signatures\) 3\)) show newline
-(            \(execute-capability capability signatures\)) show newline
-(            \(error "Insufficient signatures"\)\)\)\)) show newline
-() show newline
-() show newline
-(Pattern 4: Time-Bounded Delegation) show newline
-(----------------------------------) show newline
-() show newline
-(Temporary access:) show newline
-() show newline
-() show newline
-(    ;; Conference access - 3 days only) show newline
-(    \(spki-cert) show newline
-(      \(issuer organizer-key\)) show newline
-(      \(subject attendee-key\)) show newline
-(      \(capability \(action read\) \(object conference-materials\)\)) show newline
-(      \(validity) show newline
-(        \(not-before "2026-03-15T09:00:00Z"\)) show newline
-(        \(not-after "2026-03-17T18:00:00Z"\)\)) show newline
-(      \(delegation #f\)\)) show newline
-() show newline
-() show newline
-(Pattern 5: Conditional Delegation) show newline
-(---------------------------------) show newline
-() show newline
-(Capability with restrictions:) show newline
-() show newline
-() show newline
-(    ;; Can read, but only from specific IP range) show newline
-(    \(spki-cert) show newline
-(      \(issuer admin-key\)) show newline
-(      \(subject service-key\)) show newline
-(      \(capability \(action read\) \(object api-data\)\)) show newline
-(      \(condition) show newline
-(        \(source-ip "10.0.0.0/8"\)\)) show newline
-(      \(delegation #f\)\)) show newline
-(    ;; Can write, but only objects under 1MB) show newline
-(    \(spki-cert) show newline
-(      \(issuer admin-key\)) show newline
-(      \(subject uploader-key\)) show newline
-(      \(capability \(action write\) \(object uploads\)\)) show newline
-(      \(condition) show newline
-(        \(max-size 1048576\)\)) show newline
-(      \(delegation #f\)\)) show newline
-() show newline
-() show newline
-(Pattern 6: Proxy Delegation) show newline
-(---------------------------) show newline
-() show newline
-(Delegate through intermediary:) show newline
-() show newline
-() show newline
-(    ;; Alice delegates to proxy service) show newline
-(    \(spki-cert) show newline
-(      \(issuer alice-key\)) show newline
-(      \(subject proxy-key\)) show newline
-(      \(capability \(action read\) \(object alice-files\)\)) show newline
-(      \(delegation #t\)) show newline
-(      \(condition \(proxy-for alice-key\)\)\)) show newline
-(    ;; Proxy can act on Alice's behalf) show newline
-(    ;; but chain shows Alice as original authority) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CONTENT-ADDRESSED CAPABILITIES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Hash as Capability) show newline
-(------------------) show newline
-() show newline
-(Knowledge of a content hash is itself a capability \(Memo-020\):) show newline
-() show newline
-() show newline
-(    ;; Possessing this hash grants read access) show newline
-(    \(define secret-doc-hash "sha256:7f83b1657ff1fc..."\)) show newline
-(    ;; The hash is unguessable \(256 bits of entropy\)) show newline
-(    ;; Sharing the hash = sharing the capability) show newline
-(    \(define \(share-capability recipient hash\)) show newline
-(      \(encrypted-send recipient hash\)\)) show newline
-() show newline
-() show newline
-(Capability Certificates for Hashes) show newline
-(----------------------------------) show newline
-() show newline
-(Formalize hash-based access:) show newline
-() show newline
-() show newline
-(    \(spki-cert) show newline
-(      \(issuer vault-key\)) show newline
-(      \(subject reader-key\)) show newline
-(      \(capability) show newline
-(        \(action read\)) show newline
-(        \(object \(hash sha256 "specific-doc..."\)\)\)) show newline
-(      \(validity \(not-after "2027-01-01"\)\)\)) show newline
-() show newline
-() show newline
-(Tree Capabilities) show newline
-(-----------------) show newline
-() show newline
-(Grant access to Merkle subtree:) show newline
-() show newline
-() show newline
-(    \(spki-cert) show newline
-(      \(issuer vault-key\)) show newline
-(      \(subject team-key\)) show newline
-(      \(capability) show newline
-(        \(action read\)) show newline
-(        \(object \(tree sha256 "project-root..."\)\)) show newline
-(        \(propagate #t\)\)  ; Includes all referenced objects) show newline
-(      \(delegation #t\)\)) show newline
-() show newline
-() show newline
-(Sealed Capabilities) show newline
-(-------------------) show newline
-() show newline
-(Encrypt capability for specific recipient:) show newline
-() show newline
-() show newline
-(    \(define \(seal-capability cap recipient-pubkey\)) show newline
-(      "Encrypt capability so only recipient can use it") show newline
-(      \(let \(\(serialized \(serialize cap\)\)) show newline
-(             \(encrypted \(age-encrypt serialized recipient-pubkey\)\)\)) show newline
-(        \(cas-put encrypted\)\)\)) show newline
-(    \(define \(unseal-capability sealed-hash identity\)) show newline
-(      "Decrypt and exercise capability") show newline
-(      \(let \(\(encrypted \(cas-get sealed-hash\)\)) show newline
-(             \(decrypted \(age-decrypt encrypted identity\)\)) show newline
-(             \(cap \(deserialize decrypted\)\)\)) show newline
-(        cap\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REVOCATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Revocation Lists) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    \(spki-crl) show newline
-(      \(issuer vault-admin\)) show newline
-(      \(revoked) show newline
-(        \(\(cert-hash "sha256:revoked1..."\)) show newline
-(         \(reason key-compromise\)) show newline
-(         \(revoked-at 1767700000\)\)) show newline
-(        \(\(cert-hash "sha256:revoked2..."\)) show newline
-(         \(reason superseded\)) show newline
-(         \(revoked-at 1767700100\)\)\)\)) show newline
-() show newline
-() show newline
-(Online Revocation Check) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(    \(define \(check-revocation cert\)) show newline
-(      "Check if certificate is revoked") show newline
-(      \(let* \(\(cert-hash \(sha256 \(serialize cert\)\)\)) show newline
-(             \(issuer \(cert-issuer cert\)\)) show newline
-(             \(crl \(fetch-crl issuer\)\)\)) show newline
-(        \(not \(member cert-hash \(crl-revoked-hashes crl\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Tombstone Revocation) show newline
-(--------------------) show newline
-() show newline
-(Using CAS tombstones \(Memo-020\):) show newline
-() show newline
-() show newline
-(    \(define \(revoke-capability-tombstone cert-hash reason\)) show newline
-(      "Revoke by tombstoning the certificate") show newline
-(      \(cas-tombstone cert-hash) show newline
-(        reason: reason) show newline
-(        actor: \(current-principal\)\)\)) show newline
-() show newline
-() show newline
-(Short-Lived Certificates) show newline
-(------------------------) show newline
-() show newline
-(Avoid revocation by using short validity:) show newline
-() show newline
-() show newline
-(    ;; 1-hour certificate, no revocation needed) show newline
-(    \(spki-cert) show newline
-(      \(issuer service-key\)) show newline
-(      \(subject session-key\)) show newline
-(      \(capability \(action api-access\)\)) show newline
-(      \(validity) show newline
-(        \(not-before ,\(current-time\)\)) show newline
-(        \(not-after ,\(+ \(current-time\) 3600\)\)\)) show newline
-(      \(delegation #f\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SOUP INTEGRATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Certificates in the Soup) show newline
-(------------------------) show newline
-() show newline
-(All certificates are soup objects:) show newline
-() show newline
-() show newline
-(    \(soup-object) show newline
-(      \(name "cert/alice-read-docs"\)) show newline
-(      \(type certificate\)) show newline
-(      \(size "412B"\)) show newline
-(      \(crypto \(ed25519 sha256 "cert-hash..."\)\)) show newline
-(      \(issuer "vault-admin"\)) show newline
-(      \(subject "alice"\)) show newline
-(      \(capability "read docs/*"\)) show newline
-(      \(expires "2027-01-01"\)\)) show newline
-() show newline
-() show newline
-(Querying Capabilities) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(    ;; Find all certificates for a subject) show newline
-(    \(soup-query type: 'certificate subject: alice-key\)) show newline
-(    ;; Find all certificates granting write access) show newline
-(    \(soup-query type: 'certificate capability: 'write\)) show newline
-(    ;; Find expiring certificates) show newline
-(    \(soup-query type: 'certificate) show newline
-(                expires-before: \(+ \(current-time\) \(* 7 24 3600\)\)\)) show newline
-(    ;; Find certificates from specific issuer) show newline
-(    \(soup-query type: 'certificate issuer: vault-admin\)) show newline
-() show newline
-() show newline
-(Capability Introspection) show newline
-(------------------------) show newline
-() show newline
-() show newline
-(    ;; What can Alice do?) show newline
-(    \(define \(principal-capabilities principal\)) show newline
-(      \(let \(\(certs \(soup-query type: 'certificate subject: principal\)\)\)) show newline
-(        \(map cert-capability certs\)\)\)) show newline
-(    ;; Who can read this object?) show newline
-(    \(define \(object-readers hash\)) show newline
-(      \(let \(\(certs \(soup-query type: 'certificate) show newline
-(                               capability: `\(read ,hash\)\)\)\)) show newline
-(        \(map cert-subject certs\)\)\)) show newline
-(    ;; Visualize delegation graph) show newline
-(    \(define \(delegation-graph root-principal\)) show newline
-(      \(let \(\(certs \(soup-query type: 'certificate issuer: root-principal\)\)\)) show newline
-(        \(map \(lambda \(cert\)) show newline
-(               \(cons \(cert-subject cert\)) show newline
-(                     \(delegation-graph \(cert-subject cert\)\)\)\)) show newline
-(             certs\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(AUTHORIZATION DECISIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Simple Check) show newline
-(------------) show newline
-() show newline
-() show newline
-(    \(define \(authorized? principal action object\)) show newline
-(      "Check if principal can perform action on object") show newline
-(      \(let \(\(chains \(find-authorization-chains principal action object\)\)\)) show newline
-(        \(any valid-chain? chains\)\)\)) show newline
-() show newline
-() show newline
-(Chain Discovery) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(define \(find-authorization-chains principal action object\)) show newline
-(      "Find all certificate chains granting capability") show newline
-(      \(let \(\(target-cap \(capability action object\)\)\)) show newline
-(        \(let search \(\(current principal\) \(chain '\(\)\)\)) show newline
-(          \(let \(\(certs \(soup-query type: 'certificate subject: current\)\)\)) show newline
-(            \(append-map) show newline
-(              \(lambda \(cert\)) show newline
-(                \(if \(capability-grants? \(cert-capability cert\) target-cap\)) show newline
-(                    \(list \(reverse \(cons cert chain\)\)\)) show newline
-(                    \(if \(cert-delegation? cert\)) show newline
-(                        \(search \(cert-issuer cert\) \(cons cert chain\)\)) show newline
-(                        '\(\)\)\)\)) show newline
-(              certs\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Cached Authorization) show newline
-(--------------------) show newline
-() show newline
-() show newline
-(    \(define auth-cache \(make-lru-cache 10000\)\)) show newline
-(    \(define \(authorized?/cached principal action object\)) show newline
-(      \(let \(\(key \(list principal action object\)\)\)) show newline
-(        \(or \(lru-get auth-cache key\)) show newline
-(            \(let \(\(result \(authorized? principal action object\)\)\)) show newline
-(              \(lru-put! auth-cache key result\)) show newline
-(              result\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DELEGATION CEREMONIES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Key Ceremony) show newline
-(------------) show newline
-() show newline
-(For critical delegations:) show newline
-() show newline
-() show newline
-(    \(define \(key-ceremony capability threshold witnesses\)) show newline
-(      "Conduct witnessed delegation ceremony") show newline
-(      \(let* \(\(ceremony-id \(generate-ceremony-id\)\)) show newline
-(             \(ceremony-record) show newline
-(              \(ceremony) show newline
-(                \(id ,ceremony-id\)) show newline
-(                \(capability ,capability\)) show newline
-(                \(threshold ,threshold\)) show newline
-(                \(witnesses ,witnesses\)) show newline
-(                \(started-at ,\(current-time\)\)\)\)\)) show newline
-(        ;; Record ceremony start) show newline
-(        \(audit-append action: \(ceremony-start ,ceremony-id\)\)) show newline
-(        ;; Gather witness signatures) show newline
-(        \(let \(\(signatures \(gather-witness-signatures ceremony-record witnesses\)\)\)) show newline
-(          \(if \(>= \(length signatures\) threshold\)) show newline
-(              \(let \(\(cert \(finalize-ceremony ceremony-record signatures\)\)\)) show newline
-(                \(audit-append action: \(ceremony-complete ,ceremony-id\)\)) show newline
-(                cert\)) show newline
-(              \(begin) show newline
-(                \(audit-append action: \(ceremony-failed ,ceremony-id\)\)) show newline
-(                \(error "Insufficient witnesses"\)\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Emergency Revocation) show newline
-(--------------------) show newline
-() show newline
-() show newline
-(    \(define \(emergency-revoke cert-hash reason\)) show newline
-(      "Emergency revocation with audit trail") show newline
-(      \(let \(\(revocation) show newline
-(             \(emergency-revocation) show newline
-(               \(cert ,cert-hash\)) show newline
-(               \(reason ,reason\)) show newline
-(               \(revoked-by ,\(current-principal\)\)) show newline
-(               \(revoked-at ,\(current-time\)\)\)\)\)) show newline
-(        ;; Immediate tombstone) show newline
-(        \(cas-tombstone cert-hash reason: reason\)) show newline
-(        ;; Add to CRL) show newline
-(        \(crl-append cert-hash reason\)) show newline
-(        ;; Audit with high priority) show newline
-(        \(audit-append) show newline
-(          action: \(emergency-revoke ,cert-hash\)) show newline
-(          motivation: reason) show newline
-(          priority: 'critical\)) show newline
-(        ;; Notify affected parties) show newline
-(        \(notify-revocation cert-hash\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Capability Leakage) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    ;; Capabilities can leak through:) show newline
-(    ;; 1. Logging - don't log capability tokens) show newline
-(    ;; 2. URLs - don't put capabilities in query strings) show newline
-(    ;; 3. Errors - don't include capabilities in error messages) show newline
-(    \(define \(safe-log message capability\)) show newline
-(      \(log \(string-append message " [capability:REDACTED]"\)\)\)) show newline
-() show newline
-() show newline
-(Confused Deputy) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    ;; Always verify capability matches intended action) show newline
-(    \(define \(execute-action action object capability\)) show newline
-(      \(unless \(capability-grants? capability action object\)) show newline
-(        \(error "Capability does not grant this action"\)\)) show newline
-(      \(perform-action action object\)\)) show newline
-() show newline
-() show newline
-(Time-of-Check vs Time-of-Use) show newline
-(----------------------------) show newline
-() show newline
-() show newline
-(    ;; Validate immediately before use, not before) show newline
-(    \(define \(safe-execute capability action\)) show newline
-(      \(let \(\(validated \(validate-capability capability\)\)\)) show newline
-(        ;; No window between check and use) show newline
-(        \(atomically) show newline
-(          \(unless validated) show newline
-(            \(error "Invalid capability"\)\)) show newline
-(          \(perform-action action\)\)\)\)) show newline
-() show newline
-() show newline
-(Delegation Depth Limits) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(    ;; Prevent infinite delegation chains) show newline
-(    \(define max-delegation-depth 10\)) show newline
-(    \(define \(validate-chain-depth chain\)) show newline
-(      \(when \(> \(length chain\) max-delegation-depth\)) show newline
-(        \(error "Delegation chain too deep"\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION NOTES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Certificate Storage) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    ;; Certificates stored in CAS) show newline
-(    \(define \(store-cert cert\)) show newline
-(      \(let \(\(signed \(sign-cert cert\)\)\)) show newline
-(        \(cas-put \(serialize signed\)\)\)\)) show newline
-(    ;; Indexed by issuer and subject for fast lookup) show newline
-(    \(define cert-by-issuer \(make-hash-table\)\)) show newline
-(    \(define cert-by-subject \(make-hash-table\)\)) show newline
-() show newline
-() show newline
-(Performance) show newline
-(-----------) show newline
-() show newline
-(  * Certificate validation is expensive - cache results) show newline
-(  * Chain discovery can be slow - index by issuer/subject) show newline
-(  * Revocation checks add latency - use short-lived certs when possible) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * SDSI/SPKI 2.0 - RFC 2693 \(preserved\)) show newline
-(  * A Logic of Authentication - Burrows, Abadi, Needham \(preserved\)) show newline
-(  * Capability Myths Demolished - Miller, Yee, Shapiro \(preserved\)) show newline
-(  * Memo-004: SPKI Authorization) show newline
-(  * Memo-020: Content-Addressed Storage) show newline
-(  * Memo-008: Threshold Signature Governance) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-07) show newline
-(  * Initial draft) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0023:) show ( ) show (Capability) show ( ) show (Delegation) show ( ) show (Patterns) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (capability) show ( ) show (delegation) show ( ) show (patterns) show ( ) show (for) show ( ) show (the) show ( ) show (Library) show ( ) show (of) show  newline
+(Cyberspace:) show ( ) show (how) show ( ) show (principals) show ( ) show (grant,) show ( ) show (attenuate,) show ( ) show (and) show ( ) show (revoke) show ( ) show (capabilities) show  newline
+(using) show ( ) show (SPKI) show ( ) show (certificates,) show ( ) show (content-addressed) show ( ) show (objects,) show ( ) show (and) show ( ) show (the) show ( ) show (soup) show  newline
+(metadata) show ( ) show (layer.) show ( ) show (Capabilities) show ( ) show (flow) show ( ) show (through) show ( ) show (delegation) show ( ) show (chains) show ( ) show (with) show  newline
+(monotonically) show ( ) show (decreasing) show ( ) show (authority.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Authorization) show ( ) show (in) show ( ) show (distributed) show ( ) show (systems) show ( ) show (is) show ( ) show (hard:) show  newline
+ newline
+(-) show ( ) show (ACLs) show ( ) show (don't) show ( ) show (scale) show ( ) show (-) show ( ) show (Central) show ( ) show (lists) show ( ) show (become) show ( ) show (bottlenecks) show ( ) show (-) show ( ) show (Identity) show ( ) show (is) show  newline
+(fragile) show ( ) show (-) show ( ) show (Names) show ( ) show (change,) show ( ) show (keys) show ( ) show (rotate) show ( ) show (-) show ( ) show (Ambient) show ( ) show (authority) show ( ) show (is) show ( ) show (dangerous) show ( ) show (-) show  newline
+("Run) show ( ) show (as) show ( ) show (root") show ( ) show (is) show ( ) show (not) show ( ) show (a) show ( ) show (security) show ( ) show (model) show ( ) show (-) show ( ) show (Revocation) show ( ) show (is) show ( ) show (an) show ( ) show (afterthought) show ( ) show (-) show  newline
+(Usually) show ( ) show (bolted) show ( ) show (on) show ( ) show (badly) show  newline
+ newline
+(Simple) show ( ) show (Distributed) show ( ) show (Security) show ( ) show (Infrastructure/Simple) show ( ) show (Public) show ( ) show (Key) show  newline
+(Infrastructure) show ( ) show (\(SDSI/SPKI\)) show ( ) show (solved) show ( ) show (this) show ( ) show (decades) show ( ) show (ago:) show  newline
+ newline
+(*) show ( ) show (Capabilities,) show ( ) show (not) show ( ) show (identities) show  newline
+(*) show ( ) show (What) show ( ) show (you) show ( ) show (can) show ( ) show (do,) show ( ) show (not) show ( ) show (who) show ( ) show (you) show ( ) show (are) show  newline
+(*) show ( ) show (Local) show ( ) show (names) show  newline
+(*) show ( ) show (No) show ( ) show (global) show ( ) show (namespace) show ( ) show (required) show  newline
+(*) show ( ) show (Delegation) show ( ) show (chains) show  newline
+(*) show ( ) show (Authority) show ( ) show (flows) show ( ) show (from) show ( ) show (source) show ( ) show (to) show ( ) show (delegate) show  newline
+(*) show ( ) show (Threshold) show ( ) show (signatures) show  newline
+(*) show ( ) show (M-of-N) show ( ) show (for) show ( ) show (critical) show ( ) show (operations) show  newline
+ newline
+(These) show ( ) show (principles) show ( ) show (eliminate) show ( ) show (the) show ( ) show (central) show ( ) show (authority) show ( ) show (problem:) show ( ) show (authorization) show  newline
+(decisions) show ( ) show (are) show ( ) show (local,) show ( ) show (verifiable,) show ( ) show (and) show ( ) show (require) show ( ) show (no) show ( ) show (trusted) show ( ) show (third) show ( ) show (party.) show  newline
+ newline
+(The) show ( ) show (Library) show ( ) show (integrates) show ( ) show (SPKI) show ( ) show (with) show ( ) show (content-addressed) show ( ) show (storage,) show ( ) show (creating) show  newline
+(capabilities) show ( ) show (that) show ( ) show (are) show ( ) show (themselves) show ( ) show (content-addressed) show ( ) show (and) show ( ) show (introspectable.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CAPABILITY) show ( ) show (MODEL) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Principals) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+(A) show ( ) show (principal) show ( ) show (is) show ( ) show (anything) show ( ) show (that) show ( ) show (can) show ( ) show (hold) show ( ) show (authority:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Key) show ( ) show (principal) show ( ) show (-) show ( ) show (most) show ( ) show (common) show  newline
+(\(make-principal) show  newline
+(\(type) show ( ) show (key\)) show  newline
+(\(algorithm) show ( ) show (ed25519\)) show  newline
+(\(public-key) show ( ) show (#${...32) show ( ) show (bytes...}\)\)) show  newline
+(;;) show ( ) show (Hash) show ( ) show (principal) show ( ) show (-) show ( ) show (content-addressed) show ( ) show (object) show  newline
+(\(make-principal) show  newline
+(\(type) show ( ) show (hash\)) show  newline
+(\(algorithm) show ( ) show (sha256\)) show  newline
+(\(digest) show ( ) show (#${...32) show ( ) show (bytes...}\)\)) show  newline
+(;;) show ( ) show (Threshold) show ( ) show (principal) show ( ) show (-) show ( ) show (M-of-N) show ( ) show (group) show  newline
+(\(make-principal) show  newline
+(\(type) show ( ) show (threshold\)) show  newline
+(\(threshold) show ( ) show (3\)) show  newline
+(\(members) show ( ) show (\(key1) show ( ) show (key2) show ( ) show (key3) show ( ) show (key4) show ( ) show (key5\)\)\)) show  newline
+(;;) show ( ) show (Name) show ( ) show (principal) show ( ) show (-) show ( ) show (local) show ( ) show (binding) show  newline
+(\(make-principal) show  newline
+(\(type) show ( ) show (name\)) show  newline
+(\(issuer) show ( ) show (parent-key\)) show  newline
+(\(name) show ( ) show ("alice"\)\)) show  newline
+ newline
+ newline
+(Capabilities) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(A) show ( ) show (capability) show ( ) show (is) show ( ) show (a) show ( ) show (transferable) show ( ) show (right) show ( ) show (to) show ( ) show (perform) show ( ) show (an) show ( ) show (action:) show  newline
+ newline
+ newline
+(\(capability) show  newline
+(\(action) show ( ) show (read\)) show  newline
+(\(object) show ( ) show (\(hash) show ( ) show (sha256) show ( ) show ("content-hash..."\)\)\)) show  newline
+(\(capability) show  newline
+(\(action) show ( ) show (write\)) show  newline
+(\(object) show ( ) show (\(tree) show ( ) show (sha256) show ( ) show ("subtree-root..."\)\)\)) show  newline
+(\(capability) show  newline
+(\(action) show ( ) show (sign\)) show  newline
+(\(object) show ( ) show (\(tag) show ( ) show ("releases/*"\)\)\)) show  newline
+(\(capability) show  newline
+(\(action) show ( ) show (delegate\)) show  newline
+(\(object) show ( ) show (\(capability) show ( ) show (...\)\)\)) show ( ) show (;) show ( ) show (Meta-capability) show  newline
+ newline
+ newline
+(Certificates) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(SPKI) show ( ) show (certificates) show ( ) show (bind) show ( ) show (capabilities) show ( ) show (to) show ( ) show (principals:) show  newline
+ newline
+ newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (vault-master-key\)) show  newline
+(\(subject) show ( ) show (alice-key\)) show  newline
+(\(capability) show  newline
+(\(action) show ( ) show (read\)) show  newline
+(\(object) show ( ) show (\(tree) show ( ) show (sha256) show ( ) show ("docs-root..."\)\)\)) show  newline
+(\(validity) show  newline
+(\(not-before) show ( ) show ("2026-01-01"\)) show  newline
+(\(not-after) show ( ) show ("2027-01-01"\)\)) show  newline
+(\(delegation) show ( ) show (#t\)\)) show ( ) show (;) show ( ) show (Alice) show ( ) show (can) show ( ) show (re-delegate) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DELEGATION) show ( ) show (CHAINS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Chain) show ( ) show (Structure) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(Authority) show ( ) show (flows) show ( ) show (through) show ( ) show (certificate) show ( ) show (chains:) show  newline
+ newline
+ newline
+(Master) show ( ) show (Key) show  newline
+gsave
+% box char 2502 at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 25bc at col 8
+newpath margin 51 add 2 sub ypos 6 add moveto margin 51 add ypos 6 sub lineto margin 51 add 2 add ypos 6 add lineto closepath fill
+margin 60 add ypos moveto (\(cert:) show
+margin 102 add ypos moveto (full) show
+margin 132 add ypos moveto (access) show
+margin 174 add ypos moveto (to) show
+margin 192 add ypos moveto (vault\)) show
+grestore
+newline
+(Admin) show ( ) show (Key) show  newline
+gsave
+% box char 2502 at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 25bc at col 8
+newpath margin 51 add 2 sub ypos 6 add moveto margin 51 add ypos 6 sub lineto margin 51 add 2 add ypos 6 add lineto closepath fill
+margin 60 add ypos moveto (\(cert:) show
+margin 102 add ypos moveto (read/write) show
+margin 168 add ypos moveto (to) show
+margin 186 add ypos moveto (docs/,) show
+margin 228 add ypos moveto (can) show
+margin 252 add ypos moveto (delegate\)) show
+grestore
+newline
+(Developer) show ( ) show (Key) show  newline
+gsave
+% box char 2502 at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 25bc at col 8
+newpath margin 51 add 2 sub ypos 6 add moveto margin 51 add ypos 6 sub lineto margin 51 add 2 add ypos 6 add lineto closepath fill
+margin 60 add ypos moveto (\(cert:) show
+margin 102 add ypos moveto (read-only) show
+margin 162 add ypos moveto (to) show
+margin 180 add ypos moveto (docs/public/,) show
+margin 264 add ypos moveto (cannot) show
+margin 306 add ypos moveto (delegate\)) show
+grestore
+newline
+(Contractor) show ( ) show (Key) show  newline
+ newline
+ newline
+(Chain) show ( ) show (Validation) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(validate-chain) show ( ) show (chain) show ( ) show (target-capability\)) show  newline
+("Validate) show ( ) show (delegation) show ( ) show (chain) show ( ) show (grants) show ( ) show (capability") show  newline
+(\(let) show ( ) show (loop) show ( ) show (\(\(certs) show ( ) show (chain\)) show  newline
+(\(current-authority) show ( ) show ('unlimited\)\)) show  newline
+(\(if) show ( ) show (\(null?) show ( ) show (certs\)) show  newline
+(\(capability-subset?) show ( ) show (target-capability) show ( ) show (current-authority\)) show  newline
+(\(let) show ( ) show (\(\(cert) show ( ) show (\(car) show ( ) show (certs\)\)\)) show  newline
+(\(and) show ( ) show (\(verify-signature) show ( ) show (cert\)) show  newline
+(\(valid-time?) show ( ) show (cert\)) show  newline
+(\(not-revoked?) show ( ) show (cert\)) show  newline
+(\(capability-subset?) show ( ) show (\(cert-capability) show ( ) show (cert\)) show ( ) show (current-authority\)) show  newline
+(\(if) show ( ) show (\(cert-delegation?) show ( ) show (cert\)) show  newline
+(\(loop) show ( ) show (\(cdr) show ( ) show (certs\)) show ( ) show (\(cert-capability) show ( ) show (cert\)\)) show  newline
+(\(and) show ( ) show (\(null?) show ( ) show (\(cdr) show ( ) show (certs\)\)) show  newline
+(\(capability-subset?) show ( ) show (target-capability) show  newline
+(\(cert-capability) show ( ) show (cert\)\)\)\)\)\)\)\)\)) show  newline
+ newline
+ newline
+(Monotonic) show ( ) show (Attenuation) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(Delegated) show ( ) show (capabilities) show ( ) show (can) show ( ) show (only) show ( ) show (decrease:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Alice) show ( ) show (has) show ( ) show (read/write) show ( ) show (to) show ( ) show (entire) show ( ) show (vault) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (master\)) show  newline
+(\(subject) show ( ) show (alice\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (\(read) show ( ) show (write\)\)) show ( ) show (\(object) show ( ) show (vault-root\)\)) show  newline
+(\(delegation) show ( ) show (#t\)\)) show  newline
+(;;) show ( ) show (Alice) show ( ) show (delegates) show ( ) show (read-only) show ( ) show (to) show ( ) show (Bob) show ( ) show (\(valid) show ( ) show (-) show ( ) show (attenuation\)) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (alice\)) show  newline
+(\(subject) show ( ) show (bob\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (read\)) show ( ) show (\(object) show ( ) show (vault-root\)\)) show  newline
+(\(delegation) show ( ) show (#t\)\)) show  newline
+(;;) show ( ) show (Bob) show ( ) show (tries) show ( ) show (to) show ( ) show (delegate) show ( ) show (write) show ( ) show (to) show ( ) show (Carol) show ( ) show (\(INVALID) show ( ) show (-) show ( ) show (amplification\)) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (bob\)) show  newline
+(\(subject) show ( ) show (carol\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (write\)) show ( ) show (\(object) show ( ) show (vault-root\)\)) show ( ) show (;) show ( ) show (REJECTED) show  newline
+(\(delegation) show ( ) show (#f\)\)) show  newline
+(;;) show ( ) show (Bob) show ( ) show (delegates) show ( ) show (read) show ( ) show (to) show ( ) show (subtree) show ( ) show (only) show ( ) show (\(valid) show ( ) show (-) show ( ) show (further) show ( ) show (attenuation\)) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (bob\)) show  newline
+(\(subject) show ( ) show (carol\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (read\)) show ( ) show (\(object) show ( ) show (docs-subtree\)\)) show  newline
+(\(delegation) show ( ) show (#f\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DELEGATION) show ( ) show (PATTERNS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Pattern) show ( ) show (1:) show ( ) show (Direct) show ( ) show (Delegation) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+(Simplest) show ( ) show (form) show ( ) show (-) show ( ) show (one) show ( ) show (hop:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(delegate-direct) show ( ) show (issuer-key) show ( ) show (subject-key) show ( ) show (capability) show  newline
+(#!key) show ( ) show (validity) show ( ) show (can-delegate\)) show  newline
+(\(sign-cert) show ( ) show (issuer-key) show  newline
+(`\(spki-cert) show  newline
+(\(issuer) show ( ) show (,\(key->principal) show ( ) show (issuer-key\)\)) show  newline
+(\(subject) show ( ) show (,\(key->principal) show ( ) show (subject-key\)\)) show  newline
+(\(capability) show ( ) show (,capability\)) show  newline
+(\(validity) show ( ) show (,validity\)) show  newline
+(\(delegation) show ( ) show (,can-delegate\)\)\)\)) show  newline
+ newline
+ newline
+(Pattern) show ( ) show (2:) show ( ) show (Role-Based) show ( ) show (Delegation) show  newline
+newpath margin ypos moveto margin 192 add ypos lineto stroke
+newline
+ newline
+(Delegate) show ( ) show (to) show ( ) show (roles,) show ( ) show (bind) show ( ) show (keys) show ( ) show (to) show ( ) show (roles:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Define) show ( ) show (role) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (vault-admin\)) show  newline
+(\(subject) show ( ) show (\(name) show ( ) show (vault-admin) show ( ) show ("reviewer"\)\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (read\)) show ( ) show (\(object) show ( ) show (\(tag) show ( ) show ("pending/*"\)\)\)) show  newline
+(\(delegation) show ( ) show (#f\)\)) show  newline
+(;;) show ( ) show (Bind) show ( ) show (key) show ( ) show (to) show ( ) show (role) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (vault-admin\)) show  newline
+(\(subject) show ( ) show (alice-key\)) show  newline
+(\(capability) show ( ) show (\(name) show ( ) show (vault-admin) show ( ) show ("reviewer"\)\)) show  newline
+(\(validity) show ( ) show (\(not-after) show ( ) show ("2026-06-01"\)\)\)) show  newline
+(;;) show ( ) show (Alice) show ( ) show (now) show ( ) show (has) show ( ) show (reviewer) show ( ) show (capability) show ( ) show (via) show ( ) show (role) show ( ) show (binding) show  newline
+ newline
+ newline
+(Pattern) show ( ) show (3:) show ( ) show (Threshold) show ( ) show (Delegation) show  newline
+newpath margin ypos moveto margin 186 add ypos lineto stroke
+newline
+ newline
+(Require) show ( ) show (multiple) show ( ) show (parties:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Critical) show ( ) show (operation) show ( ) show (requires) show ( ) show (3-of-5) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (root-key\)) show  newline
+(\(subject) show ( ) show (\(threshold) show ( ) show (3) show ( ) show (\(key1) show ( ) show (key2) show ( ) show (key3) show ( ) show (key4) show ( ) show (key5\)\)\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (delete\)) show ( ) show (\(object) show ( ) show (vault-root\)\)) show  newline
+(\(delegation) show ( ) show (#f\)\)) show  newline
+(;;) show ( ) show (Exercise) show ( ) show (requires) show ( ) show (gathering) show ( ) show (signatures) show  newline
+(\(define) show ( ) show (\(threshold-exercise) show ( ) show (capability) show ( ) show (signers\)) show  newline
+(\(let) show ( ) show (\(\(signatures) show ( ) show (\(map) show ( ) show (\(lambda) show ( ) show (\(key\)) show ( ) show (\(sign) show ( ) show (key) show ( ) show (capability\)\)) show ( ) show (signers\)\)\)) show  newline
+(\(if) show ( ) show (\(>=) show ( ) show (\(length) show ( ) show (signatures\)) show ( ) show (3\)) show  newline
+(\(execute-capability) show ( ) show (capability) show ( ) show (signatures\)) show  newline
+(\(error) show ( ) show ("Insufficient) show ( ) show (signatures"\)\)\)\)) show  newline
+ newline
+ newline
+(Pattern) show ( ) show (4:) show ( ) show (Time-Bounded) show ( ) show (Delegation) show  newline
+newpath margin ypos moveto margin 204 add ypos lineto stroke
+newline
+ newline
+(Temporary) show ( ) show (access:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Conference) show ( ) show (access) show ( ) show (-) show ( ) show (3) show ( ) show (days) show ( ) show (only) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (organizer-key\)) show  newline
+(\(subject) show ( ) show (attendee-key\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (read\)) show ( ) show (\(object) show ( ) show (conference-materials\)\)) show  newline
+(\(validity) show  newline
+(\(not-before) show ( ) show ("2026-03-15T09:00:00Z"\)) show  newline
+(\(not-after) show ( ) show ("2026-03-17T18:00:00Z"\)\)) show  newline
+(\(delegation) show ( ) show (#f\)\)) show  newline
+ newline
+ newline
+(Pattern) show ( ) show (5:) show ( ) show (Conditional) show ( ) show (Delegation) show  newline
+newpath margin ypos moveto margin 198 add ypos lineto stroke
+newline
+ newline
+(Capability) show ( ) show (with) show ( ) show (restrictions:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Can) show ( ) show (read,) show ( ) show (but) show ( ) show (only) show ( ) show (from) show ( ) show (specific) show ( ) show (IP) show ( ) show (range) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (admin-key\)) show  newline
+(\(subject) show ( ) show (service-key\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (read\)) show ( ) show (\(object) show ( ) show (api-data\)\)) show  newline
+(\(condition) show  newline
+(\(source-ip) show ( ) show ("10.0.0.0/8"\)\)) show  newline
+(\(delegation) show ( ) show (#f\)\)) show  newline
+(;;) show ( ) show (Can) show ( ) show (write,) show ( ) show (but) show ( ) show (only) show ( ) show (objects) show ( ) show (under) show ( ) show (1MB) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (admin-key\)) show  newline
+(\(subject) show ( ) show (uploader-key\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (write\)) show ( ) show (\(object) show ( ) show (uploads\)\)) show  newline
+(\(condition) show  newline
+(\(max-size) show ( ) show (1048576\)\)) show  newline
+(\(delegation) show ( ) show (#f\)\)) show  newline
+ newline
+ newline
+(Pattern) show ( ) show (6:) show ( ) show (Proxy) show ( ) show (Delegation) show  newline
+newpath margin ypos moveto margin 162 add ypos lineto stroke
+newline
+ newline
+(Delegate) show ( ) show (through) show ( ) show (intermediary:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Alice) show ( ) show (delegates) show ( ) show (to) show ( ) show (proxy) show ( ) show (service) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (alice-key\)) show  newline
+(\(subject) show ( ) show (proxy-key\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (read\)) show ( ) show (\(object) show ( ) show (alice-files\)\)) show  newline
+(\(delegation) show ( ) show (#t\)) show  newline
+(\(condition) show ( ) show (\(proxy-for) show ( ) show (alice-key\)\)\)) show  newline
+(;;) show ( ) show (Proxy) show ( ) show (can) show ( ) show (act) show ( ) show (on) show ( ) show (Alice's) show ( ) show (behalf) show  newline
+(;;) show ( ) show (but) show ( ) show (chain) show ( ) show (shows) show ( ) show (Alice) show ( ) show (as) show ( ) show (original) show ( ) show (authority) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CONTENT-ADDRESSED) show ( ) show (CAPABILITIES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Hash) show ( ) show (as) show ( ) show (Capability) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(Knowledge) show ( ) show (of) show ( ) show (a) show ( ) show (content) show ( ) show (hash) show ( ) show (is) show ( ) show (itself) show ( ) show (a) show ( ) show (capability) show ( ) show (\(Memo-020\):) show  newline
+ newline
+ newline
+(;;) show ( ) show (Possessing) show ( ) show (this) show ( ) show (hash) show ( ) show (grants) show ( ) show (read) show ( ) show (access) show  newline
+(\(define) show ( ) show (secret-doc-hash) show ( ) show ("sha256:7f83b1657ff1fc..."\)) show  newline
+(;;) show ( ) show (The) show ( ) show (hash) show ( ) show (is) show ( ) show (unguessable) show ( ) show (\(256) show ( ) show (bits) show ( ) show (of) show ( ) show (entropy\)) show  newline
+(;;) show ( ) show (Sharing) show ( ) show (the) show ( ) show (hash) show ( ) show (=) show ( ) show (sharing) show ( ) show (the) show ( ) show (capability) show  newline
+(\(define) show ( ) show (\(share-capability) show ( ) show (recipient) show ( ) show (hash\)) show  newline
+(\(encrypted-send) show ( ) show (recipient) show ( ) show (hash\)\)) show  newline
+ newline
+ newline
+(Capability) show ( ) show (Certificates) show ( ) show (for) show ( ) show (Hashes) show  newline
+newpath margin ypos moveto margin 204 add ypos lineto stroke
+newline
+ newline
+(Formalize) show ( ) show (hash-based) show ( ) show (access:) show  newline
+ newline
+ newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (vault-key\)) show  newline
+(\(subject) show ( ) show (reader-key\)) show  newline
+(\(capability) show  newline
+(\(action) show ( ) show (read\)) show  newline
+(\(object) show ( ) show (\(hash) show ( ) show (sha256) show ( ) show ("specific-doc..."\)\)\)) show  newline
+(\(validity) show ( ) show (\(not-after) show ( ) show ("2027-01-01"\)\)\)) show  newline
+ newline
+ newline
+(Tree) show ( ) show (Capabilities) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(Grant) show ( ) show (access) show ( ) show (to) show ( ) show (Merkle) show ( ) show (subtree:) show  newline
+ newline
+ newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (vault-key\)) show  newline
+(\(subject) show ( ) show (team-key\)) show  newline
+(\(capability) show  newline
+(\(action) show ( ) show (read\)) show  newline
+(\(object) show ( ) show (\(tree) show ( ) show (sha256) show ( ) show ("project-root..."\)\)) show  newline
+(\(propagate) show ( ) show (#t\)\)) show ( ) show (;) show ( ) show (Includes) show ( ) show (all) show ( ) show (referenced) show ( ) show (objects) show  newline
+(\(delegation) show ( ) show (#t\)\)) show  newline
+ newline
+ newline
+(Sealed) show ( ) show (Capabilities) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(Encrypt) show ( ) show (capability) show ( ) show (for) show ( ) show (specific) show ( ) show (recipient:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(seal-capability) show ( ) show (cap) show ( ) show (recipient-pubkey\)) show  newline
+("Encrypt) show ( ) show (capability) show ( ) show (so) show ( ) show (only) show ( ) show (recipient) show ( ) show (can) show ( ) show (use) show ( ) show (it") show  newline
+(\(let) show ( ) show (\(\(serialized) show ( ) show (\(serialize) show ( ) show (cap\)\)) show  newline
+(\(encrypted) show ( ) show (\(age-encrypt) show ( ) show (serialized) show ( ) show (recipient-pubkey\)\)\)) show  newline
+(\(cas-put) show ( ) show (encrypted\)\)\)) show  newline
+(\(define) show ( ) show (\(unseal-capability) show ( ) show (sealed-hash) show ( ) show (identity\)) show  newline
+("Decrypt) show ( ) show (and) show ( ) show (exercise) show ( ) show (capability") show  newline
+(\(let) show ( ) show (\(\(encrypted) show ( ) show (\(cas-get) show ( ) show (sealed-hash\)\)) show  newline
+(\(decrypted) show ( ) show (\(age-decrypt) show ( ) show (encrypted) show ( ) show (identity\)\)) show  newline
+(\(cap) show ( ) show (\(deserialize) show ( ) show (decrypted\)\)\)) show  newline
+(cap\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REVOCATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Revocation) show ( ) show (Lists) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(spki-crl) show  newline
+(\(issuer) show ( ) show (vault-admin\)) show  newline
+(\(revoked) show  newline
+(\(\(cert-hash) show ( ) show ("sha256:revoked1..."\)) show  newline
+(\(reason) show ( ) show (key-compromise\)) show  newline
+(\(revoked-at) show ( ) show (1767700000\)\)) show  newline
+(\(\(cert-hash) show ( ) show ("sha256:revoked2..."\)) show  newline
+(\(reason) show ( ) show (superseded\)) show  newline
+(\(revoked-at) show ( ) show (1767700100\)\)\)\)) show  newline
+ newline
+ newline
+(Online) show ( ) show (Revocation) show ( ) show (Check) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(check-revocation) show ( ) show (cert\)) show  newline
+("Check) show ( ) show (if) show ( ) show (certificate) show ( ) show (is) show ( ) show (revoked") show  newline
+(\(let*) show ( ) show (\(\(cert-hash) show ( ) show (\(sha256) show ( ) show (\(serialize) show ( ) show (cert\)\)\)) show  newline
+(\(issuer) show ( ) show (\(cert-issuer) show ( ) show (cert\)\)) show  newline
+(\(crl) show ( ) show (\(fetch-crl) show ( ) show (issuer\)\)\)) show  newline
+(\(not) show ( ) show (\(member) show ( ) show (cert-hash) show ( ) show (\(crl-revoked-hashes) show ( ) show (crl\)\)\)\)\)) show  newline
+ newline
+ newline
+(Tombstone) show ( ) show (Revocation) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(Using) show ( ) show (CAS) show ( ) show (tombstones) show ( ) show (\(Memo-020\):) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(revoke-capability-tombstone) show ( ) show (cert-hash) show ( ) show (reason\)) show  newline
+("Revoke) show ( ) show (by) show ( ) show (tombstoning) show ( ) show (the) show ( ) show (certificate") show  newline
+(\(cas-tombstone) show ( ) show (cert-hash) show  newline
+(reason:) show ( ) show (reason) show  newline
+(actor:) show ( ) show (\(current-principal\)\)\)) show  newline
+ newline
+ newline
+(Short-Lived) show ( ) show (Certificates) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+(Avoid) show ( ) show (revocation) show ( ) show (by) show ( ) show (using) show ( ) show (short) show ( ) show (validity:) show  newline
+ newline
+ newline
+(;;) show ( ) show (1-hour) show ( ) show (certificate,) show ( ) show (no) show ( ) show (revocation) show ( ) show (needed) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (service-key\)) show  newline
+(\(subject) show ( ) show (session-key\)) show  newline
+(\(capability) show ( ) show (\(action) show ( ) show (api-access\)\)) show  newline
+(\(validity) show  newline
+(\(not-before) show ( ) show (,\(current-time\)\)) show  newline
+(\(not-after) show ( ) show (,\(+) show ( ) show (\(current-time\)) show ( ) show (3600\)\)\)) show  newline
+(\(delegation) show ( ) show (#f\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SOUP) show ( ) show (INTEGRATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Certificates) show ( ) show (in) show ( ) show (the) show ( ) show (Soup) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+(All) show ( ) show (certificates) show ( ) show (are) show ( ) show (soup) show ( ) show (objects:) show  newline
+ newline
+ newline
+(\(soup-object) show  newline
+(\(name) show ( ) show ("cert/alice-read-docs"\)) show  newline
+(\(type) show ( ) show (certificate\)) show  newline
+(\(size) show ( ) show ("412B"\)) show  newline
+(\(crypto) show ( ) show (\(ed25519) show ( ) show (sha256) show ( ) show ("cert-hash..."\)\)) show  newline
+(\(issuer) show ( ) show ("vault-admin"\)) show  newline
+(\(subject) show ( ) show ("alice"\)) show  newline
+(\(capability) show ( ) show ("read) show ( ) show (docs/*"\)) show  newline
+(\(expires) show ( ) show ("2027-01-01"\)\)) show  newline
+ newline
+ newline
+(Querying) show ( ) show (Capabilities) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Find) show ( ) show (all) show ( ) show (certificates) show ( ) show (for) show ( ) show (a) show ( ) show (subject) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show ( ) show (subject:) show ( ) show (alice-key\)) show  newline
+(;;) show ( ) show (Find) show ( ) show (all) show ( ) show (certificates) show ( ) show (granting) show ( ) show (write) show ( ) show (access) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show ( ) show (capability:) show ( ) show ('write\)) show  newline
+(;;) show ( ) show (Find) show ( ) show (expiring) show ( ) show (certificates) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show  newline
+(expires-before:) show ( ) show (\(+) show ( ) show (\(current-time\)) show ( ) show (\(*) show ( ) show (7) show ( ) show (24) show ( ) show (3600\)\)\)) show  newline
+(;;) show ( ) show (Find) show ( ) show (certificates) show ( ) show (from) show ( ) show (specific) show ( ) show (issuer) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show ( ) show (issuer:) show ( ) show (vault-admin\)) show  newline
+ newline
+ newline
+(Capability) show ( ) show (Introspection) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (What) show ( ) show (can) show ( ) show (Alice) show ( ) show (do?) show  newline
+(\(define) show ( ) show (\(principal-capabilities) show ( ) show (principal\)) show  newline
+(\(let) show ( ) show (\(\(certs) show ( ) show (\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show ( ) show (subject:) show ( ) show (principal\)\)\)) show  newline
+(\(map) show ( ) show (cert-capability) show ( ) show (certs\)\)\)) show  newline
+(;;) show ( ) show (Who) show ( ) show (can) show ( ) show (read) show ( ) show (this) show ( ) show (object?) show  newline
+(\(define) show ( ) show (\(object-readers) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(certs) show ( ) show (\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show  newline
+(capability:) show ( ) show (`\(read) show ( ) show (,hash\)\)\)\)) show  newline
+(\(map) show ( ) show (cert-subject) show ( ) show (certs\)\)\)) show  newline
+(;;) show ( ) show (Visualize) show ( ) show (delegation) show ( ) show (graph) show  newline
+(\(define) show ( ) show (\(delegation-graph) show ( ) show (root-principal\)) show  newline
+(\(let) show ( ) show (\(\(certs) show ( ) show (\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show ( ) show (issuer:) show ( ) show (root-principal\)\)\)) show  newline
+(\(map) show ( ) show (\(lambda) show ( ) show (\(cert\)) show  newline
+(\(cons) show ( ) show (\(cert-subject) show ( ) show (cert\)) show  newline
+(\(delegation-graph) show ( ) show (\(cert-subject) show ( ) show (cert\)\)\)\)) show  newline
+(certs\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(AUTHORIZATION) show ( ) show (DECISIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Simple) show ( ) show (Check) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(authorized?) show ( ) show (principal) show ( ) show (action) show ( ) show (object\)) show  newline
+("Check) show ( ) show (if) show ( ) show (principal) show ( ) show (can) show ( ) show (perform) show ( ) show (action) show ( ) show (on) show ( ) show (object") show  newline
+(\(let) show ( ) show (\(\(chains) show ( ) show (\(find-authorization-chains) show ( ) show (principal) show ( ) show (action) show ( ) show (object\)\)\)) show  newline
+(\(any) show ( ) show (valid-chain?) show ( ) show (chains\)\)\)) show  newline
+ newline
+ newline
+(Chain) show ( ) show (Discovery) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(find-authorization-chains) show ( ) show (principal) show ( ) show (action) show ( ) show (object\)) show  newline
+("Find) show ( ) show (all) show ( ) show (certificate) show ( ) show (chains) show ( ) show (granting) show ( ) show (capability") show  newline
+(\(let) show ( ) show (\(\(target-cap) show ( ) show (\(capability) show ( ) show (action) show ( ) show (object\)\)\)) show  newline
+(\(let) show ( ) show (search) show ( ) show (\(\(current) show ( ) show (principal\)) show ( ) show (\(chain) show ( ) show ('\(\)\)\)) show  newline
+(\(let) show ( ) show (\(\(certs) show ( ) show (\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show ( ) show (subject:) show ( ) show (current\)\)\)) show  newline
+(\(append-map) show  newline
+(\(lambda) show ( ) show (\(cert\)) show  newline
+(\(if) show ( ) show (\(capability-grants?) show ( ) show (\(cert-capability) show ( ) show (cert\)) show ( ) show (target-cap\)) show  newline
+(\(list) show ( ) show (\(reverse) show ( ) show (\(cons) show ( ) show (cert) show ( ) show (chain\)\)\)) show  newline
+(\(if) show ( ) show (\(cert-delegation?) show ( ) show (cert\)) show  newline
+(\(search) show ( ) show (\(cert-issuer) show ( ) show (cert\)) show ( ) show (\(cons) show ( ) show (cert) show ( ) show (chain\)\)) show  newline
+('\(\)\)\)\)) show  newline
+(certs\)\)\)\)\)) show  newline
+ newline
+ newline
+(Cached) show ( ) show (Authorization) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (auth-cache) show ( ) show (\(make-lru-cache) show ( ) show (10000\)\)) show  newline
+(\(define) show ( ) show (\(authorized?/cached) show ( ) show (principal) show ( ) show (action) show ( ) show (object\)) show  newline
+(\(let) show ( ) show (\(\(key) show ( ) show (\(list) show ( ) show (principal) show ( ) show (action) show ( ) show (object\)\)\)) show  newline
+(\(or) show ( ) show (\(lru-get) show ( ) show (auth-cache) show ( ) show (key\)) show  newline
+(\(let) show ( ) show (\(\(result) show ( ) show (\(authorized?) show ( ) show (principal) show ( ) show (action) show ( ) show (object\)\)\)) show  newline
+(\(lru-put!) show ( ) show (auth-cache) show ( ) show (key) show ( ) show (result\)) show  newline
+(result\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DELEGATION) show ( ) show (CEREMONIES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Key) show ( ) show (Ceremony) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (critical) show ( ) show (delegations:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(key-ceremony) show ( ) show (capability) show ( ) show (threshold) show ( ) show (witnesses\)) show  newline
+("Conduct) show ( ) show (witnessed) show ( ) show (delegation) show ( ) show (ceremony") show  newline
+(\(let*) show ( ) show (\(\(ceremony-id) show ( ) show (\(generate-ceremony-id\)\)) show  newline
+(\(ceremony-record) show  newline
+(\(ceremony) show  newline
+(\(id) show ( ) show (,ceremony-id\)) show  newline
+(\(capability) show ( ) show (,capability\)) show  newline
+(\(threshold) show ( ) show (,threshold\)) show  newline
+(\(witnesses) show ( ) show (,witnesses\)) show  newline
+(\(started-at) show ( ) show (,\(current-time\)\)\)\)\)) show  newline
+(;;) show ( ) show (Record) show ( ) show (ceremony) show ( ) show (start) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (\(ceremony-start) show ( ) show (,ceremony-id\)\)) show  newline
+(;;) show ( ) show (Gather) show ( ) show (witness) show ( ) show (signatures) show  newline
+(\(let) show ( ) show (\(\(signatures) show ( ) show (\(gather-witness-signatures) show ( ) show (ceremony-record) show ( ) show (witnesses\)\)\)) show  newline
+(\(if) show ( ) show (\(>=) show ( ) show (\(length) show ( ) show (signatures\)) show ( ) show (threshold\)) show  newline
+(\(let) show ( ) show (\(\(cert) show ( ) show (\(finalize-ceremony) show ( ) show (ceremony-record) show ( ) show (signatures\)\)\)) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (\(ceremony-complete) show ( ) show (,ceremony-id\)\)) show  newline
+(cert\)) show  newline
+(\(begin) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (\(ceremony-failed) show ( ) show (,ceremony-id\)\)) show  newline
+(\(error) show ( ) show ("Insufficient) show ( ) show (witnesses"\)\)\)\)\)\)) show  newline
+ newline
+ newline
+(Emergency) show ( ) show (Revocation) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(emergency-revoke) show ( ) show (cert-hash) show ( ) show (reason\)) show  newline
+("Emergency) show ( ) show (revocation) show ( ) show (with) show ( ) show (audit) show ( ) show (trail") show  newline
+(\(let) show ( ) show (\(\(revocation) show  newline
+(\(emergency-revocation) show  newline
+(\(cert) show ( ) show (,cert-hash\)) show  newline
+(\(reason) show ( ) show (,reason\)) show  newline
+(\(revoked-by) show ( ) show (,\(current-principal\)\)) show  newline
+(\(revoked-at) show ( ) show (,\(current-time\)\)\)\)\)) show  newline
+(;;) show ( ) show (Immediate) show ( ) show (tombstone) show  newline
+(\(cas-tombstone) show ( ) show (cert-hash) show ( ) show (reason:) show ( ) show (reason\)) show  newline
+(;;) show ( ) show (Add) show ( ) show (to) show ( ) show (CRL) show  newline
+(\(crl-append) show ( ) show (cert-hash) show ( ) show (reason\)) show  newline
+(;;) show ( ) show (Audit) show ( ) show (with) show ( ) show (high) show ( ) show (priority) show  newline
+(\(audit-append) show  newline
+(action:) show ( ) show (\(emergency-revoke) show ( ) show (,cert-hash\)) show  newline
+(motivation:) show ( ) show (reason) show  newline
+(priority:) show ( ) show ('critical\)) show  newline
+(;;) show ( ) show (Notify) show ( ) show (affected) show ( ) show (parties) show  newline
+(\(notify-revocation) show ( ) show (cert-hash\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Capability) show ( ) show (Leakage) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Capabilities) show ( ) show (can) show ( ) show (leak) show ( ) show (through:) show  newline
+(;;) show ( ) show (1.) show ( ) show (Logging) show ( ) show (-) show ( ) show (don't) show ( ) show (log) show ( ) show (capability) show ( ) show (tokens) show  newline
+(;;) show ( ) show (2.) show ( ) show (URLs) show ( ) show (-) show ( ) show (don't) show ( ) show (put) show ( ) show (capabilities) show ( ) show (in) show ( ) show (query) show ( ) show (strings) show  newline
+(;;) show ( ) show (3.) show ( ) show (Errors) show ( ) show (-) show ( ) show (don't) show ( ) show (include) show ( ) show (capabilities) show ( ) show (in) show ( ) show (error) show ( ) show (messages) show  newline
+(\(define) show ( ) show (\(safe-log) show ( ) show (message) show ( ) show (capability\)) show  newline
+(\(log) show ( ) show (\(string-append) show ( ) show (message) show ( ) show (") show ( ) show ([capability:REDACTED]"\)\)\)) show  newline
+ newline
+ newline
+(Confused) show ( ) show (Deputy) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Always) show ( ) show (verify) show ( ) show (capability) show ( ) show (matches) show ( ) show (intended) show ( ) show (action) show  newline
+(\(define) show ( ) show (\(execute-action) show ( ) show (action) show ( ) show (object) show ( ) show (capability\)) show  newline
+(\(unless) show ( ) show (\(capability-grants?) show ( ) show (capability) show ( ) show (action) show ( ) show (object\)) show  newline
+(\(error) show ( ) show ("Capability) show ( ) show (does) show ( ) show (not) show ( ) show (grant) show ( ) show (this) show ( ) show (action"\)\)) show  newline
+(\(perform-action) show ( ) show (action) show ( ) show (object\)\)) show  newline
+ newline
+ newline
+(Time-of-Check) show ( ) show (vs) show ( ) show (Time-of-Use) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Validate) show ( ) show (immediately) show ( ) show (before) show ( ) show (use,) show ( ) show (not) show ( ) show (before) show  newline
+(\(define) show ( ) show (\(safe-execute) show ( ) show (capability) show ( ) show (action\)) show  newline
+(\(let) show ( ) show (\(\(validated) show ( ) show (\(validate-capability) show ( ) show (capability\)\)\)) show  newline
+(;;) show ( ) show (No) show ( ) show (window) show ( ) show (between) show ( ) show (check) show ( ) show (and) show ( ) show (use) show  newline
+(\(atomically) show  newline
+(\(unless) show ( ) show (validated) show  newline
+(\(error) show ( ) show ("Invalid) show ( ) show (capability"\)\)) show  newline
+(\(perform-action) show ( ) show (action\)\)\)\)) show  newline
+ newline
+ newline
+(Delegation) show ( ) show (Depth) show ( ) show (Limits) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Prevent) show ( ) show (infinite) show ( ) show (delegation) show ( ) show (chains) show  newline
+(\(define) show ( ) show (max-delegation-depth) show ( ) show (10\)) show  newline
+(\(define) show ( ) show (\(validate-chain-depth) show ( ) show (chain\)) show  newline
+(\(when) show ( ) show (\(>) show ( ) show (\(length) show ( ) show (chain\)) show ( ) show (max-delegation-depth\)) show  newline
+(\(error) show ( ) show ("Delegation) show ( ) show (chain) show ( ) show (too) show ( ) show (deep"\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show ( ) show (NOTES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Certificate) show ( ) show (Storage) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Certificates) show ( ) show (stored) show ( ) show (in) show ( ) show (CAS) show  newline
+(\(define) show ( ) show (\(store-cert) show ( ) show (cert\)) show  newline
+(\(let) show ( ) show (\(\(signed) show ( ) show (\(sign-cert) show ( ) show (cert\)\)\)) show  newline
+(\(cas-put) show ( ) show (\(serialize) show ( ) show (signed\)\)\)\)) show  newline
+(;;) show ( ) show (Indexed) show ( ) show (by) show ( ) show (issuer) show ( ) show (and) show ( ) show (subject) show ( ) show (for) show ( ) show (fast) show ( ) show (lookup) show  newline
+(\(define) show ( ) show (cert-by-issuer) show ( ) show (\(make-hash-table\)\)) show  newline
+(\(define) show ( ) show (cert-by-subject) show ( ) show (\(make-hash-table\)\)) show  newline
+ newline
+ newline
+(Performance) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Certificate) show ( ) show (validation) show ( ) show (is) show ( ) show (expensive) show ( ) show (-) show ( ) show (cache) show ( ) show (results) show  newline
+(*) show ( ) show (Chain) show ( ) show (discovery) show ( ) show (can) show ( ) show (be) show ( ) show (slow) show ( ) show (-) show ( ) show (index) show ( ) show (by) show ( ) show (issuer/subject) show  newline
+(*) show ( ) show (Revocation) show ( ) show (checks) show ( ) show (add) show ( ) show (latency) show ( ) show (-) show ( ) show (use) show ( ) show (short-lived) show ( ) show (certs) show ( ) show (when) show ( ) show (possible) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (SDSI/SPKI) show ( ) show (2.0) show ( ) show (-) show ( ) show (RFC) show ( ) show (2693) show ( ) show (\(preserved\)) show  newline
+(*) show ( ) show (A) show ( ) show (Logic) show ( ) show (of) show ( ) show (Authentication) show ( ) show (-) show ( ) show (Burrows,) show ( ) show (Abadi,) show ( ) show (Needham) show ( ) show (\(preserved\)) show  newline
+(*) show ( ) show (Capability) show ( ) show (Myths) show ( ) show (Demolished) show ( ) show (-) show ( ) show (Miller,) show ( ) show (Yee,) show ( ) show (Shapiro) show ( ) show (\(preserved\)) show  newline
+(*) show ( ) show (Memo-004:) show ( ) show (SPKI) show ( ) show (Authorization) show  newline
+(*) show ( ) show (Memo-020:) show ( ) show (Content-Addressed) show ( ) show (Storage) show  newline
+(*) show ( ) show (Memo-008:) show ( ) show (Threshold) show ( ) show (Signature) show ( ) show (Governance) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-07) show  newline
+(*) show ( ) show (Initial) show ( ) show (draft) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

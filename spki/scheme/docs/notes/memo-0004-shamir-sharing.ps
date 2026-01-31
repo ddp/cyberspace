@@ -15,418 +15,638 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0004: Shamir Secret Sharing) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies Shamir's Secret Sharing implementation for the) show newline
-(Library of Cyberspace, enabling K-of-N threshold splitting and) show newline
-(reconstruction of cryptographic keys and other secrets.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Private keys are single points of failure:) show newline
-() show newline
-(  * Key loss: Funds locked forever) show newline
-(  * Key theft: Complete compromise) show newline
-(  * Key escrow: Trust a third party?) show newline
-() show newline
-(Any centralized solution to these problems requires trusting someone,) show newline
-(which moves rather than eliminates the single point of failure.) show newline
-() show newline
-(Shamir's Secret Sharing provides:) show newline
-() show newline
-(  * Threshold recovery: Any K of N shares reconstruct) show newline
-(  * Information-theoretic security: K-1 shares reveal nothing) show newline
-(  * Distributed custody: No single holder) show newline
-(  * Backup flexibility: Geographic distribution) show newline
-() show newline
-(These properties eliminate single points of failure mathematically) show newline
-(rather than administratively, distributing trust across multiple) show newline
-(independent parties.) show newline
-() show newline
-(From Adi Shamir's 1979 paper "How to Share a Secret":) show newline
-() show newline
-() show newline
-(    "Split a secret into N pieces such that any K pieces suffice to reconstruct, but K-1 pieces reveal absolutely nothing.") show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SPECIFICATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Share Record) show newline
-(------------) show newline
-() show newline
-() show newline
-(    \(define-record-type <shamir-share>) show newline
-(      \(make-shamir-share id threshold x y\)) show newline
-(      shamir-share?) show newline
-(      \(id share-id\)            ; Symbol: share-1, share-2, etc.) show newline
-(      \(threshold share-threshold\)  ; K value) show newline
-(      \(x share-x\)              ; X-coordinate \(1 to N\)) show newline
-(      \(y share-y\)\)             ; Y-coordinate \(blob, same size as secret\)) show newline
-() show newline
-() show newline
-(Splitting a Secret) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    \(shamir-split secret #!key \(threshold 3\) \(total 5\)\)) show newline
-() show newline
-(Parameters: - secret - Blob to split \(any size, typically 32 or 64) show newline
-(bytes\) - threshold - Minimum shares to reconstruct \(K\) - total - Total) show newline
-(shares to create \(N\)) show newline
-() show newline
-(Returns: List of N shamir-share records) show newline
-() show newline
-(Algorithm:) show newline
-() show newline
-(  * For each byte of secret: generate K-1 random coefficients, set coefficient[0] = secret byte, construct polynomial f\(x\) = a0 + a1*x + a2*x^2 + ... + a\(k-1\)*x^\(k-1\)) show newline
-(  * Evaluate polynomial at x = 1, 2, ..., N) show newline
-(  * Package \(x, f\(x\)\) pairs as shares) show newline
-() show newline
-() show newline
-(Reconstructing a Secret) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(    \(shamir-reconstruct shares\)) show newline
-() show newline
-(Parameters: - shares - List of at least K shamir-share records) show newline
-() show newline
-(Returns: Reconstructed secret blob) show newline
-() show newline
-(Algorithm:) show newline
-() show newline
-(  * Take first K shares) show newline
-(  * For each byte position: use Lagrange interpolation, compute f\(0\) = secret byte) show newline
-(  * Assemble reconstructed secret) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(GALOIS FIELD ARITHMETIC) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Operations performed in GF\(2⁸\) with irreducible polynomial x⁸ + x⁴) show newline
-(+ x³ + x + 1:) show newline
-() show newline
-() show newline
-(    \(define gf256-primitive #x11b\)  ; x^8 + x^4 + x^3 + x + 1) show newline
-(    \(define \(gf256-mul a b\)) show newline
-(      "Multiply in GF\(2^8\)") show newline
-(      ...\)) show newline
-(    \(define \(gf256-inv a\)) show newline
-(      "Multiplicative inverse in GF\(2^8\)") show newline
-(      ...\)) show newline
-(    \(define \(gf256-poly-eval coeffs x\)) show newline
-(      "Evaluate polynomial at x using Horner's method") show newline
-(      ...\)) show newline
-() show newline
-(GF\(2⁸\) ensures: - All operations stay within byte range - No overflow) show newline
-(issues - Proper field properties \(every non-zero element has inverse\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(USAGE EXAMPLES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Basic Secret Splitting) show newline
-(----------------------) show newline
-() show newline
-() show newline
-(    \(import crypto-ffi\)) show newline
-(    \(sodium-init\)) show newline
-(    ;; Create a 32-byte secret) show newline
-(    \(define secret \(make-blob 32\)\)) show newline
-(    ;; ... fill with secret data ...) show newline
-(    ;; Split into 5 shares, threshold 3) show newline
-(    \(define shares \(shamir-split secret threshold: 3 total: 5\)\)) show newline
-(    ;; Distribute shares to custodians) show newline
-(    \(print "Created " \(length shares\) " shares"\)) show newline
-(    \(print "Threshold: " \(share-threshold \(car shares\)\)\)) show newline
-() show newline
-() show newline
-(Reconstruction from K Shares) show newline
-(----------------------------) show newline
-() show newline
-() show newline
-(    ;; Collect any 3 shares) show newline
-(    \(define collected \(list share-1 share-3 share-5\)\)) show newline
-(    ;; Reconstruct) show newline
-(    \(define reconstructed \(shamir-reconstruct collected\)\)) show newline
-(    ;; Verify) show newline
-(    \(if \(equal? \(blob->hex secret\) \(blob->hex reconstructed\)\)) show newline
-(        \(print "✓ Reconstruction successful!"\)) show newline
-(        \(print "✗ Reconstruction failed"\)\)) show newline
-() show newline
-() show newline
-(Ed25519 Key Backup) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    ;; Generate keypair) show newline
-(    \(define keypair \(ed25519-keypair\)\)) show newline
-(    \(define public-key \(car keypair\)\)) show newline
-(    \(define private-key \(cadr keypair\)\)) show newline
-(    ;; Split private key \(5-of-7 for production\)) show newline
-(    \(define key-shares \(shamir-split private-key threshold: 5 total: 7\)\)) show newline
-(    ;; Later: reconstruct and verify) show newline
-(    \(define recovered-key \(shamir-reconstruct \(take key-shares 5\)\)\)) show newline
-(    ;; Test: sign with recovered key) show newline
-(    \(define message "Test message"\)) show newline
-(    \(define signature \(ed25519-sign recovered-key message\)\)) show newline
-(    \(define valid? \(ed25519-verify public-key message signature\)\)) show newline
-(    \(if valid?) show newline
-(        \(print "✓ Recovered key produces valid signatures!"\)) show newline
-(        \(print "✗ Key recovery failed"\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY PROPERTIES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Information-Theoretic Security) show newline
-(------------------------------) show newline
-() show newline
-(With K-1 shares: - No information about secret is revealed - Not) show newline
-(computationally hard - literally impossible - Even infinite compute) show newline
-(power cannot break) show newline
-() show newline
-(This is because K-1 points determine infinitely many degree-\(K-1\)) show newline
-(polynomials.) show newline
-() show newline
-() show newline
-(Share Independence) show newline
-(------------------) show newline
-() show newline
-(Each share is uniformly random: - Looks like random bytes - No) show newline
-(correlation between shares - Safe to store on untrusted media) show newline
-() show newline
-() show newline
-(Threshold Guarantee) show newline
-(-------------------) show newline
-() show newline
-(Exactly K shares required: - K shares: reconstruction succeeds - K-1) show newline
-(shares: no information - K+1 shares: still works \(overdetermined\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(THRESHOLD SELECTION GUIDELINES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(  Use Case            Threshold   Total                  Rationale   ) show newline
-(  Personal backup     2-of-3      Simple recovery        ) show newline
-(  Team key            3-of-5      Majority required      ) show newline
-(  Organization root   5-of-7      Supermajority          ) show newline
-(  Hardware ceremony   7-of-11     High assurance         ) show newline
-(  Paranoid            11-of-15    Maximum distribution   ) show newline
-() show newline
-() show newline
-(Considerations) show newline
-(--------------) show newline
-() show newline
-(  * Availability: Higher K = harder to recover) show newline
-(  * Security: Lower K = easier to collude) show newline
-(  * Geography: Consider time zones for ceremonies) show newline
-(  * Succession: What if custodians unavailable?) show newline
-() show newline
-(Threshold selection balances the probability of legitimate recovery) show newline
-(against the probability of malicious collusion, tailored to the specific) show newline
-(threat model.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SHARE DISTRIBUTION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Physical Security) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    Share 1: Safe deposit box \(Bank A\)) show newline
-(    Share 2: Home safe) show newline
-(    Share 3: Attorney's vault) show newline
-(    Share 4: Trusted family member) show newline
-(    Share 5: Offshore location) show newline
-() show newline
-() show newline
-(Digital Storage) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    Share 1: Hardware security module) show newline
-(    Share 2: Air-gapped laptop) show newline
-(    Share 3: Encrypted USB \(passphrase protected\)) show newline
-(    Share 4: Paper printout \(secure location\)) show newline
-(    Share 5: Tattoo \(not recommended\)) show newline
-() show newline
-() show newline
-(Geographic Distribution) show newline
-(-----------------------) show newline
-() show newline
-(  * Different jurisdictions) show newline
-(  * Different failure domains) show newline
-(  * Different time zones \(for ceremonies\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(VERIFICATION WITHOUT RECONSTRUCTION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(For periodic verification that shares are intact:) show newline
-() show newline
-() show newline
-(    ;; Each custodian verifies their share) show newline
-(    \(define \(verify-share share expected-id expected-threshold\)) show newline
-(      \(and \(eq? \(share-id share\) expected-id\)) show newline
-(           \(= \(share-threshold share\) expected-threshold\)) show newline
-(           \(= \(blob-size \(share-y share\)\) expected-length\)\)\)) show newline
-() show newline
-(Full reconstruction should be rare: - Key rotation ceremonies -) show newline
-(Emergency recovery - Succession events) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(INTEGRATION WITH THRESHOLD SIGNATURES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Two complementary approaches:) show newline
-() show newline
-() show newline
-(Shamir for Key Backup \(This Memo\)) show newline
-(---------------------------------) show newline
-() show newline
-() show newline
-(    Private key → split → N shares) show newline
-(    Recovery: K shares → reconstruct → use key) show newline
-() show newline
-() show newline
-(Multi-Signature for Governance \(Memo-008\)) show newline
-(-----------------------------------------) show newline
-() show newline
-() show newline
-(    N parties → N keys → N signatures) show newline
-(    Verification: count valid ≥ K) show newline
-() show newline
-(Use Shamir when: - Backing up existing keys - Emergency recovery) show newline
-(scenarios - Single key must be reconstructable) show newline
-() show newline
-(Use Multi-Sig when: - Ongoing governance decisions - Need audit trail of) show newline
-(who signed - Asynchronous authorization) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Threats Mitigated) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(  Threat              Mitigation                            ) show newline
-(  Key loss            Any K shares recover                  ) show newline
-(  Single compromise   Need K colluding                      ) show newline
-(  Insider attack      Distribute to independent parties     ) show newline
-(  Coercion            Geographic/jurisdictional diversity   ) show newline
-() show newline
-() show newline
-(Threats Remaining) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(  Threat                                Notes                     ) show newline
-(  K colluding parties                   Fundamental limitation    ) show newline
-(  Poor share storage                    Operational security      ) show newline
-(  Side channels during reconstruction   Use secure environments   ) show newline
-(  Weak random generation                Use libsodium             ) show newline
-() show newline
-() show newline
-(Operational Security) show newline
-(--------------------) show newline
-() show newline
-(  * Generation: Air-gapped machine, secure random) show newline
-(  * Distribution: Out-of-band verification) show newline
-(  * Storage: Encrypted, physically secure) show newline
-(  * Reconstruction: Secure room, witnesses) show newline
-(  * Destruction: Secure wipe after use) show newline
-() show newline
-(Shamir's mathematical security is only as strong as the operational) show newline
-(procedures surrounding share generation, distribution, and) show newline
-(reconstruction.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION NOTES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Dependencies) show newline
-(------------) show newline
-() show newline
-(  * libsodium) show newline
-(  * Secure random number generation - srfi-4 - u8vectors for byte manipulation) show newline
-() show newline
-() show newline
-(Performance) show newline
-(-----------) show newline
-() show newline
-(  * Split: O\(N × K × secretlength\)) show newline
-(  * Reconstruct: O\(K² × secretlength\)) show newline
-(  * GF\(2⁸\) operations: O\(1\) per byte) show newline
-() show newline
-() show newline
-(Limitations) show newline
-(-----------) show newline
-() show newline
-(  * Secret size: Arbitrary \(but typically ≤ 64 bytes\)) show newline
-(  * Share count: Practical limit ~255 \(byte x-coordinates\)) show newline
-(  * Threshold: 2 ≤ K ≤ N) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Shamir, A. \(1979\). How to share a secret. Communications of the ACM.) show newline
-(  * Blakley, G. R. \(1979\). Safeguarding cryptographic keys.) show newline
-(  * Beimel, A. \(2011\). Secret-Sharing Schemes: A Survey.) show newline
-(  * NIST SP 800-57. Recommendation for Key Management.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-06) show newline
-(  * Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0004:) show ( ) show (Shamir) show ( ) show (Secret) show ( ) show (Sharing) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (Shamir's) show ( ) show (Secret) show ( ) show (Sharing) show ( ) show (implementation) show ( ) show (for) show ( ) show (the) show  newline
+(Library) show ( ) show (of) show ( ) show (Cyberspace,) show ( ) show (enabling) show ( ) show (K-of-N) show ( ) show (threshold) show ( ) show (splitting) show ( ) show (and) show  newline
+(reconstruction) show ( ) show (of) show ( ) show (cryptographic) show ( ) show (keys) show ( ) show (and) show ( ) show (other) show ( ) show (secrets.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Private) show ( ) show (keys) show ( ) show (are) show ( ) show (single) show ( ) show (points) show ( ) show (of) show ( ) show (failure:) show  newline
+ newline
+(*) show ( ) show (Key) show ( ) show (loss:) show ( ) show (Funds) show ( ) show (locked) show ( ) show (forever) show  newline
+(*) show ( ) show (Key) show ( ) show (theft:) show ( ) show (Complete) show ( ) show (compromise) show  newline
+(*) show ( ) show (Key) show ( ) show (escrow:) show ( ) show (Trust) show ( ) show (a) show ( ) show (third) show ( ) show (party?) show  newline
+ newline
+(Any) show ( ) show (centralized) show ( ) show (solution) show ( ) show (to) show ( ) show (these) show ( ) show (problems) show ( ) show (requires) show ( ) show (trusting) show ( ) show (someone,) show  newline
+(which) show ( ) show (moves) show ( ) show (rather) show ( ) show (than) show ( ) show (eliminates) show ( ) show (the) show ( ) show (single) show ( ) show (point) show ( ) show (of) show ( ) show (failure.) show  newline
+ newline
+(Shamir's) show ( ) show (Secret) show ( ) show (Sharing) show ( ) show (provides:) show  newline
+ newline
+(*) show ( ) show (Threshold) show ( ) show (recovery:) show ( ) show (Any) show ( ) show (K) show ( ) show (of) show ( ) show (N) show ( ) show (shares) show ( ) show (reconstruct) show  newline
+(*) show ( ) show (Information-theoretic) show ( ) show (security:) show ( ) show (K-1) show ( ) show (shares) show ( ) show (reveal) show ( ) show (nothing) show  newline
+(*) show ( ) show (Distributed) show ( ) show (custody:) show ( ) show (No) show ( ) show (single) show ( ) show (holder) show  newline
+(*) show ( ) show (Backup) show ( ) show (flexibility:) show ( ) show (Geographic) show ( ) show (distribution) show  newline
+ newline
+(These) show ( ) show (properties) show ( ) show (eliminate) show ( ) show (single) show ( ) show (points) show ( ) show (of) show ( ) show (failure) show ( ) show (mathematically) show  newline
+(rather) show ( ) show (than) show ( ) show (administratively,) show ( ) show (distributing) show ( ) show (trust) show ( ) show (across) show ( ) show (multiple) show  newline
+(independent) show ( ) show (parties.) show  newline
+ newline
+(From) show ( ) show (Adi) show ( ) show (Shamir's) show ( ) show (1979) show ( ) show (paper) show ( ) show ("How) show ( ) show (to) show ( ) show (Share) show ( ) show (a) show ( ) show (Secret":) show  newline
+ newline
+ newline
+("Split) show ( ) show (a) show ( ) show (secret) show ( ) show (into) show ( ) show (N) show ( ) show (pieces) show ( ) show (such) show ( ) show (that) show ( ) show (any) show ( ) show (K) show ( ) show (pieces) show ( ) show (suffice) show ( ) show (to) show ( ) show (reconstruct,) show ( ) show (but) show ( ) show (K-1) show ( ) show (pieces) show ( ) show (reveal) show ( ) show (absolutely) show ( ) show (nothing.") show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SPECIFICATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Share) show ( ) show (Record) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<shamir-share>) show  newline
+(\(make-shamir-share) show ( ) show (id) show ( ) show (threshold) show ( ) show (x) show ( ) show (y\)) show  newline
+(shamir-share?) show  newline
+(\(id) show ( ) show (share-id\)) show ( ) show (;) show ( ) show (Symbol:) show ( ) show (share-1,) show ( ) show (share-2,) show ( ) show (etc.) show  newline
+(\(threshold) show ( ) show (share-threshold\)) show ( ) show (;) show ( ) show (K) show ( ) show (value) show  newline
+(\(x) show ( ) show (share-x\)) show ( ) show (;) show ( ) show (X-coordinate) show ( ) show (\(1) show ( ) show (to) show ( ) show (N\)) show  newline
+(\(y) show ( ) show (share-y\)\)) show ( ) show (;) show ( ) show (Y-coordinate) show ( ) show (\(blob,) show ( ) show (same) show ( ) show (size) show ( ) show (as) show ( ) show (secret\)) show  newline
+ newline
+ newline
+(Splitting) show ( ) show (a) show ( ) show (Secret) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(shamir-split) show ( ) show (secret) show ( ) show (#!key) show ( ) show (\(threshold) show ( ) show (3\)) show ( ) show (\(total) show ( ) show (5\)\)) show  newline
+ newline
+(Parameters:) show ( ) show (-) show ( ) show (secret) show ( ) show (-) show ( ) show (Blob) show ( ) show (to) show ( ) show (split) show ( ) show (\(any) show ( ) show (size,) show ( ) show (typically) show ( ) show (32) show ( ) show (or) show ( ) show (64) show  newline
+(bytes\)) show ( ) show (-) show ( ) show (threshold) show ( ) show (-) show ( ) show (Minimum) show ( ) show (shares) show ( ) show (to) show ( ) show (reconstruct) show ( ) show (\(K\)) show ( ) show (-) show ( ) show (total) show ( ) show (-) show ( ) show (Total) show  newline
+(shares) show ( ) show (to) show ( ) show (create) show ( ) show (\(N\)) show  newline
+ newline
+(Returns:) show ( ) show (List) show ( ) show (of) show ( ) show (N) show ( ) show (shamir-share) show ( ) show (records) show  newline
+ newline
+(Algorithm:) show  newline
+ newline
+(*) show ( ) show (For) show ( ) show (each) show ( ) show (byte) show ( ) show (of) show ( ) show (secret:) show ( ) show (generate) show ( ) show (K-1) show ( ) show (random) show ( ) show (coefficients,) show ( ) show (set) show ( ) show (coefficient[0]) show ( ) show (=) show ( ) show (secret) show ( ) show (byte,) show ( ) show (construct) show ( ) show (polynomial) show ( ) show (f\(x\)) show ( ) show (=) show ( ) show (a0) show ( ) show (+) show ( ) show (a1*x) show ( ) show (+) show ( ) show (a2*x^2) show ( ) show (+) show ( ) show (...) show ( ) show (+) show ( ) show (a\(k-1\)*x^\(k-1\)) show  newline
+(*) show ( ) show (Evaluate) show ( ) show (polynomial) show ( ) show (at) show ( ) show (x) show ( ) show (=) show ( ) show (1,) show ( ) show (2,) show ( ) show (...,) show ( ) show (N) show  newline
+(*) show ( ) show (Package) show ( ) show (\(x,) show ( ) show (f\(x\)\)) show ( ) show (pairs) show ( ) show (as) show ( ) show (shares) show  newline
+ newline
+ newline
+(Reconstructing) show ( ) show (a) show ( ) show (Secret) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(shamir-reconstruct) show ( ) show (shares\)) show  newline
+ newline
+(Parameters:) show ( ) show (-) show ( ) show (shares) show ( ) show (-) show ( ) show (List) show ( ) show (of) show ( ) show (at) show ( ) show (least) show ( ) show (K) show ( ) show (shamir-share) show ( ) show (records) show  newline
+ newline
+(Returns:) show ( ) show (Reconstructed) show ( ) show (secret) show ( ) show (blob) show  newline
+ newline
+(Algorithm:) show  newline
+ newline
+(*) show ( ) show (Take) show ( ) show (first) show ( ) show (K) show ( ) show (shares) show  newline
+(*) show ( ) show (For) show ( ) show (each) show ( ) show (byte) show ( ) show (position:) show ( ) show (use) show ( ) show (Lagrange) show ( ) show (interpolation,) show ( ) show (compute) show ( ) show (f\(0\)) show ( ) show (=) show ( ) show (secret) show ( ) show (byte) show  newline
+(*) show ( ) show (Assemble) show ( ) show (reconstructed) show ( ) show (secret) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(GALOIS) show ( ) show (FIELD) show ( ) show (ARITHMETIC) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 0 add ypos moveto (Operations) show
+margin 66 add ypos moveto (performed) show
+margin 126 add ypos moveto (in) show
+margin 144 add ypos moveto (GF\(2\)) show
+margin 186 add ypos moveto (with) show
+margin 216 add ypos moveto (irreducible) show
+margin 288 add ypos moveto (polynomial) show
+margin 354 add ypos moveto (x) show
+margin 372 add ypos moveto (+) show
+margin 384 add ypos moveto (x) show
+grestore
+newline
+gsave
+margin 0 add ypos moveto (+) show
+margin 12 add ypos moveto (x\263) show
+margin 30 add ypos moveto (+) show
+margin 42 add ypos moveto (x) show
+margin 54 add ypos moveto (+) show
+margin 66 add ypos moveto (1:) show
+grestore
+newline
+ newline
+ newline
+(\(define) show ( ) show (gf256-primitive) show ( ) show (#x11b\)) show ( ) show (;) show ( ) show (x^8) show ( ) show (+) show ( ) show (x^4) show ( ) show (+) show ( ) show (x^3) show ( ) show (+) show ( ) show (x) show ( ) show (+) show ( ) show (1) show  newline
+(\(define) show ( ) show (\(gf256-mul) show ( ) show (a) show ( ) show (b\)) show  newline
+("Multiply) show ( ) show (in) show ( ) show (GF\(2^8\)") show  newline
+(...\)) show  newline
+(\(define) show ( ) show (\(gf256-inv) show ( ) show (a\)) show  newline
+("Multiplicative) show ( ) show (inverse) show ( ) show (in) show ( ) show (GF\(2^8\)") show  newline
+(...\)) show  newline
+(\(define) show ( ) show (\(gf256-poly-eval) show ( ) show (coeffs) show ( ) show (x\)) show  newline
+("Evaluate) show ( ) show (polynomial) show ( ) show (at) show ( ) show (x) show ( ) show (using) show ( ) show (Horner's) show ( ) show (method") show  newline
+(...\)) show  newline
+ newline
+gsave
+margin 0 add ypos moveto (GF\(2\)) show
+margin 42 add ypos moveto (ensures:) show
+margin 96 add ypos moveto (-) show
+margin 108 add ypos moveto (All) show
+margin 132 add ypos moveto (operations) show
+margin 198 add ypos moveto (stay) show
+margin 228 add ypos moveto (within) show
+margin 270 add ypos moveto (byte) show
+margin 300 add ypos moveto (range) show
+margin 336 add ypos moveto (-) show
+margin 348 add ypos moveto (No) show
+margin 366 add ypos moveto (overflow) show
+grestore
+newline
+(issues) show ( ) show (-) show ( ) show (Proper) show ( ) show (field) show ( ) show (properties) show ( ) show (\(every) show ( ) show (non-zero) show ( ) show (element) show ( ) show (has) show ( ) show (inverse\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(USAGE) show ( ) show (EXAMPLES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Basic) show ( ) show (Secret) show ( ) show (Splitting) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(import) show ( ) show (crypto-ffi\)) show  newline
+(\(sodium-init\)) show  newline
+(;;) show ( ) show (Create) show ( ) show (a) show ( ) show (32-byte) show ( ) show (secret) show  newline
+(\(define) show ( ) show (secret) show ( ) show (\(make-blob) show ( ) show (32\)\)) show  newline
+(;;) show ( ) show (...) show ( ) show (fill) show ( ) show (with) show ( ) show (secret) show ( ) show (data) show ( ) show (...) show  newline
+(;;) show ( ) show (Split) show ( ) show (into) show ( ) show (5) show ( ) show (shares,) show ( ) show (threshold) show ( ) show (3) show  newline
+(\(define) show ( ) show (shares) show ( ) show (\(shamir-split) show ( ) show (secret) show ( ) show (threshold:) show ( ) show (3) show ( ) show (total:) show ( ) show (5\)\)) show  newline
+(;;) show ( ) show (Distribute) show ( ) show (shares) show ( ) show (to) show ( ) show (custodians) show  newline
+(\(print) show ( ) show ("Created) show ( ) show (") show ( ) show (\(length) show ( ) show (shares\)) show ( ) show (") show ( ) show (shares"\)) show  newline
+(\(print) show ( ) show ("Threshold:) show ( ) show (") show ( ) show (\(share-threshold) show ( ) show (\(car) show ( ) show (shares\)\)\)) show  newline
+ newline
+ newline
+(Reconstruction) show ( ) show (from) show ( ) show (K) show ( ) show (Shares) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Collect) show ( ) show (any) show ( ) show (3) show ( ) show (shares) show  newline
+(\(define) show ( ) show (collected) show ( ) show (\(list) show ( ) show (share-1) show ( ) show (share-3) show ( ) show (share-5\)\)) show  newline
+(;;) show ( ) show (Reconstruct) show  newline
+(\(define) show ( ) show (reconstructed) show ( ) show (\(shamir-reconstruct) show ( ) show (collected\)\)) show  newline
+(;;) show ( ) show (Verify) show  newline
+(\(if) show ( ) show (\(equal?) show ( ) show (\(blob->hex) show ( ) show (secret\)) show ( ) show (\(blob->hex) show ( ) show (reconstructed\)\)) show  newline
+gsave
+margin 48 add ypos moveto (\(print) show
+margin 90 add ypos moveto (") show
+margin 108 add ypos moveto (Reconstruction) show
+margin 198 add ypos moveto (successful!"\)) show
+grestore
+newline
+gsave
+margin 48 add ypos moveto (\(print) show
+margin 90 add ypos moveto (") show
+margin 108 add ypos moveto (Reconstruction) show
+margin 198 add ypos moveto (failed"\)\)) show
+grestore
+newline
+ newline
+ newline
+(Ed25519) show ( ) show (Key) show ( ) show (Backup) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Generate) show ( ) show (keypair) show  newline
+(\(define) show ( ) show (keypair) show ( ) show (\(ed25519-keypair\)\)) show  newline
+(\(define) show ( ) show (public-key) show ( ) show (\(car) show ( ) show (keypair\)\)) show  newline
+(\(define) show ( ) show (private-key) show ( ) show (\(cadr) show ( ) show (keypair\)\)) show  newline
+(;;) show ( ) show (Split) show ( ) show (private) show ( ) show (key) show ( ) show (\(5-of-7) show ( ) show (for) show ( ) show (production\)) show  newline
+(\(define) show ( ) show (key-shares) show ( ) show (\(shamir-split) show ( ) show (private-key) show ( ) show (threshold:) show ( ) show (5) show ( ) show (total:) show ( ) show (7\)\)) show  newline
+(;;) show ( ) show (Later:) show ( ) show (reconstruct) show ( ) show (and) show ( ) show (verify) show  newline
+(\(define) show ( ) show (recovered-key) show ( ) show (\(shamir-reconstruct) show ( ) show (\(take) show ( ) show (key-shares) show ( ) show (5\)\)\)) show  newline
+(;;) show ( ) show (Test:) show ( ) show (sign) show ( ) show (with) show ( ) show (recovered) show ( ) show (key) show  newline
+(\(define) show ( ) show (message) show ( ) show ("Test) show ( ) show (message"\)) show  newline
+(\(define) show ( ) show (signature) show ( ) show (\(ed25519-sign) show ( ) show (recovered-key) show ( ) show (message\)\)) show  newline
+(\(define) show ( ) show (valid?) show ( ) show (\(ed25519-verify) show ( ) show (public-key) show ( ) show (message) show ( ) show (signature\)\)) show  newline
+(\(if) show ( ) show (valid?) show  newline
+gsave
+margin 48 add ypos moveto (\(print) show
+margin 90 add ypos moveto (") show
+margin 108 add ypos moveto (Recovered) show
+margin 168 add ypos moveto (key) show
+margin 192 add ypos moveto (produces) show
+margin 246 add ypos moveto (valid) show
+margin 282 add ypos moveto (signatures!"\)) show
+grestore
+newline
+gsave
+margin 48 add ypos moveto (\(print) show
+margin 90 add ypos moveto (") show
+margin 108 add ypos moveto (Key) show
+margin 132 add ypos moveto (recovery) show
+margin 186 add ypos moveto (failed"\)\)) show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (PROPERTIES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Information-Theoretic) show ( ) show (Security) show  newline
+newpath margin ypos moveto margin 180 add ypos lineto stroke
+newline
+ newline
+(With) show ( ) show (K-1) show ( ) show (shares:) show ( ) show (-) show ( ) show (No) show ( ) show (information) show ( ) show (about) show ( ) show (secret) show ( ) show (is) show ( ) show (revealed) show ( ) show (-) show ( ) show (Not) show  newline
+(computationally) show ( ) show (hard) show ( ) show (-) show ( ) show (literally) show ( ) show (impossible) show ( ) show (-) show ( ) show (Even) show ( ) show (infinite) show ( ) show (compute) show  newline
+(power) show ( ) show (cannot) show ( ) show (break) show  newline
+ newline
+(This) show ( ) show (is) show ( ) show (because) show ( ) show (K-1) show ( ) show (points) show ( ) show (determine) show ( ) show (infinitely) show ( ) show (many) show ( ) show (degree-\(K-1\)) show  newline
+(polynomials.) show  newline
+ newline
+ newline
+(Share) show ( ) show (Independence) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(Each) show ( ) show (share) show ( ) show (is) show ( ) show (uniformly) show ( ) show (random:) show ( ) show (-) show ( ) show (Looks) show ( ) show (like) show ( ) show (random) show ( ) show (bytes) show ( ) show (-) show ( ) show (No) show  newline
+(correlation) show ( ) show (between) show ( ) show (shares) show ( ) show (-) show ( ) show (Safe) show ( ) show (to) show ( ) show (store) show ( ) show (on) show ( ) show (untrusted) show ( ) show (media) show  newline
+ newline
+ newline
+(Threshold) show ( ) show (Guarantee) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(Exactly) show ( ) show (K) show ( ) show (shares) show ( ) show (required:) show ( ) show (-) show ( ) show (K) show ( ) show (shares:) show ( ) show (reconstruction) show ( ) show (succeeds) show ( ) show (-) show ( ) show (K-1) show  newline
+(shares:) show ( ) show (no) show ( ) show (information) show ( ) show (-) show ( ) show (K+1) show ( ) show (shares:) show ( ) show (still) show ( ) show (works) show ( ) show (\(overdetermined\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(THRESHOLD) show ( ) show (SELECTION) show ( ) show (GUIDELINES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Use) show ( ) show (Case) show ( ) show (Threshold) show ( ) show (Total) show ( ) show (Rationale) show  newline
+(Personal) show ( ) show (backup) show ( ) show (2-of-3) show ( ) show (Simple) show ( ) show (recovery) show  newline
+(Team) show ( ) show (key) show ( ) show (3-of-5) show ( ) show (Majority) show ( ) show (required) show  newline
+(Organization) show ( ) show (root) show ( ) show (5-of-7) show ( ) show (Supermajority) show  newline
+(Hardware) show ( ) show (ceremony) show ( ) show (7-of-11) show ( ) show (High) show ( ) show (assurance) show  newline
+(Paranoid) show ( ) show (11-of-15) show ( ) show (Maximum) show ( ) show (distribution) show  newline
+ newline
+ newline
+(Considerations) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Availability:) show ( ) show (Higher) show ( ) show (K) show ( ) show (=) show ( ) show (harder) show ( ) show (to) show ( ) show (recover) show  newline
+(*) show ( ) show (Security:) show ( ) show (Lower) show ( ) show (K) show ( ) show (=) show ( ) show (easier) show ( ) show (to) show ( ) show (collude) show  newline
+(*) show ( ) show (Geography:) show ( ) show (Consider) show ( ) show (time) show ( ) show (zones) show ( ) show (for) show ( ) show (ceremonies) show  newline
+(*) show ( ) show (Succession:) show ( ) show (What) show ( ) show (if) show ( ) show (custodians) show ( ) show (unavailable?) show  newline
+ newline
+(Threshold) show ( ) show (selection) show ( ) show (balances) show ( ) show (the) show ( ) show (probability) show ( ) show (of) show ( ) show (legitimate) show ( ) show (recovery) show  newline
+(against) show ( ) show (the) show ( ) show (probability) show ( ) show (of) show ( ) show (malicious) show ( ) show (collusion,) show ( ) show (tailored) show ( ) show (to) show ( ) show (the) show ( ) show (specific) show  newline
+(threat) show ( ) show (model.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SHARE) show ( ) show (DISTRIBUTION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Physical) show ( ) show (Security) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(Share) show ( ) show (1:) show ( ) show (Safe) show ( ) show (deposit) show ( ) show (box) show ( ) show (\(Bank) show ( ) show (A\)) show  newline
+(Share) show ( ) show (2:) show ( ) show (Home) show ( ) show (safe) show  newline
+(Share) show ( ) show (3:) show ( ) show (Attorney's) show ( ) show (vault) show  newline
+(Share) show ( ) show (4:) show ( ) show (Trusted) show ( ) show (family) show ( ) show (member) show  newline
+(Share) show ( ) show (5:) show ( ) show (Offshore) show ( ) show (location) show  newline
+ newline
+ newline
+(Digital) show ( ) show (Storage) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(Share) show ( ) show (1:) show ( ) show (Hardware) show ( ) show (security) show ( ) show (module) show  newline
+(Share) show ( ) show (2:) show ( ) show (Air-gapped) show ( ) show (laptop) show  newline
+(Share) show ( ) show (3:) show ( ) show (Encrypted) show ( ) show (USB) show ( ) show (\(passphrase) show ( ) show (protected\)) show  newline
+(Share) show ( ) show (4:) show ( ) show (Paper) show ( ) show (printout) show ( ) show (\(secure) show ( ) show (location\)) show  newline
+(Share) show ( ) show (5:) show ( ) show (Tattoo) show ( ) show (\(not) show ( ) show (recommended\)) show  newline
+ newline
+ newline
+(Geographic) show ( ) show (Distribution) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Different) show ( ) show (jurisdictions) show  newline
+(*) show ( ) show (Different) show ( ) show (failure) show ( ) show (domains) show  newline
+(*) show ( ) show (Different) show ( ) show (time) show ( ) show (zones) show ( ) show (\(for) show ( ) show (ceremonies\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(VERIFICATION) show ( ) show (WITHOUT) show ( ) show (RECONSTRUCTION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (periodic) show ( ) show (verification) show ( ) show (that) show ( ) show (shares) show ( ) show (are) show ( ) show (intact:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Each) show ( ) show (custodian) show ( ) show (verifies) show ( ) show (their) show ( ) show (share) show  newline
+(\(define) show ( ) show (\(verify-share) show ( ) show (share) show ( ) show (expected-id) show ( ) show (expected-threshold\)) show  newline
+(\(and) show ( ) show (\(eq?) show ( ) show (\(share-id) show ( ) show (share\)) show ( ) show (expected-id\)) show  newline
+(\(=) show ( ) show (\(share-threshold) show ( ) show (share\)) show ( ) show (expected-threshold\)) show  newline
+(\(=) show ( ) show (\(blob-size) show ( ) show (\(share-y) show ( ) show (share\)\)) show ( ) show (expected-length\)\)\)) show  newline
+ newline
+(Full) show ( ) show (reconstruction) show ( ) show (should) show ( ) show (be) show ( ) show (rare:) show ( ) show (-) show ( ) show (Key) show ( ) show (rotation) show ( ) show (ceremonies) show ( ) show (-) show  newline
+(Emergency) show ( ) show (recovery) show ( ) show (-) show ( ) show (Succession) show ( ) show (events) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(INTEGRATION) show ( ) show (WITH) show ( ) show (THRESHOLD) show ( ) show (SIGNATURES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Two) show ( ) show (complementary) show ( ) show (approaches:) show  newline
+ newline
+ newline
+(Shamir) show ( ) show (for) show ( ) show (Key) show ( ) show (Backup) show ( ) show (\(This) show ( ) show (Memo\)) show  newline
+newpath margin ypos moveto margin 198 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto (Private) show
+margin 72 add ypos moveto (key) show
+% box char 2192 at col 16
+newpath margin 99 add 3 sub ypos 2 add moveto margin 99 add 3 add ypos lineto margin 99 add 3 sub ypos 2 sub lineto closepath fill
+margin 108 add ypos moveto (split) show
+% box char 2192 at col 24
+newpath margin 147 add 3 sub ypos 2 add moveto margin 147 add 3 add ypos lineto margin 147 add 3 sub ypos 2 sub lineto closepath fill
+margin 156 add ypos moveto (N) show
+margin 168 add ypos moveto (shares) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (Recovery:) show
+margin 84 add ypos moveto (K) show
+margin 96 add ypos moveto (shares) show
+% box char 2192 at col 23
+newpath margin 141 add 3 sub ypos 2 add moveto margin 141 add 3 add ypos lineto margin 141 add 3 sub ypos 2 sub lineto closepath fill
+margin 150 add ypos moveto (reconstruct) show
+% box char 2192 at col 37
+newpath margin 225 add 3 sub ypos 2 add moveto margin 225 add 3 add ypos lineto margin 225 add 3 sub ypos 2 sub lineto closepath fill
+margin 234 add ypos moveto (use) show
+margin 258 add ypos moveto (key) show
+grestore
+newline
+ newline
+ newline
+(Multi-Signature) show ( ) show (for) show ( ) show (Governance) show ( ) show (\(Memo-008\)) show  newline
+newpath margin ypos moveto margin 246 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto (N) show
+margin 36 add ypos moveto (parties) show
+% box char 2192 at col 14
+newpath margin 87 add 3 sub ypos 2 add moveto margin 87 add 3 add ypos lineto margin 87 add 3 sub ypos 2 sub lineto closepath fill
+margin 96 add ypos moveto (N) show
+margin 108 add ypos moveto (keys) show
+% box char 2192 at col 23
+newpath margin 141 add 3 sub ypos 2 add moveto margin 141 add 3 add ypos lineto margin 141 add 3 sub ypos 2 sub lineto closepath fill
+margin 150 add ypos moveto (N) show
+margin 162 add ypos moveto (signatures) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (Verification:) show
+margin 108 add ypos moveto (count) show
+margin 144 add ypos moveto (valid) show
+margin 180 add ypos moveto () show
+margin 192 add ypos moveto (K) show
+grestore
+newline
+ newline
+(Use) show ( ) show (Shamir) show ( ) show (when:) show ( ) show (-) show ( ) show (Backing) show ( ) show (up) show ( ) show (existing) show ( ) show (keys) show ( ) show (-) show ( ) show (Emergency) show ( ) show (recovery) show  newline
+(scenarios) show ( ) show (-) show ( ) show (Single) show ( ) show (key) show ( ) show (must) show ( ) show (be) show ( ) show (reconstructable) show  newline
+ newline
+(Use) show ( ) show (Multi-Sig) show ( ) show (when:) show ( ) show (-) show ( ) show (Ongoing) show ( ) show (governance) show ( ) show (decisions) show ( ) show (-) show ( ) show (Need) show ( ) show (audit) show ( ) show (trail) show ( ) show (of) show  newline
+(who) show ( ) show (signed) show ( ) show (-) show ( ) show (Asynchronous) show ( ) show (authorization) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Threats) show ( ) show (Mitigated) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(Threat) show ( ) show (Mitigation) show  newline
+(Key) show ( ) show (loss) show ( ) show (Any) show ( ) show (K) show ( ) show (shares) show ( ) show (recover) show  newline
+(Single) show ( ) show (compromise) show ( ) show (Need) show ( ) show (K) show ( ) show (colluding) show  newline
+(Insider) show ( ) show (attack) show ( ) show (Distribute) show ( ) show (to) show ( ) show (independent) show ( ) show (parties) show  newline
+(Coercion) show ( ) show (Geographic/jurisdictional) show ( ) show (diversity) show  newline
+ newline
+ newline
+(Threats) show ( ) show (Remaining) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(Threat) show ( ) show (Notes) show  newline
+(K) show ( ) show (colluding) show ( ) show (parties) show ( ) show (Fundamental) show ( ) show (limitation) show  newline
+(Poor) show ( ) show (share) show ( ) show (storage) show ( ) show (Operational) show ( ) show (security) show  newline
+(Side) show ( ) show (channels) show ( ) show (during) show ( ) show (reconstruction) show ( ) show (Use) show ( ) show (secure) show ( ) show (environments) show  newline
+(Weak) show ( ) show (random) show ( ) show (generation) show ( ) show (Use) show ( ) show (libsodium) show  newline
+ newline
+ newline
+(Operational) show ( ) show (Security) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Generation:) show ( ) show (Air-gapped) show ( ) show (machine,) show ( ) show (secure) show ( ) show (random) show  newline
+(*) show ( ) show (Distribution:) show ( ) show (Out-of-band) show ( ) show (verification) show  newline
+(*) show ( ) show (Storage:) show ( ) show (Encrypted,) show ( ) show (physically) show ( ) show (secure) show  newline
+(*) show ( ) show (Reconstruction:) show ( ) show (Secure) show ( ) show (room,) show ( ) show (witnesses) show  newline
+(*) show ( ) show (Destruction:) show ( ) show (Secure) show ( ) show (wipe) show ( ) show (after) show ( ) show (use) show  newline
+ newline
+(Shamir's) show ( ) show (mathematical) show ( ) show (security) show ( ) show (is) show ( ) show (only) show ( ) show (as) show ( ) show (strong) show ( ) show (as) show ( ) show (the) show ( ) show (operational) show  newline
+(procedures) show ( ) show (surrounding) show ( ) show (share) show ( ) show (generation,) show ( ) show (distribution,) show ( ) show (and) show  newline
+(reconstruction.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show ( ) show (NOTES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Dependencies) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (libsodium) show  newline
+(*) show ( ) show (Secure) show ( ) show (random) show ( ) show (number) show ( ) show (generation) show ( ) show (-) show ( ) show (srfi-4) show ( ) show (-) show ( ) show (u8vectors) show ( ) show (for) show ( ) show (byte) show ( ) show (manipulation) show  newline
+ newline
+ newline
+(Performance) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Split:) show
+margin 66 add ypos moveto (O\(N) show
+margin 90 add ypos moveto (\327) show
+margin 102 add ypos moveto (K) show
+margin 114 add ypos moveto (\327) show
+margin 126 add ypos moveto (secretlength\)) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Reconstruct:) show
+margin 102 add ypos moveto (O\(K\262) show
+margin 132 add ypos moveto (\327) show
+margin 144 add ypos moveto (secretlength\)) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (GF\(2\)) show
+margin 66 add ypos moveto (operations:) show
+margin 138 add ypos moveto (O\(1\)) show
+margin 168 add ypos moveto (per) show
+margin 192 add ypos moveto (byte) show
+grestore
+newline
+ newline
+ newline
+(Limitations) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Secret) show
+margin 66 add ypos moveto (size:) show
+margin 102 add ypos moveto (Arbitrary) show
+margin 162 add ypos moveto (\(but) show
+margin 192 add ypos moveto (typically) show
+margin 252 add ypos moveto () show
+margin 264 add ypos moveto (64) show
+margin 282 add ypos moveto (bytes\)) show
+grestore
+newline
+(*) show ( ) show (Share) show ( ) show (count:) show ( ) show (Practical) show ( ) show (limit) show ( ) show (~255) show ( ) show (\(byte) show ( ) show (x-coordinates\)) show  newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Threshold:) show
+margin 90 add ypos moveto (2) show
+margin 102 add ypos moveto () show
+margin 114 add ypos moveto (K) show
+margin 126 add ypos moveto () show
+margin 138 add ypos moveto (N) show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Shamir,) show ( ) show (A.) show ( ) show (\(1979\).) show ( ) show (How) show ( ) show (to) show ( ) show (share) show ( ) show (a) show ( ) show (secret.) show ( ) show (Communications) show ( ) show (of) show ( ) show (the) show ( ) show (ACM.) show  newline
+(*) show ( ) show (Blakley,) show ( ) show (G.) show ( ) show (R.) show ( ) show (\(1979\).) show ( ) show (Safeguarding) show ( ) show (cryptographic) show ( ) show (keys.) show  newline
+(*) show ( ) show (Beimel,) show ( ) show (A.) show ( ) show (\(2011\).) show ( ) show (Secret-Sharing) show ( ) show (Schemes:) show ( ) show (A) show ( ) show (Survey.) show  newline
+(*) show ( ) show (NIST) show ( ) show (SP) show ( ) show (800-57.) show ( ) show (Recommendation) show ( ) show (for) show ( ) show (Key) show ( ) show (Management.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-06) show  newline
+(*) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

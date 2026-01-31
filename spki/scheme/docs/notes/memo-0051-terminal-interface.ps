@@ -15,367 +15,1067 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0051: Terminal Interface Conventions) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The terminal is for operators. This Memo specifies visual conventions) show newline
-(for the Cyberspace REPL: box drawing, tree displays, prompts, color) show newline
-(usage, and output formatting. Consistency aids muscle memory.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(1. THE OPERATOR INTERFACE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The Cyberspace REPL is for hackers, admins, and operators—people who) show newline
-(think in terms of data structures. This interface is deliberately) show newline
-(different from the friendly GUI interface \(Memo-051\).) show newline
-() show newline
-() show newline
-(                   CYBERSPACE) show newline
-(                        │) show newline
-(           ┌────────────┴────────────┐) show newline
-(           │                         │) show newline
-(      ┌────▼─────┐              ┌────▼─────┐) show newline
-(      │ Terminal │              │ Friendly │) show newline
-(      │   \(cs\)   │ ← this memo  │   Door   │) show newline
-(      └──────────┘              └──────────┘) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(2. NOVICE MODE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The terminal defaults to novice mode: English-like commands, guided) show newline
-(exploration, hidden complexity. Scheme is underneath but not visible) show newline
-(until discovered.) show newline
-() show newline
-() show newline
-(2.1 Two Modes) show newline
-(-------------) show newline
-() show newline
-() show newline
-(  Mode      Prompt   Commands                              ) show newline
-(  novice    :        inspect soup, describe vault, help    ) show newline
-(  schemer   λ       \(soup 'keys\), ,s ,p ,x, expressions   ) show newline
-() show newline
-(Novice mode is the default. Schemer mode uses the lambda prompt \(λ\).) show newline
-(The difference is what commands are available and how results are) show newline
-(presented.) show newline
-() show newline
-() show newline
-(2.2 Dylan-Style Inspectors) show newline
-(--------------------------) show newline
-() show newline
-(Inspectors in novice mode follow Dylan/Symbolics tradition: numbered) show newline
-(lists with drill-down commands.) show newline
-() show newline
-() show newline
-(    : inspect soup) show newline
-(    ╔═══════════════════════════════════════════════════╗) show newline
-(    ║                  Vault Contents                   ║) show newline
-(    ╠═══════════════════════════════════════════════════╣) show newline
-(    ║ 1. keys \(2\)                                       ║) show newline
-(    ║ 2. releases \(3\)                                   ║) show newline
-(    ║ 3. archives \(12\)                                  ║) show newline
-(    ╚═══════════════════════════════════════════════════╝) show newline
-(    Enter number to inspect, or: help list search done) show newline
-() show newline
-(The heritage: Symbolics genera-style browsers, Apple Dylan's inspector,) show newline
-(Clozure CL's GUI. Same principle: show a numbered list, let the user) show newline
-(drill in by number.) show newline
-() show newline
-() show newline
-(2.3 Describe vs Inspect) show newline
-(-----------------------) show newline
-() show newline
-(Two commands for understanding:) show newline
-() show newline
-() show newline
-(  Command            Purpose                                         ) show newline
-(  describe <thing>   What IS this thing? Conceptual explanation.     ) show newline
-(  inspect <thing>    What's IN this thing? Contents and structure.   ) show newline
-() show newline
-(Example: describe soup explains the concept; inspect soup shows what's) show newline
-(in the vault.) show newline
-() show newline
-() show newline
-(2.4 The Hidden Door) show newline
-(-------------------) show newline
-() show newline
-(describe scheme is the hidden door to Scheme. Not advertised, found by) show newline
-(curious novices who try describe on everything.) show newline
-() show newline
-() show newline
-(    : describe scheme) show newline
-(    Everything here is Scheme underneath.) show newline
-(    The : prompt accepts commands. Parentheses unlock the language.) show newline
-(    Try: \(+ 1 2\) or \(soup 'keys\)) show newline
-() show newline
-(By the time they find it, they're ready. Self-selecting.) show newline
-() show newline
-() show newline
-(2.5 Mode Switching) show newline
-(------------------) show newline
-() show newline
-(The system auto-detects mode from usage. Type parentheses or comma) show newline
-(commands, become a schemer:) show newline
-() show newline
-() show newline
-(    : \(+ 1 2 3\)) show newline
-(    Detected Scheme usage - switching to schemer mode.) show newline
-(    Type \(novice\) to switch back.) show newline
-(    6) show newline
-() show newline
-(Comma commands also assert schemer mode:) show newline
-() show newline
-() show newline
-(    : ,s) show newline
-(    λ ) show newline
-() show newline
-(Explicit switching:) show newline
-() show newline
-() show newline
-(  Command     Effect                        ) show newline
-(  \(schemer\)   Switch to schemer mode        ) show newline
-(  \(novice\)    Switch to novice mode         ) show newline
-(  ,anything   Comma usage implies schemer   ) show newline
-() show newline
-(Schemer mode shows the λ prompt and treats the REPL as a full Scheme) show newline
-(environment. Self-selecting: use parentheses or comma commands and you) show newline
-(become a schemer.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(3. BOX DRAWING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(2.1 Unicode Box Characters) show newline
-(--------------------------) show newline
-() show newline
-(Boxes use ASCII characters for web compatibility, Unicode in terminals:) show newline
-() show newline
-() show newline
-(    +  corner/tee/cross) show newline
-(    |  vertical line) show newline
-(    -  horizontal line) show newline
-() show newline
-(Double-line boxes use = and # for emphasis:) show newline
-() show newline
-() show newline
-(    #  corner) show newline
-(    |  vertical) show newline
-(    =  horizontal) show newline
-() show newline
-() show newline
-(2.2 Box Construction Pattern) show newline
-(----------------------------) show newline
-() show newline
-(Use closures to encapsulate box state:) show newline
-() show newline
-() show newline
-(    \(define \(make-box title w\)) show newline
-(      "Create a box drawing closure with given title and width") show newline
-(      \(let \(\(title-padded \(string-append " " title " "\)\)) show newline
-(             \(title-len \(string-length title-padded\)\)) show newline
-(             \(left-pad \(quotient \(- w title-len\) 2\)\)) show newline
-(             \(right-pad \(- w title-len left-pad\)\)) show newline
-(             \(header \(string-append "+" \(make-string left-pad #\\-\)) show newline
-(                                   title-padded) show newline
-(                                   \(make-string right-pad #\\-\) "+\\n"\)\)) show newline
-(             \(footer \(string-append "+" \(make-string w #\\-\) "+\\n"\)\)\)) show newline
-(        \(lambda \(cmd . args\)) show newline
-(          \(case cmd) show newline
-(            \(\(header\) header\)) show newline
-(            \(\(footer\) footer\)) show newline
-(            \(\(line\) \(let \(\(content \(if \(null? args\) "" \(car args\)\)\)) show newline
-(                           \(pad \(- w \(string-length content\) 2\)\)\)) show newline
-(                      \(string-append "| " content) show newline
-(                                    \(make-string \(max 0 pad\) #\\space\)) show newline
-(                                    " |\\n"\)\)\)\)\)\)\)) show newline
-() show newline
-() show newline
-(2.3 Standard Box Widths) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(  Context    Width   Usage                   ) show newline
-(  Compact    40      Small status displays   ) show newline
-(  Standard   50      Most dialogs            ) show newline
-(  Wide       65      Detailed information    ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(3. TREE DISPLAY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(3.1 Tree Characters) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    +-  branch with more siblings) show newline
-(    +-  final branch \(last item\)) show newline
-(    |   vertical continuation) show newline
-() show newline
-() show newline
-(3.2 Tree Example) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    hostname - up 3d 12:45:03) show newline
-(    +- 10 cores, 64GB, Apple M4) show newline
-(    +- 192.168.1.100 / 2001:db8::1...) show newline
-(    +- vault: .vault/ \(keys\) \(audit\)) show newline
-() show newline
-() show newline
-(3.3 Multi-level Trees) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(    vault \(49 objects\)) show newline
-(    +- archives \(3\)) show newline
-(    |  +- cyberspace-v0.59.tar.gz) show newline
-(    +- keys \(2\)) show newline
-(    |  +- starlight - Ed25519) show newline
-(    |  +- macmini - Ed25519) show newline
-(    +- releases \(5\)) show newline
-(       +- v0.59 \(signed\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(4. PROMPT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(4.1 Default Prompt) show newline
-(------------------) show newline
-() show newline
-(The default prompt is a simple colon with trailing space:) show newline
-() show newline
-() show newline
-(    :) show newline
-() show newline
-(This echoes the Newton's soup browser prompt.) show newline
-() show newline
-() show newline
-(4.2 Prompt Variants) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(  Context        Prompt   Usage                            ) show newline
-(  Novice         :        Default, English-like commands   ) show newline
-(  Schemer        λ       Full Scheme mode                 ) show newline
-(  Continuation   >        Multi-line input                 ) show newline
-(  Debug          [n]:     In debugger at frame n           ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(5. COLOR AND EMPHASIS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(5.1 VT100 Codes) show newline
-(---------------) show newline
-() show newline
-(Use ANSI/VT100 escape sequences sparingly:) show newline
-() show newline
-() show newline
-(    \(define vt100-bold    "\\x1b[1m"\)) show newline
-(    \(define vt100-dim     "\\x1b[2m"\)) show newline
-(    \(define vt100-normal  "\\x1b[0m"\)) show newline
-(    \(define vt100-red     "\\x1b[31m"\)) show newline
-(    \(define vt100-green   "\\x1b[32m"\)) show newline
-(    \(define vt100-yellow  "\\x1b[33m"\)) show newline
-(    \(define vt100-blue    "\\x1b[34m"\)) show newline
-() show newline
-() show newline
-(5.2 When to Use Color) show newline
-(---------------------) show newline
-() show newline
-(  * Green: Success, completion \(✓\)) show newline
-(  * Red: Error, failure \(✗\)) show newline
-(  * Yellow: Warning, attention needed) show newline
-(  * Blue: Informational highlights) show newline
-(  * Dim: Secondary information) show newline
-(  * Bold: Headers, important values) show newline
-() show newline
-(Color conveys urgency and category at a glance. Consistent usage across) show newline
-(the interface builds muscle memory: red always means stop, green always) show newline
-(means proceed.) show newline
-() show newline
-() show newline
-(5.3 Principle) show newline
-(-------------) show newline
-() show newline
-(Color is enhancement, not information. All output MUST be readable) show newline
-(without color \(plain terminal, logging, piped output\).) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(6. STATUS SYMBOLS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(6.1 Checkmarks and Crosses) show newline
-(--------------------------) show newline
-() show newline
-() show newline
-(    [ok]  Success) show newline
-(    [!!]  Failure) show newline
-(    *     Bullet point) show newline
-(    ->    Arrow, implies) show newline
-() show newline
-() show newline
-(6.2 Inline Separators) show newline
-(---------------------) show newline
-() show newline
-(For separating items in compact displays \(session stats, status lines\):) show newline
-() show newline
-() show newline
-(    -  dash separator) show newline
-(    |  pipe \(more intrusive\)) show newline
-(    v  down \(bytes/data in\)) show newline
-(    ^  up \(bytes/data out\)) show newline
-() show newline
-(Example session summary:) show newline
-() show newline
-() show newline
-(    Session: 4m 24s - 2 syncs - 3 seals - v1.2K ^856B) show newline
-() show newline
-() show newline
-(6.3 Sparklines) show newline
-(--------------) show newline
-() show newline
-(For activity visualization over time, eight ASCII levels:) show newline
-() show newline
-() show newline
-(     ._,-~=+#) show newline
-() show newline
-(Map to normalized data:) show newline
-() show newline
-() show newline
-(    \(define sparkline-chars '#\(" " "." "_" "," "-" "~" "=" "+" "#"\)\)) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0051:) show ( ) show (Terminal) show ( ) show (Interface) show ( ) show (Conventions) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (terminal) show ( ) show (is) show ( ) show (for) show ( ) show (operators.) show ( ) show (This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (visual) show ( ) show (conventions) show  newline
+(for) show ( ) show (the) show ( ) show (Cyberspace) show ( ) show (REPL:) show ( ) show (box) show ( ) show (drawing,) show ( ) show (tree) show ( ) show (displays,) show ( ) show (prompts,) show ( ) show (color) show  newline
+(usage,) show ( ) show (and) show ( ) show (output) show ( ) show (formatting.) show ( ) show (Consistency) show ( ) show (aids) show ( ) show (muscle) show ( ) show (memory.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(1.) show ( ) show (THE) show ( ) show (OPERATOR) show ( ) show (INTERFACE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 0 add ypos moveto (The) show
+margin 24 add ypos moveto (Cyberspace) show
+margin 90 add ypos moveto (REPL) show
+margin 120 add ypos moveto (is) show
+margin 138 add ypos moveto (for) show
+margin 162 add ypos moveto (hackers,) show
+margin 216 add ypos moveto (admins,) show
+margin 264 add ypos moveto (and) show
+margin 288 add ypos moveto (operators--people) show
+margin 390 add ypos moveto (who) show
+grestore
+newline
+(think) show ( ) show (in) show ( ) show (terms) show ( ) show (of) show ( ) show (data) show ( ) show (structures.) show ( ) show (This) show ( ) show (interface) show ( ) show (is) show ( ) show (deliberately) show  newline
+(different) show ( ) show (from) show ( ) show (the) show ( ) show (friendly) show ( ) show (GUI) show ( ) show (interface) show ( ) show (\(Memo-051\).) show  newline
+ newline
+ newline
+(CYBERSPACE) show  newline
+gsave
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 250c at col 11
+newpath margin 69 add ypos moveto margin 69 add 3 add ypos lineto stroke
+newpath margin 69 add ypos moveto margin 69 add ypos 6 sub lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2534 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+newpath margin 147 add ypos 6 add moveto margin 147 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2510 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add ypos lineto stroke
+newpath margin 225 add ypos moveto margin 225 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 11
+newpath margin 69 add ypos 6 sub moveto margin 69 add ypos 6 add lineto stroke
+% box char 2502 at col 37
+newpath margin 225 add ypos 6 sub moveto margin 225 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 250c at col 6
+newpath margin 39 add ypos moveto margin 39 add 3 add ypos lineto stroke
+newpath margin 39 add ypos moveto margin 39 add ypos 6 sub lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 25bc at col 11
+newpath margin 69 add 2 sub ypos 6 add moveto margin 69 add ypos 6 sub lineto margin 69 add 2 add ypos 6 add lineto closepath fill
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2510 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add ypos lineto stroke
+newpath margin 105 add ypos moveto margin 105 add ypos 6 sub lineto stroke
+% box char 250c at col 32
+newpath margin 195 add ypos moveto margin 195 add 3 add ypos lineto stroke
+newpath margin 195 add ypos moveto margin 195 add ypos 6 sub lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 25bc at col 37
+newpath margin 225 add 2 sub ypos 6 add moveto margin 225 add ypos 6 sub lineto margin 225 add 2 add ypos 6 add lineto closepath fill
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2510 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add ypos lineto stroke
+newpath margin 261 add ypos moveto margin 261 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 6
+newpath margin 39 add ypos 6 sub moveto margin 39 add ypos 6 add lineto stroke
+margin 48 add ypos moveto (Terminal) show
+% box char 2502 at col 17
+newpath margin 105 add ypos 6 sub moveto margin 105 add ypos 6 add lineto stroke
+% box char 2502 at col 32
+newpath margin 195 add ypos 6 sub moveto margin 195 add ypos 6 add lineto stroke
+margin 204 add ypos moveto (Friendly) show
+% box char 2502 at col 43
+newpath margin 261 add ypos 6 sub moveto margin 261 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 6
+newpath margin 39 add ypos 6 sub moveto margin 39 add ypos 6 add lineto stroke
+margin 60 add ypos moveto (\(cs\)) show
+% box char 2502 at col 17
+newpath margin 105 add ypos 6 sub moveto margin 105 add ypos 6 add lineto stroke
+% box char 2190 at col 19
+newpath margin 117 add 3 add ypos 2 add moveto margin 117 add 3 sub ypos lineto margin 117 add 3 add ypos 2 sub lineto closepath fill
+margin 126 add ypos moveto (this) show
+margin 156 add ypos moveto (memo) show
+% box char 2502 at col 32
+newpath margin 195 add ypos 6 sub moveto margin 195 add ypos 6 add lineto stroke
+margin 216 add ypos moveto (Door) show
+% box char 2502 at col 43
+newpath margin 261 add ypos 6 sub moveto margin 261 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 6
+newpath margin 39 add ypos moveto margin 39 add 3 add ypos lineto stroke
+newpath margin 39 add ypos 6 add moveto margin 39 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2518 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add ypos lineto stroke
+newpath margin 105 add ypos 6 add moveto margin 105 add ypos lineto stroke
+% box char 2514 at col 32
+newpath margin 195 add ypos moveto margin 195 add 3 add ypos lineto stroke
+newpath margin 195 add ypos 6 add moveto margin 195 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2518 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add ypos lineto stroke
+newpath margin 261 add ypos 6 add moveto margin 261 add ypos lineto stroke
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(2.) show ( ) show (NOVICE) show ( ) show (MODE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (terminal) show ( ) show (defaults) show ( ) show (to) show ( ) show (novice) show ( ) show (mode:) show ( ) show (English-like) show ( ) show (commands,) show ( ) show (guided) show  newline
+(exploration,) show ( ) show (hidden) show ( ) show (complexity.) show ( ) show (Scheme) show ( ) show (is) show ( ) show (underneath) show ( ) show (but) show ( ) show (not) show ( ) show (visible) show  newline
+(until) show ( ) show (discovered.) show  newline
+ newline
+ newline
+(2.1) show ( ) show (Two) show ( ) show (Modes) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(Mode) show ( ) show (Prompt) show ( ) show (Commands) show  newline
+(novice) show ( ) show (:) show ( ) show (inspect) show ( ) show (soup,) show ( ) show (describe) show ( ) show (vault,) show ( ) show (help) show  newline
+gsave
+margin 12 add ypos moveto (schemer) show
+margin 72 add ypos moveto () show
+margin 120 add ypos moveto (\(soup) show
+margin 156 add ypos moveto ('keys\),) show
+margin 204 add ypos moveto (,s) show
+margin 222 add ypos moveto (,p) show
+margin 240 add ypos moveto (,x,) show
+margin 264 add ypos moveto (expressions) show
+grestore
+newline
+ newline
+gsave
+margin 0 add ypos moveto (Novice) show
+margin 42 add ypos moveto (mode) show
+margin 72 add ypos moveto (is) show
+margin 90 add ypos moveto (the) show
+margin 114 add ypos moveto (default.) show
+margin 168 add ypos moveto (Schemer) show
+margin 216 add ypos moveto (mode) show
+margin 246 add ypos moveto (uses) show
+margin 276 add ypos moveto (the) show
+margin 300 add ypos moveto (lambda) show
+margin 342 add ypos moveto (prompt) show
+margin 384 add ypos moveto (\(\).) show
+grestore
+newline
+(The) show ( ) show (difference) show ( ) show (is) show ( ) show (what) show ( ) show (commands) show ( ) show (are) show ( ) show (available) show ( ) show (and) show ( ) show (how) show ( ) show (results) show ( ) show (are) show  newline
+(presented.) show  newline
+ newline
+ newline
+(2.2) show ( ) show (Dylan-Style) show ( ) show (Inspectors) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+(Inspectors) show ( ) show (in) show ( ) show (novice) show ( ) show (mode) show ( ) show (follow) show ( ) show (Dylan/Symbolics) show ( ) show (tradition:) show ( ) show (numbered) show  newline
+(lists) show ( ) show (with) show ( ) show (drill-down) show ( ) show (commands.) show  newline
+ newline
+ newline
+(:) show ( ) show (inspect) show ( ) show (soup) show  newline
+gsave
+% box char 2554 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2550 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2550 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2550 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2550 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2550 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2550 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2550 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2550 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2550 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2550 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2550 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2550 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2550 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2550 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2550 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2550 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2550 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2550 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2550 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2550 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2550 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2550 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2550 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2550 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2550 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2550 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2550 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2550 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2550 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2550 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2550 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2550 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2550 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2550 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2550 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2550 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2550 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2550 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2550 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2550 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2550 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2550 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2550 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2550 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2550 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2550 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2550 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2550 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2550 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2550 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2550 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2557 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add ypos lineto stroke
+newpath margin 339 add ypos moveto margin 339 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2551 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 138 add ypos moveto (Vault) show
+margin 174 add ypos moveto (Contents) show
+% box char 2551 at col 56
+newpath margin 339 add ypos 6 sub moveto margin 339 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2560 at col 4
+% box char 2550 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2550 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2550 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2550 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2550 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2550 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2550 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2550 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2550 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2550 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2550 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2550 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2550 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2550 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2550 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2550 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2550 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2550 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2550 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2550 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2550 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2550 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2550 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2550 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2550 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2550 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2550 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2550 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2550 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2550 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2550 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2550 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2550 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2550 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2550 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2550 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2550 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2550 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2550 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2550 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2550 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2550 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2550 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2550 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2550 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2550 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2550 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2550 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2550 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2550 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2550 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2563 at col 56
+grestore
+newline
+gsave
+% box char 2551 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (1.) show
+margin 54 add ypos moveto (keys) show
+margin 84 add ypos moveto (\(2\)) show
+% box char 2551 at col 56
+newpath margin 339 add ypos 6 sub moveto margin 339 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2551 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (2.) show
+margin 54 add ypos moveto (releases) show
+margin 108 add ypos moveto (\(3\)) show
+% box char 2551 at col 56
+newpath margin 339 add ypos 6 sub moveto margin 339 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2551 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (3.) show
+margin 54 add ypos moveto (archives) show
+margin 108 add ypos moveto (\(12\)) show
+% box char 2551 at col 56
+newpath margin 339 add ypos 6 sub moveto margin 339 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 255a at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2550 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2550 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2550 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2550 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2550 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2550 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2550 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2550 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2550 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2550 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2550 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2550 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2550 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2550 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2550 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2550 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2550 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2550 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2550 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2550 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2550 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2550 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2550 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2550 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2550 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2550 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2550 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2550 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2550 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2550 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2550 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2550 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2550 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2550 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2550 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2550 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2550 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2550 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2550 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2550 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2550 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2550 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2550 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2550 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2550 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2550 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2550 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2550 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2550 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2550 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2550 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 255d at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add ypos lineto stroke
+newpath margin 339 add ypos 6 add moveto margin 339 add ypos lineto stroke
+grestore
+newline
+(Enter) show ( ) show (number) show ( ) show (to) show ( ) show (inspect,) show ( ) show (or:) show ( ) show (help) show ( ) show (list) show ( ) show (search) show ( ) show (done) show  newline
+ newline
+(The) show ( ) show (heritage:) show ( ) show (Symbolics) show ( ) show (genera-style) show ( ) show (browsers,) show ( ) show (Apple) show ( ) show (Dylan's) show ( ) show (inspector,) show  newline
+(Clozure) show ( ) show (CL's) show ( ) show (GUI.) show ( ) show (Same) show ( ) show (principle:) show ( ) show (show) show ( ) show (a) show ( ) show (numbered) show ( ) show (list,) show ( ) show (let) show ( ) show (the) show ( ) show (user) show  newline
+(drill) show ( ) show (in) show ( ) show (by) show ( ) show (number.) show  newline
+ newline
+ newline
+(2.3) show ( ) show (Describe) show ( ) show (vs) show ( ) show (Inspect) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(Two) show ( ) show (commands) show ( ) show (for) show ( ) show (understanding:) show  newline
+ newline
+ newline
+(Command) show ( ) show (Purpose) show  newline
+(describe) show ( ) show (<thing>) show ( ) show (What) show ( ) show (IS) show ( ) show (this) show ( ) show (thing?) show ( ) show (Conceptual) show ( ) show (explanation.) show  newline
+(inspect) show ( ) show (<thing>) show ( ) show (What's) show ( ) show (IN) show ( ) show (this) show ( ) show (thing?) show ( ) show (Contents) show ( ) show (and) show ( ) show (structure.) show  newline
+ newline
+(Example:) show ( ) show (describe) show ( ) show (soup) show ( ) show (explains) show ( ) show (the) show ( ) show (concept;) show ( ) show (inspect) show ( ) show (soup) show ( ) show (shows) show ( ) show (what's) show  newline
+(in) show ( ) show (the) show ( ) show (vault.) show  newline
+ newline
+ newline
+(2.4) show ( ) show (The) show ( ) show (Hidden) show ( ) show (Door) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(describe) show ( ) show (scheme) show ( ) show (is) show ( ) show (the) show ( ) show (hidden) show ( ) show (door) show ( ) show (to) show ( ) show (Scheme.) show ( ) show (Not) show ( ) show (advertised,) show ( ) show (found) show ( ) show (by) show  newline
+(curious) show ( ) show (novices) show ( ) show (who) show ( ) show (try) show ( ) show (describe) show ( ) show (on) show ( ) show (everything.) show  newline
+ newline
+ newline
+(:) show ( ) show (describe) show ( ) show (scheme) show  newline
+(Everything) show ( ) show (here) show ( ) show (is) show ( ) show (Scheme) show ( ) show (underneath.) show  newline
+(The) show ( ) show (:) show ( ) show (prompt) show ( ) show (accepts) show ( ) show (commands.) show ( ) show (Parentheses) show ( ) show (unlock) show ( ) show (the) show ( ) show (language.) show  newline
+(Try:) show ( ) show (\(+) show ( ) show (1) show ( ) show (2\)) show ( ) show (or) show ( ) show (\(soup) show ( ) show ('keys\)) show  newline
+ newline
+(By) show ( ) show (the) show ( ) show (time) show ( ) show (they) show ( ) show (find) show ( ) show (it,) show ( ) show (they're) show ( ) show (ready.) show ( ) show (Self-selecting.) show  newline
+ newline
+ newline
+(2.5) show ( ) show (Mode) show ( ) show (Switching) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (system) show ( ) show (auto-detects) show ( ) show (mode) show ( ) show (from) show ( ) show (usage.) show ( ) show (Type) show ( ) show (parentheses) show ( ) show (or) show ( ) show (comma) show  newline
+(commands,) show ( ) show (become) show ( ) show (a) show ( ) show (schemer:) show  newline
+ newline
+ newline
+(:) show ( ) show (\(+) show ( ) show (1) show ( ) show (2) show ( ) show (3\)) show  newline
+(Detected) show ( ) show (Scheme) show ( ) show (usage) show ( ) show (-) show ( ) show (switching) show ( ) show (to) show ( ) show (schemer) show ( ) show (mode.) show  newline
+(Type) show ( ) show (\(novice\)) show ( ) show (to) show ( ) show (switch) show ( ) show (back.) show  newline
+(6) show  newline
+ newline
+(Comma) show ( ) show (commands) show ( ) show (also) show ( ) show (assert) show ( ) show (schemer) show ( ) show (mode:) show  newline
+ newline
+ newline
+(:) show ( ) show (,s) show  newline
+gsave
+margin 24 add ypos moveto () show
+grestore
+newline
+ newline
+(Explicit) show ( ) show (switching:) show  newline
+ newline
+ newline
+(Command) show ( ) show (Effect) show  newline
+(\(schemer\)) show ( ) show (Switch) show ( ) show (to) show ( ) show (schemer) show ( ) show (mode) show  newline
+(\(novice\)) show ( ) show (Switch) show ( ) show (to) show ( ) show (novice) show ( ) show (mode) show  newline
+(,anything) show ( ) show (Comma) show ( ) show (usage) show ( ) show (implies) show ( ) show (schemer) show  newline
+ newline
+gsave
+margin 0 add ypos moveto (Schemer) show
+margin 48 add ypos moveto (mode) show
+margin 78 add ypos moveto (shows) show
+margin 114 add ypos moveto (the) show
+margin 138 add ypos moveto () show
+margin 150 add ypos moveto (prompt) show
+margin 192 add ypos moveto (and) show
+margin 216 add ypos moveto (treats) show
+margin 258 add ypos moveto (the) show
+margin 282 add ypos moveto (REPL) show
+margin 312 add ypos moveto (as) show
+margin 330 add ypos moveto (a) show
+margin 342 add ypos moveto (full) show
+margin 372 add ypos moveto (Scheme) show
+grestore
+newline
+(environment.) show ( ) show (Self-selecting:) show ( ) show (use) show ( ) show (parentheses) show ( ) show (or) show ( ) show (comma) show ( ) show (commands) show ( ) show (and) show ( ) show (you) show  newline
+(become) show ( ) show (a) show ( ) show (schemer.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(3.) show ( ) show (BOX) show ( ) show (DRAWING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(2.1) show ( ) show (Unicode) show ( ) show (Box) show ( ) show (Characters) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+(Boxes) show ( ) show (use) show ( ) show (ASCII) show ( ) show (characters) show ( ) show (for) show ( ) show (web) show ( ) show (compatibility,) show ( ) show (Unicode) show ( ) show (in) show ( ) show (terminals:) show  newline
+ newline
+ newline
+(+) show ( ) show (corner/tee/cross) show  newline
+(|) show ( ) show (vertical) show ( ) show (line) show  newline
+(-) show ( ) show (horizontal) show ( ) show (line) show  newline
+ newline
+(Double-line) show ( ) show (boxes) show ( ) show (use) show ( ) show (=) show ( ) show (and) show ( ) show (#) show ( ) show (for) show ( ) show (emphasis:) show  newline
+ newline
+ newline
+(#) show ( ) show (corner) show  newline
+(|) show ( ) show (vertical) show  newline
+(=) show ( ) show (horizontal) show  newline
+ newline
+ newline
+(2.2) show ( ) show (Box) show ( ) show (Construction) show ( ) show (Pattern) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+(Use) show ( ) show (closures) show ( ) show (to) show ( ) show (encapsulate) show ( ) show (box) show ( ) show (state:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(make-box) show ( ) show (title) show ( ) show (w\)) show  newline
+("Create) show ( ) show (a) show ( ) show (box) show ( ) show (drawing) show ( ) show (closure) show ( ) show (with) show ( ) show (given) show ( ) show (title) show ( ) show (and) show ( ) show (width") show  newline
+(\(let) show ( ) show (\(\(title-padded) show ( ) show (\(string-append) show ( ) show (") show ( ) show (") show ( ) show (title) show ( ) show (") show ( ) show ("\)\)) show  newline
+(\(title-len) show ( ) show (\(string-length) show ( ) show (title-padded\)\)) show  newline
+(\(left-pad) show ( ) show (\(quotient) show ( ) show (\(-) show ( ) show (w) show ( ) show (title-len\)) show ( ) show (2\)\)) show  newline
+(\(right-pad) show ( ) show (\(-) show ( ) show (w) show ( ) show (title-len) show ( ) show (left-pad\)\)) show  newline
+(\(header) show ( ) show (\(string-append) show ( ) show ("+") show ( ) show (\(make-string) show ( ) show (left-pad) show ( ) show (#\\-\)) show  newline
+(title-padded) show  newline
+(\(make-string) show ( ) show (right-pad) show ( ) show (#\\-\)) show ( ) show ("+\\n"\)\)) show  newline
+(\(footer) show ( ) show (\(string-append) show ( ) show ("+") show ( ) show (\(make-string) show ( ) show (w) show ( ) show (#\\-\)) show ( ) show ("+\\n"\)\)\)) show  newline
+(\(lambda) show ( ) show (\(cmd) show ( ) show (.) show ( ) show (args\)) show  newline
+(\(case) show ( ) show (cmd) show  newline
+(\(\(header\)) show ( ) show (header\)) show  newline
+(\(\(footer\)) show ( ) show (footer\)) show  newline
+(\(\(line\)) show ( ) show (\(let) show ( ) show (\(\(content) show ( ) show (\(if) show ( ) show (\(null?) show ( ) show (args\)) show ( ) show ("") show ( ) show (\(car) show ( ) show (args\)\)\)) show  newline
+(\(pad) show ( ) show (\(-) show ( ) show (w) show ( ) show (\(string-length) show ( ) show (content\)) show ( ) show (2\)\)\)) show  newline
+(\(string-append) show ( ) show ("|) show ( ) show (") show ( ) show (content) show  newline
+(\(make-string) show ( ) show (\(max) show ( ) show (0) show ( ) show (pad\)) show ( ) show (#\\space\)) show  newline
+(") show ( ) show (|\\n"\)\)\)\)\)\)\)) show  newline
+ newline
+ newline
+(2.3) show ( ) show (Standard) show ( ) show (Box) show ( ) show (Widths) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(Context) show ( ) show (Width) show ( ) show (Usage) show  newline
+(Compact) show ( ) show (40) show ( ) show (Small) show ( ) show (status) show ( ) show (displays) show  newline
+(Standard) show ( ) show (50) show ( ) show (Most) show ( ) show (dialogs) show  newline
+(Wide) show ( ) show (65) show ( ) show (Detailed) show ( ) show (information) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(3.) show ( ) show (TREE) show ( ) show (DISPLAY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(3.1) show ( ) show (Tree) show ( ) show (Characters) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(+-) show ( ) show (branch) show ( ) show (with) show ( ) show (more) show ( ) show (siblings) show  newline
+(+-) show ( ) show (final) show ( ) show (branch) show ( ) show (\(last) show ( ) show (item\)) show  newline
+(|) show ( ) show (vertical) show ( ) show (continuation) show  newline
+ newline
+ newline
+(3.2) show ( ) show (Tree) show ( ) show (Example) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(hostname) show ( ) show (-) show ( ) show (up) show ( ) show (3d) show ( ) show (12:45:03) show  newline
+(+-) show ( ) show (10) show ( ) show (cores,) show ( ) show (64GB,) show ( ) show (Apple) show ( ) show (M4) show  newline
+(+-) show ( ) show (192.168.1.100) show ( ) show (/) show ( ) show (2001:db8::1...) show  newline
+(+-) show ( ) show (vault:) show ( ) show (.vault/) show ( ) show (\(keys\)) show ( ) show (\(audit\)) show  newline
+ newline
+ newline
+(3.3) show ( ) show (Multi-level) show ( ) show (Trees) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(vault) show ( ) show (\(49) show ( ) show (objects\)) show  newline
+(+-) show ( ) show (archives) show ( ) show (\(3\)) show  newline
+(|) show ( ) show (+-) show ( ) show (cyberspace-v0.59.tar.gz) show  newline
+(+-) show ( ) show (keys) show ( ) show (\(2\)) show  newline
+(|) show ( ) show (+-) show ( ) show (starlight) show ( ) show (-) show ( ) show (Ed25519) show  newline
+(|) show ( ) show (+-) show ( ) show (macmini) show ( ) show (-) show ( ) show (Ed25519) show  newline
+(+-) show ( ) show (releases) show ( ) show (\(5\)) show  newline
+(+-) show ( ) show (v0.59) show ( ) show (\(signed\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(4.) show ( ) show (PROMPT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(4.1) show ( ) show (Default) show ( ) show (Prompt) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (default) show ( ) show (prompt) show ( ) show (is) show ( ) show (a) show ( ) show (simple) show ( ) show (colon) show ( ) show (with) show ( ) show (trailing) show ( ) show (space:) show  newline
+ newline
+ newline
+(:) show  newline
+ newline
+(This) show ( ) show (echoes) show ( ) show (the) show ( ) show (Newton's) show ( ) show (soup) show ( ) show (browser) show ( ) show (prompt.) show  newline
+ newline
+ newline
+(4.2) show ( ) show (Prompt) show ( ) show (Variants) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(Context) show ( ) show (Prompt) show ( ) show (Usage) show  newline
+(Novice) show ( ) show (:) show ( ) show (Default,) show ( ) show (English-like) show ( ) show (commands) show  newline
+gsave
+margin 12 add ypos moveto (Schemer) show
+margin 102 add ypos moveto () show
+margin 150 add ypos moveto (Full) show
+margin 180 add ypos moveto (Scheme) show
+margin 222 add ypos moveto (mode) show
+grestore
+newline
+(Continuation) show ( ) show (>) show ( ) show (Multi-line) show ( ) show (input) show  newline
+(Debug) show ( ) show ([n]:) show ( ) show (In) show ( ) show (debugger) show ( ) show (at) show ( ) show (frame) show ( ) show (n) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(5.) show ( ) show (COLOR) show ( ) show (AND) show ( ) show (EMPHASIS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(5.1) show ( ) show (VT100) show ( ) show (Codes) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(Use) show ( ) show (ANSI/VT100) show ( ) show (escape) show ( ) show (sequences) show ( ) show (sparingly:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (vt100-bold) show ( ) show ("\\x1b[1m"\)) show  newline
+(\(define) show ( ) show (vt100-dim) show ( ) show ("\\x1b[2m"\)) show  newline
+(\(define) show ( ) show (vt100-normal) show ( ) show ("\\x1b[0m"\)) show  newline
+(\(define) show ( ) show (vt100-red) show ( ) show ("\\x1b[31m"\)) show  newline
+(\(define) show ( ) show (vt100-green) show ( ) show ("\\x1b[32m"\)) show  newline
+(\(define) show ( ) show (vt100-yellow) show ( ) show ("\\x1b[33m"\)) show  newline
+(\(define) show ( ) show (vt100-blue) show ( ) show ("\\x1b[34m"\)) show  newline
+ newline
+ newline
+(5.2) show ( ) show (When) show ( ) show (to) show ( ) show (Use) show ( ) show (Color) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Green:) show
+margin 66 add ypos moveto (Success,) show
+margin 120 add ypos moveto (completion) show
+margin 186 add ypos moveto (\(\)) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Red:) show
+margin 54 add ypos moveto (Error,) show
+margin 96 add ypos moveto (failure) show
+margin 144 add ypos moveto (\(\)) show
+grestore
+newline
+(*) show ( ) show (Yellow:) show ( ) show (Warning,) show ( ) show (attention) show ( ) show (needed) show  newline
+(*) show ( ) show (Blue:) show ( ) show (Informational) show ( ) show (highlights) show  newline
+(*) show ( ) show (Dim:) show ( ) show (Secondary) show ( ) show (information) show  newline
+(*) show ( ) show (Bold:) show ( ) show (Headers,) show ( ) show (important) show ( ) show (values) show  newline
+ newline
+(Color) show ( ) show (conveys) show ( ) show (urgency) show ( ) show (and) show ( ) show (category) show ( ) show (at) show ( ) show (a) show ( ) show (glance.) show ( ) show (Consistent) show ( ) show (usage) show ( ) show (across) show  newline
+(the) show ( ) show (interface) show ( ) show (builds) show ( ) show (muscle) show ( ) show (memory:) show ( ) show (red) show ( ) show (always) show ( ) show (means) show ( ) show (stop,) show ( ) show (green) show ( ) show (always) show  newline
+(means) show ( ) show (proceed.) show  newline
+ newline
+ newline
+(5.3) show ( ) show (Principle) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+(Color) show ( ) show (is) show ( ) show (enhancement,) show ( ) show (not) show ( ) show (information.) show ( ) show (All) show ( ) show (output) show ( ) show (MUST) show ( ) show (be) show ( ) show (readable) show  newline
+(without) show ( ) show (color) show ( ) show (\(plain) show ( ) show (terminal,) show ( ) show (logging,) show ( ) show (piped) show ( ) show (output\).) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(6.) show ( ) show (STATUS) show ( ) show (SYMBOLS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(6.1) show ( ) show (Checkmarks) show ( ) show (and) show ( ) show (Crosses) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+ newline
+([ok]) show ( ) show (Success) show  newline
+([!!]) show ( ) show (Failure) show  newline
+(*) show ( ) show (Bullet) show ( ) show (point) show  newline
+(->) show ( ) show (Arrow,) show ( ) show (implies) show  newline
+ newline
+ newline
+(6.2) show ( ) show (Inline) show ( ) show (Separators) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (separating) show ( ) show (items) show ( ) show (in) show ( ) show (compact) show ( ) show (displays) show ( ) show (\(session) show ( ) show (stats,) show ( ) show (status) show ( ) show (lines\):) show  newline
+ newline
+ newline
+(-) show ( ) show (dash) show ( ) show (separator) show  newline
+(|) show ( ) show (pipe) show ( ) show (\(more) show ( ) show (intrusive\)) show  newline
+(v) show ( ) show (down) show ( ) show (\(bytes/data) show ( ) show (in\)) show  newline
+(^) show ( ) show (up) show ( ) show (\(bytes/data) show ( ) show (out\)) show  newline
+ newline
+(Example) show ( ) show (session) show ( ) show (summary:) show  newline
+ newline
+ newline
+(Session:) show ( ) show (4m) show ( ) show (24s) show ( ) show (-) show ( ) show (2) show ( ) show (syncs) show ( ) show (-) show ( ) show (3) show ( ) show (seals) show ( ) show (-) show ( ) show (v1.2K) show ( ) show (^856B) show  newline
+ newline
+ newline
+(6.3) show ( ) show (Sparklines) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (activity) show ( ) show (visualization) show ( ) show (over) show ( ) show (time,) show ( ) show (eight) show ( ) show (ASCII) show ( ) show (levels:) show  newline
+ newline
+ newline
+(._,-~=+#) show  newline
+ newline
+(Map) show ( ) show (to) show ( ) show (normalized) show ( ) show (data:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (sparkline-chars) show ( ) show ('#\(") show ( ) show (") show ( ) show (".") show ( ) show ("_") show ( ) show (",") show ( ) show ("-") show ( ) show ("~") show ( ) show ("=") show ( ) show ("+") show ( ) show ("#"\)\)) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

@@ -15,748 +15,1775 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0042: Wormholes) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies wormholes—FUSE-based bidirectional portals between) show newline
-(the macOS filesystem and the Library of Cyberspace vault. Wormholes) show newline
-(preserve full metadata including extended attributes, Finder tags, and) show newline
-(ACLs. All operations are auditable \(Memo-003\) and rate-limited) show newline
-(\(Memo-032\).[^h1]) show newline
-() show newline
-([^h1]: Historical: FUSE originated in Linux 2.6 \(2005\), inspired by) show newline
-(earlier userspace filesystem work in Plan 9 and Hurd. macFUSE) show newline
-(\(originally MacFUSE\) brought it to macOS in 2007. The abstraction) show newline
-(outlived Apple's hostility.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Users need seamless integration between their existing filesystem and) show newline
-(the vault. Manual import/export creates friction and risks metadata) show newline
-(loss.) show newline
-() show newline
-(A wormhole provides:) show newline
-() show newline
-(  * Transparency - Finder, cp, rsync work unchanged) show newline
-(  * Bidirectionality - No separate sync step; it IS the filesystem) show newline
-(  * Metadata preservation - Full macOS attributes captured automatically) show newline
-(  * Content addressing - Deduplication and integrity built-in) show newline
-(  * Security - First-class Simple Public Key Infrastructure \(SPKI\) object with audit and rate-limit) show newline
-() show newline
-(The filesystem abstraction is the right boundary—everything above it) show newline
-(\(apps, shell, Finder\) works without modification.[^d1]) show newline
-() show newline
-([^d1]: Design: FUSE inverts the usual model. Instead of teaching) show newline
-(applications about vaults, we teach the vault to speak filesystem. Unix) show newline
-(got this right: everything is a file.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(WORMHOLE AS SECURITY OBJECT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(A wormhole is a first-class security object in cyberspace, subject) show newline
-(to:[^d2]) show newline
-() show newline
-(  * SPKI Authorization \(Memo-004\) — Opening requires valid certificate) show newline
-(  * Capability Delegation \(Memo-021\) — Wormhole access can be delegated) show newline
-(  * Audit Trail \(Memo-003\) — All operations logged) show newline
-(  * Rate Limiting \(Memo-032\) — Configurable ops/minute) show newline
-(  * Sandboxing \(Memo-023\) — Agents access wormholes through capabilities) show newline
-() show newline
-(Wormholes bridge two security domains—the filesystem and the) show newline
-(vault—making them inherently privileged operations. Treating wormholes) show newline
-(as first-class security objects ensures that filesystem access remains) show newline
-(under cryptographic control, not just ambient POSIX permissions.) show newline
-() show newline
-([^d2]: Design: Wormholes are attack surface. Unrestricted filesystem) show newline
-(access defeats vault security. Every wormhole must be explicitly) show newline
-(authorized, continuously audited, and rate-limited against abuse.) show newline
-() show newline
-() show newline
-(Wormhole Certificate) show newline
-(--------------------) show newline
-() show newline
-() show newline
-(    \(define \(wormhole-cert issuer fs-path vault-path permissions\)) show newline
-(      "Create SPKI certificate authorizing wormhole") show newline
-(      \(create-cert) show newline
-(       issuer) show newline
-(       \(wormhole-principal fs-path vault-path\)) show newline
-(       `\(tag \(wormhole) show newline
-(              \(fs-path ,fs-path\)) show newline
-(              \(vault-path ,vault-path\)) show newline
-(              \(permissions ,@permissions\)   ; read, write, delete) show newline
-(              \(rate-limit 1000\)             ; ops/minute) show newline
-(              \(expires ,\(+ \(current-seconds\) 86400\)\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Capability Model) show newline
-(----------------) show newline
-() show newline
-(Wormholes support fine-grained capabilities:[^d3]) show newline
-() show newline
-([^d3]: Design: Rich capabilities enable principle of least privilege. A) show newline
-(backup agent needs read-only; a sync agent needs read-write but not) show newline
-(delete. Capabilities compose—grant exactly what's needed.) show newline
-() show newline
-(Table 0: Wormhole Capabilities) show newline
-() show newline
-() show newline
-(  Capability    Allows                            ) show newline
-(  Data Access   ) show newline
-(  read          Read file contents                ) show newline
-(  write         Write/modify file contents        ) show newline
-(  create        Create new files                  ) show newline
-(  delete        Remove files                      ) show newline
-(  rename        Rename/move files                 ) show newline
-(  Metadata      ) show newline
-(  stat          Read POSIX attributes             ) show newline
-(  chmod         Modify permissions                ) show newline
-(  chown         Change ownership                  ) show newline
-(  xattr-read    Read extended attributes          ) show newline
-(  xattr-write   Modify extended attributes        ) show newline
-(  acl-read      Read ACLs                         ) show newline
-(  acl-write     Modify ACLs                       ) show newline
-(  Directory     ) show newline
-(  readdir       List directory contents           ) show newline
-(  mkdir         Create directories                ) show newline
-(  rmdir         Remove directories                ) show newline
-(  Control       ) show newline
-(  admin         Configure wormhole                ) show newline
-(  delegate      Delegate capabilities to others   ) show newline
-(  audit-read    Read wormhole audit log           ) show newline
-(  rate-limit    Modify rate limits                ) show newline
-() show newline
-() show newline
-(Capability Composition) show newline
-(----------------------) show newline
-() show newline
-() show newline
-(    ;; Common capability sets \(long form for readability\)) show newline
-(    \(define capability:read-only) show newline
-(      '\(read stat readdir xattr-read acl-read\)\)) show newline
-(    \(define capability:read-write) show newline
-(      '\(read write create stat chmod readdir mkdir xattr-read xattr-write\)\)) show newline
-(    \(define capability:full) show newline
-(      '\(read write create delete rename) show newline
-(        stat chmod chown) show newline
-(        xattr-read xattr-write acl-read acl-write) show newline
-(        readdir mkdir rmdir admin delegate audit-read rate-limit\)\)) show newline
-(    \(define capability:backup) show newline
-(      '\(read stat readdir xattr-read acl-read\)\)) show newline
-(    \(define capability:synchronize) show newline
-(      '\(read write create delete rename) show newline
-(        stat chmod readdir mkdir rmdir) show newline
-(        xattr-read xattr-write\)\)) show newline
-() show newline
-() show newline
-(Capability Attenuation) show newline
-(----------------------) show newline
-() show newline
-(Capabilities can only be reduced, never amplified:[^r1]) show newline
-() show newline
-([^r1]: Research: Capability attenuation is fundamental to the) show newline
-(object-capability model. See Miller, "Robust Composition" \(2006\). You) show newline
-(cannot grant more authority than you possess.) show newline
-() show newline
-() show newline
-(    \(define \(wormhole-delegate wormhole new-caps recipient\)) show newline
-(      "Delegate subset of wormhole capabilities") show newline
-(      \(let \(\(my-caps \(wormhole-capabilities wormhole\)\)\)) show newline
-(        \(unless \(subset? new-caps my-caps\)) show newline
-(          \(error 'capability-amplification) show newline
-(                 "Cannot delegate capabilities you don't have"\)\)) show newline
-(        \(wormhole-cert) show newline
-(         \(wormhole-issuer wormhole\)) show newline
-(         \(wormhole-fs-path wormhole\)) show newline
-(         \(wormhole-vault-path wormhole\)) show newline
-(         new-caps) show newline
-(         recipient: recipient\)\)\)) show newline
-() show newline
-() show newline
-(Opening a Wormhole) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    \(define \(wormhole-open fs-path #!key \(vault-path "/"\)) show newline
-(                                         \(capabilities capability:read-write\)) show newline
-(                                         \(rate-limit 1000\)) show newline
-(                                         \(locked #f\)) show newline
-(                                         \(auth-required '\(\)\)) show newline
-(                                         \(certificate #f\)\)) show newline
-(      "Open wormhole - requires valid certificate") show newline
-(      \(unless certificate) show newline
-(        \(error 'unauthorized "Wormhole requires SPKI certificate"\)\)) show newline
-(      \(unless \(verify-wormhole-cert certificate fs-path vault-path\)) show newline
-(        \(error 'unauthorized "Invalid wormhole certificate"\)\)) show newline
-(      ;; Audit the open) show newline
-(      \(wormhole-audit 'wormhole-open fs-path) show newline
-(                      `\(\(vault ,vault-path\)) show newline
-(                        \(capabilities ,\(length capabilities\)\)\)\)) show newline
-(      ;; Proceed with FUSE mount) show newline
-(      ...\)) show newline
-() show newline
-() show newline
-(Usage Examples) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    ;; Basic read-write wormhole) show newline
-(    \(wormhole-open "~/Cyberspace"\)) show newline
-(    ;; Read-only wormhole for browsing) show newline
-(    \(wormhole-open "~/Archive" capabilities: capability:read-only\)) show newline
-(    ;; Sync wormhole with rate limiting) show newline
-(    \(wormhole-open "~/Sync") show newline
-(      capabilities: capability:synchronize) show newline
-(      rate-limit: 500\)) show newline
-(    ;; Locked wormhole requiring unlock for sensitive operations) show newline
-(    \(wormhole-open "~/Secure") show newline
-(      capabilities: capability:full) show newline
-(      locked: #t) show newline
-(      auth-required: '\(delete admin\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ARCHITECTURE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Mount Topology) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    ~/Cyberspace/                    ← FUSE mount point) show newline
-(    ├── documents/) show newline
-(    │   ├── paper.pdf               ← Virtual file \(content in vault\)) show newline
-(    │   └── notes.txt) show newline
-(    ├── projects/) show newline
-(    │   └── cyberspace/) show newline
-(    │       └── ...) show newline
-(    └── .vault/                      ← Hidden, actual storage) show newline
-(        ├── objects/                 ← Content-addressed blobs) show newline
-(        │   ├── sha256:abc123...) show newline
-(        │   └── sha256:def456...) show newline
-(        ├── manifests/               ← Directory → file mappings) show newline
-(        └── metadata/                ← Per-file metadata store) show newline
-() show newline
-() show newline
-(Component Stack) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    ┌─────────────────────────────────────┐) show newline
-(    │         Applications                │) show newline
-(    │    \(Finder, cp, rsync, etc.\)        │) show newline
-(    ├─────────────────────────────────────┤) show newline
-(    │         VFS \(kernel\)                │) show newline
-(    ├─────────────────────────────────────┤) show newline
-(    │      FUSE-T / macFUSE               │) show newline
-(    ├─────────────────────────────────────┤) show newline
-(    │    cyberspace-fuse daemon           │  ← Our code) show newline
-(    ├─────────────────────────────────────┤) show newline
-(    │         Vault layer                 │) show newline
-(    │   \(content-address, metadata\)       │) show newline
-(    └─────────────────────────────────────┘) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(METADATA PRESERVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(macOS Metadata Captured) show newline
-(-----------------------) show newline
-() show newline
-(Table 1: Preserved Metadata) show newline
-() show newline
-() show newline
-(  Category         Attributes                       Capture Method                 ) show newline
-(  POSIX            mode, uid, gid, size             stat\(\)                         ) show newline
-(  Timestamps       mtime, atime, ctime, birthtime   stat\(\)                         ) show newline
-(  Extended attrs   Finder info, tags, quarantine    listxattr\(\), getxattr\(\)        ) show newline
-(  Spotlight        kMDItem* metadata                mdls / MDItem API              ) show newline
-(  ACLs             Access control lists             aclgetfile\(\)                   ) show newline
-(  Flags            hidden, locked, immutable        chflags\(\) / stat\(\)             ) show newline
-(  Resource fork    Legacy resource data             xattr com.apple.ResourceFork   ) show newline
-() show newline
-() show newline
-(Internal Representation) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(    \(define-record-type <vault-file>) show newline
-(      \(make-vault-file path content-hash metadata\)) show newline
-(      vault-file?) show newline
-(      \(path vault-file-path\)) show newline
-(      \(content-hash vault-file-hash\)) show newline
-(      \(metadata vault-file-metadata\)\)) show newline
-(    \(define \(capture-metadata path\)) show newline
-(      "Capture all macOS metadata for a file") show newline
-(      `\(\(posix) show newline
-(         \(mode ,\(file-mode path\)\)) show newline
-(         \(uid ,\(file-uid path\)\)) show newline
-(         \(gid ,\(file-gid path\)\)) show newline
-(         \(size ,\(file-size path\)\)) show newline
-(         \(mtime ,\(file-mtime path\)\)) show newline
-(         \(atime ,\(file-atime path\)\)) show newline
-(         \(ctime ,\(file-ctime path\)\)) show newline
-(         \(birthtime ,\(file-birthtime path\)\)\)) show newline
-(        \(xattr ,\(capture-xattrs path\)\)) show newline
-(        \(flags ,\(capture-flags path\)\)) show newline
-(        \(acl ,\(capture-acl path\)\)\)\)) show newline
-() show newline
-() show newline
-(Restoration) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    \(define \(restore-metadata path metadata\)) show newline
-(      "Restore all metadata to a file") show newline
-(      \(let \(\(posix \(alist-ref 'posix metadata\)\)) show newline
-(            \(xattr \(alist-ref 'xattr metadata\)\)) show newline
-(            \(flags \(alist-ref 'flags metadata\)\)) show newline
-(            \(acl \(alist-ref 'acl metadata\)\)\)) show newline
-(        \(restore-posix path posix\)) show newline
-(        \(restore-xattrs path xattr\)) show newline
-(        \(restore-flags path flags\)) show newline
-(        \(restore-acl path acl\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(FUSE OPERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Required Operations) show newline
-(-------------------) show newline
-() show newline
-(Table 2: FUSE Operations) show newline
-() show newline
-() show newline
-(  Operation   Purpose               Vault Action                       ) show newline
-(  getattr     stat\(\)                Return stored metadata             ) show newline
-(  readdir     List directory        Read manifest                      ) show newline
-(  open        Open file             Validate hash exists               ) show newline
-(  read        Read content          Fetch by content hash              ) show newline
-(  write       Write content         Content-address, update manifest   ) show newline
-(  create      Create file           Allocate manifest entry            ) show newline
-(  unlink      Delete file           Remove from manifest \(GC later\)    ) show newline
-(  mkdir       Create directory      Create manifest node               ) show newline
-(  rmdir       Remove directory      Remove manifest node               ) show newline
-(  rename      Move/rename           Update manifest path               ) show newline
-(  setxattr    Set extended attr     Store in metadata                  ) show newline
-(  getxattr    Get extended attr     Retrieve from metadata             ) show newline
-(  listxattr   List extended attrs   Enumerate metadata                 ) show newline
-() show newline
-() show newline
-(Implementation Sketch) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(    \(define \(fuse-getattr path\)) show newline
-(      "Return file attributes from vault metadata") show newline
-(      \(let \(\(entry \(manifest-lookup path\)\)\)) show newline
-(        \(if entry) show newline
-(            \(let \(\(meta \(vault-file-metadata entry\)\)\)) show newline
-(              \(make-stat) show newline
-(               \(alist-ref 'mode \(alist-ref 'posix meta\)\)) show newline
-(               \(alist-ref 'size \(alist-ref 'posix meta\)\)) show newline
-(               \(alist-ref 'mtime \(alist-ref 'posix meta\)\)) show newline
-(               ...\)\)) show newline
-(            -ENOENT\)\)\)) show newline
-(    \(define \(fuse-read path size offset\)) show newline
-(      "Read file content from vault") show newline
-(      \(let \(\(entry \(manifest-lookup path\)\)) show newline
-(             \(hash \(vault-file-hash entry\)\)) show newline
-(             \(content \(vault-fetch hash\)\)\)) show newline
-(        \(subbytes content offset \(+ offset size\)\)\)\)) show newline
-(    \(define \(fuse-write path data offset\)) show newline
-(      "Write to file, content-address the result") show newline
-(      \(let \(\(entry \(manifest-lookup path\)\)) show newline
-(             \(current \(vault-fetch \(vault-file-hash entry\)\)\)) show newline
-(             \(updated \(bytes-splice current offset data\)\)) show newline
-(             \(new-hash \(content-address updated\)\)\)) show newline
-(        \(manifest-update! path new-hash\)) show newline
-(        \(string-length data\)\)\)) show newline
-(    \(define \(fuse-setxattr path name value\)) show newline
-(      "Store extended attribute in vault metadata") show newline
-(      \(let \(\(entry \(manifest-lookup path\)\)\)) show newline
-(        \(metadata-set-xattr! entry name value\)) show newline
-(        0\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CONTENT ADDRESSING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Files are stored by content hash \(Memo-020\):) show newline
-() show newline
-() show newline
-(    \(define \(content-address data\)) show newline
-(      "Store data, return hash") show newline
-(      \(let* \(\(hash \(sha256 data\)\)) show newline
-(             \(path \(vault-object-path hash\)\)\)) show newline
-(        \(unless \(file-exists? path\)) show newline
-(          \(write-blob path data\)\)) show newline
-(        hash\)\)) show newline
-(    \(define \(vault-fetch hash\)) show newline
-(      "Retrieve data by hash") show newline
-(      \(read-blob \(vault-object-path hash\)\)\)) show newline
-() show newline
-(Benefits: - Identical files stored once \(deduplication\) - Integrity) show newline
-(verification on every read - Immutable objects enable safe caching) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SYNCHRONIZATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Change Detection) show newline
-(----------------) show newline
-() show newline
-(The FUSE layer captures all writes in real-time. No separate sync needed) show newline
-(for local changes.) show newline
-() show newline
-(For multi-device sync, the manifest includes version vectors \(Memo-012\):) show newline
-() show newline
-() show newline
-(    \(define \(manifest-entry path hash metadata\)) show newline
-(      `\(entry) show newline
-(        \(path ,path\)) show newline
-(        \(hash ,hash\)) show newline
-(        \(metadata ,metadata\)) show newline
-(        \(version-vector ,local-node ,lamport-clock\)\)\)) show newline
-() show newline
-() show newline
-(Conflict Resolution) show newline
-(-------------------) show newline
-() show newline
-(When merging manifests from different devices \(Memo-016 lazy) show newline
-(clustering\):) show newline
-() show newline
-(  * Same hash - No conflict \(identical content\)) show newline
-(  * Different hash, one newer - Take newer) show newline
-(  * Different hash, concurrent - Conflict, apply lazy-resolve) show newline
-() show newline
-(Content-addressing eliminates most conflicts at the object level; the) show newline
-(manifest's version vectors resolve the remainder. Lazy clustering defers) show newline
-(conflicts to user decision rather than attempting automatic resolution) show newline
-(that may lose work.) show newline
-() show newline
-() show newline
-(    \(define \(merge-manifests local remote\)) show newline
-(      \(for-each) show newline
-(       \(lambda \(path\)) show newline
-(         \(let \(\(l \(manifest-lookup local path\)\)) show newline
-(               \(r \(manifest-lookup remote path\)\)\)) show newline
-(           \(cond) show newline
-(            \(\(not l\) \(manifest-add! local r\)\)) show newline
-(            \(\(not r\) 'keep-local\)) show newline
-(            \(\(equal? \(vault-file-hash l\) \(vault-file-hash r\)\) 'identical\)) show newline
-(            \(\(version-newer? r l\) \(manifest-update! local r\)\)) show newline
-(            \(\(version-newer? l r\) 'keep-local\)) show newline
-(            \(else \(queue-conflict! path l r\)\)\)\)\)) show newline
-(       \(union \(manifest-paths local\) \(manifest-paths remote\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOUNT COMMANDS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(REPL Interface) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    \(define \(vault-mount point\)) show newline
-(      "Mount vault at filesystem path") show newline
-(      \(fuse-main point) show newline
-(        `\(\(getattr . ,fuse-getattr\)) show newline
-(          \(readdir . ,fuse-readdir\)) show newline
-(          \(open . ,fuse-open\)) show newline
-(          \(read . ,fuse-read\)) show newline
-(          \(write . ,fuse-write\)) show newline
-(          \(create . ,fuse-create\)) show newline
-(          \(unlink . ,fuse-unlink\)) show newline
-(          \(mkdir . ,fuse-mkdir\)) show newline
-(          \(rmdir . ,fuse-rmdir\)) show newline
-(          \(rename . ,fuse-rename\)) show newline
-(          \(setxattr . ,fuse-setxattr\)) show newline
-(          \(getxattr . ,fuse-getxattr\)) show newline
-(          \(listxattr . ,fuse-listxattr\)\)\)\)) show newline
-(    \(define \(vault-unmount point\)) show newline
-(      "Unmount vault filesystem") show newline
-(      \(fuse-unmount point\)\)) show newline
-() show newline
-() show newline
-(Command Line) show newline
-(------------) show newline
-() show newline
-() show newline
-(    # Mount) show newline
-(    cyberspace mount ~/Cyberspace) show newline
-(    # Unmount) show newline
-(    cyberspace unmount ~/Cyberspace) show newline
-(    # Or via REPL) show newline
-(    $ ./repl) show newline
-(    > \(vault-mount "~/Cyberspace"\)) show newline
-(    Mounted vault at /Users/ddp/Cyberspace) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MACOS INTEGRATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(FUSE-T vs macFUSE) show newline
-(-----------------) show newline
-() show newline
-(Table 3: FUSE Implementation Options) show newline
-() show newline
-() show newline
-(  Feature            macFUSE            FUSE-T     ) show newline
-(  Kernel extension   Yes \(deprecated\)   No         ) show newline
-(  System extension   Optional           Uses NFS   ) show newline
-(  SIP compatible     Requires disable   Yes        ) show newline
-(  Performance        Better             Adequate   ) show newline
-(  Maintenance        Active             Active     ) show newline
-() show newline
-(FUSE-T recommended for new installations—no kernel extension) show newline
-(required.[^i1]) show newline
-() show newline
-([^i1]: Implementation: FUSE-T implements FUSE API over NFS loopback.) show newline
-(Slightly higher latency but avoids Apple's kernel extension hostility.) show newline
-() show newline
-() show newline
-(Installation) show newline
-(------------) show newline
-() show newline
-() show newline
-(    # FUSE-T \(recommended\)) show newline
-(    brew install fuse-t) show newline
-(    # Or macFUSE \(if kernel ext acceptable\)) show newline
-(    brew install macfuse) show newline
-() show newline
-() show newline
-(Finder Integration) show newline
-(------------------) show newline
-() show newline
-(The mount appears as a regular volume in Finder. Optional) show newline
-(.VolumeIcon.icns for custom icon.) show newline
-() show newline
-(Spotlight indexing can be enabled by implementing getxattr for) show newline
-(com.apple.FinderInfo and related Spotlight attributes.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(INFORMATION FLOW MODEL) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Wormholes bridge two security domains—the macOS filesystem and the) show newline
-(vault. This section makes the information flow semantics explicit.[^s1]) show newline
-() show newline
-([^s1]: Security: Classic mandatory access control \(Bell-LaPadula, Biba\)) show newline
-(uses security labels and lattice-based flow rules. We choose a simpler) show newline
-(model: capability attenuation at the boundary, no lattice, no mandatory) show newline
-(labels.) show newline
-() show newline
-() show newline
-(Vault-Authoritative) show newline
-(-------------------) show newline
-() show newline
-(The vault is the source of truth. The filesystem mount is a) show newline
-(capability-constrained view of vault contents, not a peer. Writes are) show newline
-(ingested into the vault's content-addressed store; reads retrieve) show newline
-(content by hash. The filesystem namespace is a manifest overlay.) show newline
-(Unmounted, the projection vanishes; the vault remains.) show newline
-() show newline
-() show newline
-(Bidirectional by Default) show newline
-(------------------------) show newline
-() show newline
-(Unless capabilities restrict it, data flows both ways through the) show newline
-(wormhole. A read-only capability creates a one-way flow) show newline
-(\(vault→filesystem\); a write-only capability creates the reverse) show newline
-(\(filesystem→vault, the dropbox pattern\). The default read+write) show newline
-(permits bidirectional flow.) show newline
-() show newline
-() show newline
-(No Implicit Labels) show newline
-(------------------) show newline
-() show newline
-(Unlike VMS security classifications, vault objects carry no mandatory) show newline
-(security labels. Flow control is purely through capability attenuation) show newline
-(at the wormhole boundary.[^s2]) show newline
-() show newline
-([^s2]: Security: Mandatory labels require a trusted labeling authority) show newline
-(and policy engine. We avoid this complexity. The tradeoff: no automatic) show newline
-("top secret can't flow to unclassified" enforcement. If an application) show newline
-(requires labeled objects with mandatory flow rules, it must implement) show newline
-(them at a layer above the wormhole.) show newline
-() show newline
-(The deeper rationale is human factors: labels are cognitively hostile.) show newline
-(SELinux is technically sound but practically disabled on most systems) show newline
-(because administrators cannot reason about label propagation correctly.) show newline
-(Capabilities are intuitive—"I have this, I can use it, I can delegate) show newline
-(a subset"—requiring no classification decisions and producing no "why) show newline
-(can't I access my own file" mysteries.[^s2a]) show newline
-() show newline
-([^s2a]: Security: Experience with deployed MAC systems \(SEVMS, SELinux,) show newline
-(Windows MIC\) shows that label complexity defeats usability. SEVMS was a) show newline
-(layered product on VMS providing B1-level security) show newline
-(classifications—powerful but rarely deployed outside government) show newline
-(contracts. Users misconfigure labels, administrators disable) show newline
-(enforcement, and the security model exists only on paper. Capability) show newline
-(attenuation succeeds because it matches human intuition about possession) show newline
-(and delegation.) show newline
-() show newline
-() show newline
-(Audit as Flow Record) show newline
-(--------------------) show newline
-() show newline
-(Every crossing \(read or write\) is logged. The audit trail IS the flow) show newline
-(history. Post-hoc analysis can reconstruct what data moved through which) show newline
-(wormholes, when, and under what authority.) show newline
-() show newline
-(This is the key assurance property: you cannot prove that information) show newline
-(didn't flow \(covert channels exist in any real system\), but you can) show newline
-(prove what DID flow and reconstruct the path post-hoc. The audit trail) show newline
-(provides accountability rather than prevention—a pragmatic tradeoff) show newline
-(that scales to real-world use.[^s3]) show newline
-() show newline
-([^s3]: Security: Mandatory access control aims to prevent unauthorized) show newline
-(flows. We aim to detect and attribute them. Prevention requires trusting) show newline
-(the entire stack; detection requires only trusting the audit log. For) show newline
-(most threat models, accountable flow is sufficient.) show newline
-() show newline
-(Audit is orthogonal to authorization. The capability check determines) show newline
-(what is permitted; audit records what occurred. The audit trail is never) show newline
-(consulted to decide whether to allow an operation—only to reconstruct) show newline
-(flow history after the fact.) show newline
-() show newline
-() show newline
-(Capability as Flow Constraint) show newline
-(-----------------------------) show newline
-() show newline
-(Table 4: Capability and Information Flow) show newline
-() show newline
-() show newline
-(  Capabilities         Flow Direction            Pattern               ) show newline
-(  read without write   vault→filesystem only   Browse, export        ) show newline
-(  write without read   filesystem→vault only   Dropbox, ingest       ) show newline
-(  read+write           bidirectional             Full sync             ) show newline
-(  neither              no data flow              Metadata-only mount   ) show newline
-() show newline
-() show newline
-(Reference Monitor) show newline
-(-----------------) show newline
-() show newline
-(The wormhole acts as a reference monitor at the domain boundary. Every) show newline
-(operation crosses the monitor, which validates capability, enforces rate) show newline
-(limits \(Memo-032\), and records the audit trail \(Memo-003\). The monitor) show newline
-(is complete \(all crossings pass through it\) and verifiable \(audit) show newline
-(enables post-hoc analysis\).) show newline
-() show newline
-() show newline
-(    \(define \(wormhole-flow-guard wormhole operation object\)) show newline
-(      "Reference monitor for wormhole operations") show newline
-(      \(let \(\(caps \(wormhole-capabilities wormhole\)\)\)) show newline
-(        \(unless \(memq operation caps\)) show newline
-(          \(wormhole-audit 'denied operation object\)) show newline
-(          \(error 'capability-denied operation\)\)) show newline
-(        \(unless \(rate-limit-ok? wormhole\)) show newline
-(          \(wormhole-audit 'rate-limited operation object\)) show newline
-(          \(error 'rate-limited\)\)) show newline
-(        \(wormhole-audit 'permitted operation object\)) show newline
-(        `\(permitted ,operation ,object\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Permissions) show newline
-(-----------) show newline
-() show newline
-(FUSE daemon runs as user, not root. Respects vault ACLs.) show newline
-() show newline
-() show newline
-(Content Integrity) show newline
-(-----------------) show newline
-() show newline
-(Every read verifies content hash. Corruption detected immediately.) show newline
-() show newline
-() show newline
-(Metadata Trust) show newline
-(--------------) show newline
-() show newline
-(Metadata is stored separately from content. A compromised metadata store) show newline
-(cannot alter file contents \(hashes won't match\).) show newline
-() show newline
-() show newline
-(Mount Security) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    \(define \(vault-mount point #!key \(allow-other #f\)\)) show newline
-(      ;; allow-other permits other users to access mount) show newline
-(      ;; Default: owner only) show newline
-(      ...\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DEPENDENCIES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(  Component           Purpose                ) show newline
-(  FUSE-T or macFUSE   Userspace filesystem   ) show newline
-(  libfuse             FUSE library           ) show newline
-(  Scheme FFI          Bindings to libfuse    ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Memo-012: Lamport Clocks) show newline
-(  * Memo-016: Lazy Clustering) show newline
-(  * Memo-020: Content-Addressed Storage) show newline
-(  * FUSE documentation: https://libfuse.github.io/) show newline
-(  * FUSE-T: https://github.com/macos-fuse-t/fuse-t) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-07) show newline
-(  * Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0042:) show ( ) show (Wormholes) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 0 add ypos moveto (This) show
+margin 30 add ypos moveto (Memo) show
+margin 60 add ypos moveto (specifies) show
+margin 120 add ypos moveto (wormholes--FUSE-based) show
+margin 246 add ypos moveto (bidirectional) show
+margin 330 add ypos moveto (portals) show
+margin 378 add ypos moveto (between) show
+grestore
+newline
+(the) show ( ) show (macOS) show ( ) show (filesystem) show ( ) show (and) show ( ) show (the) show ( ) show (Library) show ( ) show (of) show ( ) show (Cyberspace) show ( ) show (vault.) show ( ) show (Wormholes) show  newline
+(preserve) show ( ) show (full) show ( ) show (metadata) show ( ) show (including) show ( ) show (extended) show ( ) show (attributes,) show ( ) show (Finder) show ( ) show (tags,) show ( ) show (and) show  newline
+(ACLs.) show ( ) show (All) show ( ) show (operations) show ( ) show (are) show ( ) show (auditable) show ( ) show (\(Memo-003\)) show ( ) show (and) show ( ) show (rate-limited) show  newline
+(\(Memo-032\).[^h1]) show  newline
+ newline
+([^h1]:) show ( ) show (Historical:) show ( ) show (FUSE) show ( ) show (originated) show ( ) show (in) show ( ) show (Linux) show ( ) show (2.6) show ( ) show (\(2005\),) show ( ) show (inspired) show ( ) show (by) show  newline
+(earlier) show ( ) show (userspace) show ( ) show (filesystem) show ( ) show (work) show ( ) show (in) show ( ) show (Plan) show ( ) show (9) show ( ) show (and) show ( ) show (Hurd.) show ( ) show (macFUSE) show  newline
+(\(originally) show ( ) show (MacFUSE\)) show ( ) show (brought) show ( ) show (it) show ( ) show (to) show ( ) show (macOS) show ( ) show (in) show ( ) show (2007.) show ( ) show (The) show ( ) show (abstraction) show  newline
+(outlived) show ( ) show (Apple's) show ( ) show (hostility.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Users) show ( ) show (need) show ( ) show (seamless) show ( ) show (integration) show ( ) show (between) show ( ) show (their) show ( ) show (existing) show ( ) show (filesystem) show ( ) show (and) show  newline
+(the) show ( ) show (vault.) show ( ) show (Manual) show ( ) show (import/export) show ( ) show (creates) show ( ) show (friction) show ( ) show (and) show ( ) show (risks) show ( ) show (metadata) show  newline
+(loss.) show  newline
+ newline
+(A) show ( ) show (wormhole) show ( ) show (provides:) show  newline
+ newline
+(*) show ( ) show (Transparency) show ( ) show (-) show ( ) show (Finder,) show ( ) show (cp,) show ( ) show (rsync) show ( ) show (work) show ( ) show (unchanged) show  newline
+(*) show ( ) show (Bidirectionality) show ( ) show (-) show ( ) show (No) show ( ) show (separate) show ( ) show (sync) show ( ) show (step;) show ( ) show (it) show ( ) show (IS) show ( ) show (the) show ( ) show (filesystem) show  newline
+(*) show ( ) show (Metadata) show ( ) show (preservation) show ( ) show (-) show ( ) show (Full) show ( ) show (macOS) show ( ) show (attributes) show ( ) show (captured) show ( ) show (automatically) show  newline
+(*) show ( ) show (Content) show ( ) show (addressing) show ( ) show (-) show ( ) show (Deduplication) show ( ) show (and) show ( ) show (integrity) show ( ) show (built-in) show  newline
+(*) show ( ) show (Security) show ( ) show (-) show ( ) show (First-class) show ( ) show (Simple) show ( ) show (Public) show ( ) show (Key) show ( ) show (Infrastructure) show ( ) show (\(SPKI\)) show ( ) show (object) show ( ) show (with) show ( ) show (audit) show ( ) show (and) show ( ) show (rate-limit) show  newline
+ newline
+gsave
+margin 0 add ypos moveto (The) show
+margin 24 add ypos moveto (filesystem) show
+margin 90 add ypos moveto (abstraction) show
+margin 162 add ypos moveto (is) show
+margin 180 add ypos moveto (the) show
+margin 204 add ypos moveto (right) show
+margin 240 add ypos moveto (boundary--everything) show
+margin 360 add ypos moveto (above) show
+margin 396 add ypos moveto (it) show
+grestore
+newline
+(\(apps,) show ( ) show (shell,) show ( ) show (Finder\)) show ( ) show (works) show ( ) show (without) show ( ) show (modification.[^d1]) show  newline
+ newline
+([^d1]:) show ( ) show (Design:) show ( ) show (FUSE) show ( ) show (inverts) show ( ) show (the) show ( ) show (usual) show ( ) show (model.) show ( ) show (Instead) show ( ) show (of) show ( ) show (teaching) show  newline
+(applications) show ( ) show (about) show ( ) show (vaults,) show ( ) show (we) show ( ) show (teach) show ( ) show (the) show ( ) show (vault) show ( ) show (to) show ( ) show (speak) show ( ) show (filesystem.) show ( ) show (Unix) show  newline
+(got) show ( ) show (this) show ( ) show (right:) show ( ) show (everything) show ( ) show (is) show ( ) show (a) show ( ) show (file.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(WORMHOLE) show ( ) show (AS) show ( ) show (SECURITY) show ( ) show (OBJECT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(A) show ( ) show (wormhole) show ( ) show (is) show ( ) show (a) show ( ) show (first-class) show ( ) show (security) show ( ) show (object) show ( ) show (in) show ( ) show (cyberspace,) show ( ) show (subject) show  newline
+(to:[^d2]) show  newline
+ newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (SPKI) show
+margin 54 add ypos moveto (Authorization) show
+margin 138 add ypos moveto (\(Memo-004\)) show
+margin 204 add ypos moveto (--) show
+margin 216 add ypos moveto (Opening) show
+margin 264 add ypos moveto (requires) show
+margin 318 add ypos moveto (valid) show
+margin 354 add ypos moveto (certificate) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Capability) show
+margin 90 add ypos moveto (Delegation) show
+margin 156 add ypos moveto (\(Memo-021\)) show
+margin 222 add ypos moveto (--) show
+margin 234 add ypos moveto (Wormhole) show
+margin 288 add ypos moveto (access) show
+margin 330 add ypos moveto (can) show
+margin 354 add ypos moveto (be) show
+margin 372 add ypos moveto (delegated) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Audit) show
+margin 60 add ypos moveto (Trail) show
+margin 96 add ypos moveto (\(Memo-003\)) show
+margin 162 add ypos moveto (--) show
+margin 174 add ypos moveto (All) show
+margin 198 add ypos moveto (operations) show
+margin 264 add ypos moveto (logged) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Rate) show
+margin 54 add ypos moveto (Limiting) show
+margin 108 add ypos moveto (\(Memo-032\)) show
+margin 174 add ypos moveto (--) show
+margin 186 add ypos moveto (Configurable) show
+margin 264 add ypos moveto (ops/minute) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Sandboxing) show
+margin 90 add ypos moveto (\(Memo-023\)) show
+margin 156 add ypos moveto (--) show
+margin 168 add ypos moveto (Agents) show
+margin 210 add ypos moveto (access) show
+margin 252 add ypos moveto (wormholes) show
+margin 312 add ypos moveto (through) show
+margin 360 add ypos moveto (capabilities) show
+grestore
+newline
+ newline
+gsave
+margin 0 add ypos moveto (Wormholes) show
+margin 60 add ypos moveto (bridge) show
+margin 102 add ypos moveto (two) show
+margin 126 add ypos moveto (security) show
+margin 180 add ypos moveto (domains--the) show
+margin 252 add ypos moveto (filesystem) show
+margin 318 add ypos moveto (and) show
+margin 342 add ypos moveto (the) show
+grestore
+newline
+gsave
+margin 0 add ypos moveto (vault--making) show
+margin 78 add ypos moveto (them) show
+margin 108 add ypos moveto (inherently) show
+margin 174 add ypos moveto (privileged) show
+margin 240 add ypos moveto (operations.) show
+margin 312 add ypos moveto (Treating) show
+margin 366 add ypos moveto (wormholes) show
+grestore
+newline
+(as) show ( ) show (first-class) show ( ) show (security) show ( ) show (objects) show ( ) show (ensures) show ( ) show (that) show ( ) show (filesystem) show ( ) show (access) show ( ) show (remains) show  newline
+(under) show ( ) show (cryptographic) show ( ) show (control,) show ( ) show (not) show ( ) show (just) show ( ) show (ambient) show ( ) show (POSIX) show ( ) show (permissions.) show  newline
+ newline
+([^d2]:) show ( ) show (Design:) show ( ) show (Wormholes) show ( ) show (are) show ( ) show (attack) show ( ) show (surface.) show ( ) show (Unrestricted) show ( ) show (filesystem) show  newline
+(access) show ( ) show (defeats) show ( ) show (vault) show ( ) show (security.) show ( ) show (Every) show ( ) show (wormhole) show ( ) show (must) show ( ) show (be) show ( ) show (explicitly) show  newline
+(authorized,) show ( ) show (continuously) show ( ) show (audited,) show ( ) show (and) show ( ) show (rate-limited) show ( ) show (against) show ( ) show (abuse.) show  newline
+ newline
+ newline
+(Wormhole) show ( ) show (Certificate) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(wormhole-cert) show ( ) show (issuer) show ( ) show (fs-path) show ( ) show (vault-path) show ( ) show (permissions\)) show  newline
+("Create) show ( ) show (SPKI) show ( ) show (certificate) show ( ) show (authorizing) show ( ) show (wormhole") show  newline
+(\(create-cert) show  newline
+(issuer) show  newline
+(\(wormhole-principal) show ( ) show (fs-path) show ( ) show (vault-path\)) show  newline
+(`\(tag) show ( ) show (\(wormhole) show  newline
+(\(fs-path) show ( ) show (,fs-path\)) show  newline
+(\(vault-path) show ( ) show (,vault-path\)) show  newline
+(\(permissions) show ( ) show (,@permissions\)) show ( ) show (;) show ( ) show (read,) show ( ) show (write,) show ( ) show (delete) show  newline
+(\(rate-limit) show ( ) show (1000\)) show ( ) show (;) show ( ) show (ops/minute) show  newline
+(\(expires) show ( ) show (,\(+) show ( ) show (\(current-seconds\)) show ( ) show (86400\)\)\)\)\)\)) show  newline
+ newline
+ newline
+(Capability) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(Wormholes) show ( ) show (support) show ( ) show (fine-grained) show ( ) show (capabilities:[^d3]) show  newline
+ newline
+([^d3]:) show ( ) show (Design:) show ( ) show (Rich) show ( ) show (capabilities) show ( ) show (enable) show ( ) show (principle) show ( ) show (of) show ( ) show (least) show ( ) show (privilege.) show ( ) show (A) show  newline
+(backup) show ( ) show (agent) show ( ) show (needs) show ( ) show (read-only;) show ( ) show (a) show ( ) show (sync) show ( ) show (agent) show ( ) show (needs) show ( ) show (read-write) show ( ) show (but) show ( ) show (not) show  newline
+gsave
+margin 0 add ypos moveto (delete.) show
+margin 48 add ypos moveto (Capabilities) show
+margin 126 add ypos moveto (compose--grant) show
+margin 210 add ypos moveto (exactly) show
+margin 258 add ypos moveto (what's) show
+margin 300 add ypos moveto (needed.) show
+grestore
+newline
+ newline
+(Table) show ( ) show (0:) show ( ) show (Wormhole) show ( ) show (Capabilities) show  newline
+ newline
+ newline
+(Capability) show ( ) show (Allows) show  newline
+(Data) show ( ) show (Access) show  newline
+(read) show ( ) show (Read) show ( ) show (file) show ( ) show (contents) show  newline
+(write) show ( ) show (Write/modify) show ( ) show (file) show ( ) show (contents) show  newline
+(create) show ( ) show (Create) show ( ) show (new) show ( ) show (files) show  newline
+(delete) show ( ) show (Remove) show ( ) show (files) show  newline
+(rename) show ( ) show (Rename/move) show ( ) show (files) show  newline
+(Metadata) show  newline
+(stat) show ( ) show (Read) show ( ) show (POSIX) show ( ) show (attributes) show  newline
+(chmod) show ( ) show (Modify) show ( ) show (permissions) show  newline
+(chown) show ( ) show (Change) show ( ) show (ownership) show  newline
+(xattr-read) show ( ) show (Read) show ( ) show (extended) show ( ) show (attributes) show  newline
+(xattr-write) show ( ) show (Modify) show ( ) show (extended) show ( ) show (attributes) show  newline
+(acl-read) show ( ) show (Read) show ( ) show (ACLs) show  newline
+(acl-write) show ( ) show (Modify) show ( ) show (ACLs) show  newline
+(Directory) show  newline
+(readdir) show ( ) show (List) show ( ) show (directory) show ( ) show (contents) show  newline
+(mkdir) show ( ) show (Create) show ( ) show (directories) show  newline
+(rmdir) show ( ) show (Remove) show ( ) show (directories) show  newline
+(Control) show  newline
+(admin) show ( ) show (Configure) show ( ) show (wormhole) show  newline
+(delegate) show ( ) show (Delegate) show ( ) show (capabilities) show ( ) show (to) show ( ) show (others) show  newline
+(audit-read) show ( ) show (Read) show ( ) show (wormhole) show ( ) show (audit) show ( ) show (log) show  newline
+(rate-limit) show ( ) show (Modify) show ( ) show (rate) show ( ) show (limits) show  newline
+ newline
+ newline
+(Capability) show ( ) show (Composition) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Common) show ( ) show (capability) show ( ) show (sets) show ( ) show (\(long) show ( ) show (form) show ( ) show (for) show ( ) show (readability\)) show  newline
+(\(define) show ( ) show (capability:read-only) show  newline
+('\(read) show ( ) show (stat) show ( ) show (readdir) show ( ) show (xattr-read) show ( ) show (acl-read\)\)) show  newline
+(\(define) show ( ) show (capability:read-write) show  newline
+('\(read) show ( ) show (write) show ( ) show (create) show ( ) show (stat) show ( ) show (chmod) show ( ) show (readdir) show ( ) show (mkdir) show ( ) show (xattr-read) show ( ) show (xattr-write\)\)) show  newline
+(\(define) show ( ) show (capability:full) show  newline
+('\(read) show ( ) show (write) show ( ) show (create) show ( ) show (delete) show ( ) show (rename) show  newline
+(stat) show ( ) show (chmod) show ( ) show (chown) show  newline
+(xattr-read) show ( ) show (xattr-write) show ( ) show (acl-read) show ( ) show (acl-write) show  newline
+(readdir) show ( ) show (mkdir) show ( ) show (rmdir) show ( ) show (admin) show ( ) show (delegate) show ( ) show (audit-read) show ( ) show (rate-limit\)\)) show  newline
+(\(define) show ( ) show (capability:backup) show  newline
+('\(read) show ( ) show (stat) show ( ) show (readdir) show ( ) show (xattr-read) show ( ) show (acl-read\)\)) show  newline
+(\(define) show ( ) show (capability:synchronize) show  newline
+('\(read) show ( ) show (write) show ( ) show (create) show ( ) show (delete) show ( ) show (rename) show  newline
+(stat) show ( ) show (chmod) show ( ) show (readdir) show ( ) show (mkdir) show ( ) show (rmdir) show  newline
+(xattr-read) show ( ) show (xattr-write\)\)) show  newline
+ newline
+ newline
+(Capability) show ( ) show (Attenuation) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(Capabilities) show ( ) show (can) show ( ) show (only) show ( ) show (be) show ( ) show (reduced,) show ( ) show (never) show ( ) show (amplified:[^r1]) show  newline
+ newline
+([^r1]:) show ( ) show (Research:) show ( ) show (Capability) show ( ) show (attenuation) show ( ) show (is) show ( ) show (fundamental) show ( ) show (to) show ( ) show (the) show  newline
+(object-capability) show ( ) show (model.) show ( ) show (See) show ( ) show (Miller,) show ( ) show ("Robust) show ( ) show (Composition") show ( ) show (\(2006\).) show ( ) show (You) show  newline
+(cannot) show ( ) show (grant) show ( ) show (more) show ( ) show (authority) show ( ) show (than) show ( ) show (you) show ( ) show (possess.) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(wormhole-delegate) show ( ) show (wormhole) show ( ) show (new-caps) show ( ) show (recipient\)) show  newline
+("Delegate) show ( ) show (subset) show ( ) show (of) show ( ) show (wormhole) show ( ) show (capabilities") show  newline
+(\(let) show ( ) show (\(\(my-caps) show ( ) show (\(wormhole-capabilities) show ( ) show (wormhole\)\)\)) show  newline
+(\(unless) show ( ) show (\(subset?) show ( ) show (new-caps) show ( ) show (my-caps\)) show  newline
+(\(error) show ( ) show ('capability-amplification) show  newline
+("Cannot) show ( ) show (delegate) show ( ) show (capabilities) show ( ) show (you) show ( ) show (don't) show ( ) show (have"\)\)) show  newline
+(\(wormhole-cert) show  newline
+(\(wormhole-issuer) show ( ) show (wormhole\)) show  newline
+(\(wormhole-fs-path) show ( ) show (wormhole\)) show  newline
+(\(wormhole-vault-path) show ( ) show (wormhole\)) show  newline
+(new-caps) show  newline
+(recipient:) show ( ) show (recipient\)\)\)) show  newline
+ newline
+ newline
+(Opening) show ( ) show (a) show ( ) show (Wormhole) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(wormhole-open) show ( ) show (fs-path) show ( ) show (#!key) show ( ) show (\(vault-path) show ( ) show ("/"\)) show  newline
+(\(capabilities) show ( ) show (capability:read-write\)) show  newline
+(\(rate-limit) show ( ) show (1000\)) show  newline
+(\(locked) show ( ) show (#f\)) show  newline
+(\(auth-required) show ( ) show ('\(\)\)) show  newline
+(\(certificate) show ( ) show (#f\)\)) show  newline
+("Open) show ( ) show (wormhole) show ( ) show (-) show ( ) show (requires) show ( ) show (valid) show ( ) show (certificate") show  newline
+(\(unless) show ( ) show (certificate) show  newline
+(\(error) show ( ) show ('unauthorized) show ( ) show ("Wormhole) show ( ) show (requires) show ( ) show (SPKI) show ( ) show (certificate"\)\)) show  newline
+(\(unless) show ( ) show (\(verify-wormhole-cert) show ( ) show (certificate) show ( ) show (fs-path) show ( ) show (vault-path\)) show  newline
+(\(error) show ( ) show ('unauthorized) show ( ) show ("Invalid) show ( ) show (wormhole) show ( ) show (certificate"\)\)) show  newline
+(;;) show ( ) show (Audit) show ( ) show (the) show ( ) show (open) show  newline
+(\(wormhole-audit) show ( ) show ('wormhole-open) show ( ) show (fs-path) show  newline
+(`\(\(vault) show ( ) show (,vault-path\)) show  newline
+(\(capabilities) show ( ) show (,\(length) show ( ) show (capabilities\)\)\)\)) show  newline
+(;;) show ( ) show (Proceed) show ( ) show (with) show ( ) show (FUSE) show ( ) show (mount) show  newline
+(...\)) show  newline
+ newline
+ newline
+(Usage) show ( ) show (Examples) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Basic) show ( ) show (read-write) show ( ) show (wormhole) show  newline
+(\(wormhole-open) show ( ) show ("~/Cyberspace"\)) show  newline
+(;;) show ( ) show (Read-only) show ( ) show (wormhole) show ( ) show (for) show ( ) show (browsing) show  newline
+(\(wormhole-open) show ( ) show ("~/Archive") show ( ) show (capabilities:) show ( ) show (capability:read-only\)) show  newline
+(;;) show ( ) show (Sync) show ( ) show (wormhole) show ( ) show (with) show ( ) show (rate) show ( ) show (limiting) show  newline
+(\(wormhole-open) show ( ) show ("~/Sync") show  newline
+(capabilities:) show ( ) show (capability:synchronize) show  newline
+(rate-limit:) show ( ) show (500\)) show  newline
+(;;) show ( ) show (Locked) show ( ) show (wormhole) show ( ) show (requiring) show ( ) show (unlock) show ( ) show (for) show ( ) show (sensitive) show ( ) show (operations) show  newline
+(\(wormhole-open) show ( ) show ("~/Secure") show  newline
+(capabilities:) show ( ) show (capability:full) show  newline
+(locked:) show ( ) show (#t) show  newline
+(auth-required:) show ( ) show ('\(delete) show ( ) show (admin\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ARCHITECTURE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Mount) show ( ) show (Topology) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto (~/Cyberspace/) show
+% box char 2190 at col 37
+newpath margin 225 add 3 add ypos 2 add moveto margin 225 add 3 sub ypos lineto margin 225 add 3 add ypos 2 sub lineto closepath fill
+margin 234 add ypos moveto (FUSE) show
+margin 264 add ypos moveto (mount) show
+margin 300 add ypos moveto (point) show
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+margin 48 add ypos moveto (documents/) show
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 251c at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+newpath margin 51 add ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+margin 72 add ypos moveto (paper.pdf) show
+% box char 2190 at col 36
+newpath margin 219 add 3 add ypos 2 add moveto margin 219 add 3 sub ypos lineto margin 219 add 3 add ypos 2 sub lineto closepath fill
+margin 228 add ypos moveto (Virtual) show
+margin 276 add ypos moveto (file) show
+margin 306 add ypos moveto (\(content) show
+margin 360 add ypos moveto (in) show
+margin 378 add ypos moveto (vault\)) show
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2514 at col 8
+newpath margin 51 add ypos moveto margin 51 add 3 add ypos lineto stroke
+newpath margin 51 add ypos 6 add moveto margin 51 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+margin 72 add ypos moveto (notes.txt) show
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+margin 48 add ypos moveto (projects/) show
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2514 at col 8
+newpath margin 51 add ypos moveto margin 51 add 3 add ypos lineto stroke
+newpath margin 51 add ypos 6 add moveto margin 51 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+margin 72 add ypos moveto (cyberspace/) show
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2514 at col 12
+newpath margin 75 add ypos moveto margin 75 add 3 add ypos lineto stroke
+newpath margin 75 add ypos 6 add moveto margin 75 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+margin 96 add ypos moveto (...) show
+grestore
+newline
+gsave
+% box char 2514 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+margin 48 add ypos moveto (.vault/) show
+% box char 2190 at col 37
+newpath margin 225 add 3 add ypos 2 add moveto margin 225 add 3 sub ypos lineto margin 225 add 3 add ypos 2 sub lineto closepath fill
+margin 234 add ypos moveto (Hidden,) show
+margin 282 add ypos moveto (actual) show
+margin 324 add ypos moveto (storage) show
+grestore
+newline
+gsave
+% box char 251c at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+newpath margin 51 add ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+margin 72 add ypos moveto (objects/) show
+% box char 2190 at col 37
+newpath margin 225 add 3 add ypos 2 add moveto margin 225 add 3 sub ypos lineto margin 225 add 3 add ypos 2 sub lineto closepath fill
+margin 234 add ypos moveto (Content-addressed) show
+margin 342 add ypos moveto (blobs) show
+grestore
+newline
+gsave
+% box char 2502 at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+% box char 251c at col 12
+newpath margin 75 add ypos 6 sub moveto margin 75 add ypos 6 add lineto stroke
+newpath margin 75 add ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+margin 96 add ypos moveto (sha256:abc123...) show
+grestore
+newline
+gsave
+% box char 2502 at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+% box char 2514 at col 12
+newpath margin 75 add ypos moveto margin 75 add 3 add ypos lineto stroke
+newpath margin 75 add ypos 6 add moveto margin 75 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+margin 96 add ypos moveto (sha256:def456...) show
+grestore
+newline
+gsave
+% box char 251c at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+newpath margin 51 add ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+margin 72 add ypos moveto (manifests/) show
+% box char 2190 at col 37
+newpath margin 225 add 3 add ypos 2 add moveto margin 225 add 3 sub ypos lineto margin 225 add 3 add ypos 2 sub lineto closepath fill
+margin 234 add ypos moveto (Directory) show
+% box char 2192 at col 49
+newpath margin 297 add 3 sub ypos 2 add moveto margin 297 add 3 add ypos lineto margin 297 add 3 sub ypos 2 sub lineto closepath fill
+margin 306 add ypos moveto (file) show
+margin 336 add ypos moveto (mappings) show
+grestore
+newline
+gsave
+% box char 2514 at col 8
+newpath margin 51 add ypos moveto margin 51 add 3 add ypos lineto stroke
+newpath margin 51 add ypos 6 add moveto margin 51 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+margin 72 add ypos moveto (metadata/) show
+% box char 2190 at col 37
+newpath margin 225 add 3 add ypos 2 add moveto margin 225 add 3 sub ypos lineto margin 225 add 3 add ypos 2 sub lineto closepath fill
+margin 234 add ypos moveto (Per-file) show
+margin 288 add ypos moveto (metadata) show
+margin 342 add ypos moveto (store) show
+grestore
+newline
+ newline
+ newline
+(Component) show ( ) show (Stack) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+% box char 250c at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2510 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+newpath margin 255 add ypos moveto margin 255 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 84 add ypos moveto (Applications) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 54 add ypos moveto (\(Finder,) show
+margin 108 add ypos moveto (cp,) show
+margin 132 add ypos moveto (rsync,) show
+margin 174 add ypos moveto (etc.\)) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2524 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 84 add ypos moveto (VFS) show
+margin 108 add ypos moveto (\(kernel\)) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2524 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 66 add ypos moveto (FUSE-T) show
+margin 108 add ypos moveto (/) show
+margin 120 add ypos moveto (macFUSE) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2524 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 54 add ypos moveto (cyberspace-fuse) show
+margin 150 add ypos moveto (daemon) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+% box char 2190 at col 45
+newpath margin 273 add 3 add ypos 2 add moveto margin 273 add 3 sub ypos lineto margin 273 add 3 add ypos 2 sub lineto closepath fill
+margin 282 add ypos moveto (Our) show
+margin 306 add ypos moveto (code) show
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2524 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 84 add ypos moveto (Vault) show
+margin 120 add ypos moveto (layer) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 48 add ypos moveto (\(content-address,) show
+margin 156 add ypos moveto (metadata\)) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2518 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+newpath margin 255 add ypos 6 add moveto margin 255 add ypos lineto stroke
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(METADATA) show ( ) show (PRESERVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(macOS) show ( ) show (Metadata) show ( ) show (Captured) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(Table) show ( ) show (1:) show ( ) show (Preserved) show ( ) show (Metadata) show  newline
+ newline
+ newline
+(Category) show ( ) show (Attributes) show ( ) show (Capture) show ( ) show (Method) show  newline
+(POSIX) show ( ) show (mode,) show ( ) show (uid,) show ( ) show (gid,) show ( ) show (size) show ( ) show (stat\(\)) show  newline
+(Timestamps) show ( ) show (mtime,) show ( ) show (atime,) show ( ) show (ctime,) show ( ) show (birthtime) show ( ) show (stat\(\)) show  newline
+(Extended) show ( ) show (attrs) show ( ) show (Finder) show ( ) show (info,) show ( ) show (tags,) show ( ) show (quarantine) show ( ) show (listxattr\(\),) show ( ) show (getxattr\(\)) show  newline
+(Spotlight) show ( ) show (kMDItem*) show ( ) show (metadata) show ( ) show (mdls) show ( ) show (/) show ( ) show (MDItem) show ( ) show (API) show  newline
+(ACLs) show ( ) show (Access) show ( ) show (control) show ( ) show (lists) show ( ) show (aclgetfile\(\)) show  newline
+(Flags) show ( ) show (hidden,) show ( ) show (locked,) show ( ) show (immutable) show ( ) show (chflags\(\)) show ( ) show (/) show ( ) show (stat\(\)) show  newline
+(Resource) show ( ) show (fork) show ( ) show (Legacy) show ( ) show (resource) show ( ) show (data) show ( ) show (xattr) show ( ) show (com.apple.ResourceFork) show  newline
+ newline
+ newline
+(Internal) show ( ) show (Representation) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<vault-file>) show  newline
+(\(make-vault-file) show ( ) show (path) show ( ) show (content-hash) show ( ) show (metadata\)) show  newline
+(vault-file?) show  newline
+(\(path) show ( ) show (vault-file-path\)) show  newline
+(\(content-hash) show ( ) show (vault-file-hash\)) show  newline
+(\(metadata) show ( ) show (vault-file-metadata\)\)) show  newline
+(\(define) show ( ) show (\(capture-metadata) show ( ) show (path\)) show  newline
+("Capture) show ( ) show (all) show ( ) show (macOS) show ( ) show (metadata) show ( ) show (for) show ( ) show (a) show ( ) show (file") show  newline
+(`\(\(posix) show  newline
+(\(mode) show ( ) show (,\(file-mode) show ( ) show (path\)\)) show  newline
+(\(uid) show ( ) show (,\(file-uid) show ( ) show (path\)\)) show  newline
+(\(gid) show ( ) show (,\(file-gid) show ( ) show (path\)\)) show  newline
+(\(size) show ( ) show (,\(file-size) show ( ) show (path\)\)) show  newline
+(\(mtime) show ( ) show (,\(file-mtime) show ( ) show (path\)\)) show  newline
+(\(atime) show ( ) show (,\(file-atime) show ( ) show (path\)\)) show  newline
+(\(ctime) show ( ) show (,\(file-ctime) show ( ) show (path\)\)) show  newline
+(\(birthtime) show ( ) show (,\(file-birthtime) show ( ) show (path\)\)\)) show  newline
+(\(xattr) show ( ) show (,\(capture-xattrs) show ( ) show (path\)\)) show  newline
+(\(flags) show ( ) show (,\(capture-flags) show ( ) show (path\)\)) show  newline
+(\(acl) show ( ) show (,\(capture-acl) show ( ) show (path\)\)\)\)) show  newline
+ newline
+ newline
+(Restoration) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(restore-metadata) show ( ) show (path) show ( ) show (metadata\)) show  newline
+("Restore) show ( ) show (all) show ( ) show (metadata) show ( ) show (to) show ( ) show (a) show ( ) show (file") show  newline
+(\(let) show ( ) show (\(\(posix) show ( ) show (\(alist-ref) show ( ) show ('posix) show ( ) show (metadata\)\)) show  newline
+(\(xattr) show ( ) show (\(alist-ref) show ( ) show ('xattr) show ( ) show (metadata\)\)) show  newline
+(\(flags) show ( ) show (\(alist-ref) show ( ) show ('flags) show ( ) show (metadata\)\)) show  newline
+(\(acl) show ( ) show (\(alist-ref) show ( ) show ('acl) show ( ) show (metadata\)\)\)) show  newline
+(\(restore-posix) show ( ) show (path) show ( ) show (posix\)) show  newline
+(\(restore-xattrs) show ( ) show (path) show ( ) show (xattr\)) show  newline
+(\(restore-flags) show ( ) show (path) show ( ) show (flags\)) show  newline
+(\(restore-acl) show ( ) show (path) show ( ) show (acl\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(FUSE) show ( ) show (OPERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Required) show ( ) show (Operations) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(Table) show ( ) show (2:) show ( ) show (FUSE) show ( ) show (Operations) show  newline
+ newline
+ newline
+(Operation) show ( ) show (Purpose) show ( ) show (Vault) show ( ) show (Action) show  newline
+(getattr) show ( ) show (stat\(\)) show ( ) show (Return) show ( ) show (stored) show ( ) show (metadata) show  newline
+(readdir) show ( ) show (List) show ( ) show (directory) show ( ) show (Read) show ( ) show (manifest) show  newline
+(open) show ( ) show (Open) show ( ) show (file) show ( ) show (Validate) show ( ) show (hash) show ( ) show (exists) show  newline
+(read) show ( ) show (Read) show ( ) show (content) show ( ) show (Fetch) show ( ) show (by) show ( ) show (content) show ( ) show (hash) show  newline
+(write) show ( ) show (Write) show ( ) show (content) show ( ) show (Content-address,) show ( ) show (update) show ( ) show (manifest) show  newline
+(create) show ( ) show (Create) show ( ) show (file) show ( ) show (Allocate) show ( ) show (manifest) show ( ) show (entry) show  newline
+(unlink) show ( ) show (Delete) show ( ) show (file) show ( ) show (Remove) show ( ) show (from) show ( ) show (manifest) show ( ) show (\(GC) show ( ) show (later\)) show  newline
+(mkdir) show ( ) show (Create) show ( ) show (directory) show ( ) show (Create) show ( ) show (manifest) show ( ) show (node) show  newline
+(rmdir) show ( ) show (Remove) show ( ) show (directory) show ( ) show (Remove) show ( ) show (manifest) show ( ) show (node) show  newline
+(rename) show ( ) show (Move/rename) show ( ) show (Update) show ( ) show (manifest) show ( ) show (path) show  newline
+(setxattr) show ( ) show (Set) show ( ) show (extended) show ( ) show (attr) show ( ) show (Store) show ( ) show (in) show ( ) show (metadata) show  newline
+(getxattr) show ( ) show (Get) show ( ) show (extended) show ( ) show (attr) show ( ) show (Retrieve) show ( ) show (from) show ( ) show (metadata) show  newline
+(listxattr) show ( ) show (List) show ( ) show (extended) show ( ) show (attrs) show ( ) show (Enumerate) show ( ) show (metadata) show  newline
+ newline
+ newline
+(Implementation) show ( ) show (Sketch) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(fuse-getattr) show ( ) show (path\)) show  newline
+("Return) show ( ) show (file) show ( ) show (attributes) show ( ) show (from) show ( ) show (vault) show ( ) show (metadata") show  newline
+(\(let) show ( ) show (\(\(entry) show ( ) show (\(manifest-lookup) show ( ) show (path\)\)\)) show  newline
+(\(if) show ( ) show (entry) show  newline
+(\(let) show ( ) show (\(\(meta) show ( ) show (\(vault-file-metadata) show ( ) show (entry\)\)\)) show  newline
+(\(make-stat) show  newline
+(\(alist-ref) show ( ) show ('mode) show ( ) show (\(alist-ref) show ( ) show ('posix) show ( ) show (meta\)\)) show  newline
+(\(alist-ref) show ( ) show ('size) show ( ) show (\(alist-ref) show ( ) show ('posix) show ( ) show (meta\)\)) show  newline
+(\(alist-ref) show ( ) show ('mtime) show ( ) show (\(alist-ref) show ( ) show ('posix) show ( ) show (meta\)\)) show  newline
+(...\)\)) show  newline
+(-ENOENT\)\)\)) show  newline
+(\(define) show ( ) show (\(fuse-read) show ( ) show (path) show ( ) show (size) show ( ) show (offset\)) show  newline
+("Read) show ( ) show (file) show ( ) show (content) show ( ) show (from) show ( ) show (vault") show  newline
+(\(let) show ( ) show (\(\(entry) show ( ) show (\(manifest-lookup) show ( ) show (path\)\)) show  newline
+(\(hash) show ( ) show (\(vault-file-hash) show ( ) show (entry\)\)) show  newline
+(\(content) show ( ) show (\(vault-fetch) show ( ) show (hash\)\)\)) show  newline
+(\(subbytes) show ( ) show (content) show ( ) show (offset) show ( ) show (\(+) show ( ) show (offset) show ( ) show (size\)\)\)\)) show  newline
+(\(define) show ( ) show (\(fuse-write) show ( ) show (path) show ( ) show (data) show ( ) show (offset\)) show  newline
+("Write) show ( ) show (to) show ( ) show (file,) show ( ) show (content-address) show ( ) show (the) show ( ) show (result") show  newline
+(\(let) show ( ) show (\(\(entry) show ( ) show (\(manifest-lookup) show ( ) show (path\)\)) show  newline
+(\(current) show ( ) show (\(vault-fetch) show ( ) show (\(vault-file-hash) show ( ) show (entry\)\)\)) show  newline
+(\(updated) show ( ) show (\(bytes-splice) show ( ) show (current) show ( ) show (offset) show ( ) show (data\)\)) show  newline
+(\(new-hash) show ( ) show (\(content-address) show ( ) show (updated\)\)\)) show  newline
+(\(manifest-update!) show ( ) show (path) show ( ) show (new-hash\)) show  newline
+(\(string-length) show ( ) show (data\)\)\)) show  newline
+(\(define) show ( ) show (\(fuse-setxattr) show ( ) show (path) show ( ) show (name) show ( ) show (value\)) show  newline
+("Store) show ( ) show (extended) show ( ) show (attribute) show ( ) show (in) show ( ) show (vault) show ( ) show (metadata") show  newline
+(\(let) show ( ) show (\(\(entry) show ( ) show (\(manifest-lookup) show ( ) show (path\)\)\)) show  newline
+(\(metadata-set-xattr!) show ( ) show (entry) show ( ) show (name) show ( ) show (value\)) show  newline
+(0\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CONTENT) show ( ) show (ADDRESSING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Files) show ( ) show (are) show ( ) show (stored) show ( ) show (by) show ( ) show (content) show ( ) show (hash) show ( ) show (\(Memo-020\):) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(content-address) show ( ) show (data\)) show  newline
+("Store) show ( ) show (data,) show ( ) show (return) show ( ) show (hash") show  newline
+(\(let*) show ( ) show (\(\(hash) show ( ) show (\(sha256) show ( ) show (data\)\)) show  newline
+(\(path) show ( ) show (\(vault-object-path) show ( ) show (hash\)\)\)) show  newline
+(\(unless) show ( ) show (\(file-exists?) show ( ) show (path\)) show  newline
+(\(write-blob) show ( ) show (path) show ( ) show (data\)\)) show  newline
+(hash\)\)) show  newline
+(\(define) show ( ) show (\(vault-fetch) show ( ) show (hash\)) show  newline
+("Retrieve) show ( ) show (data) show ( ) show (by) show ( ) show (hash") show  newline
+(\(read-blob) show ( ) show (\(vault-object-path) show ( ) show (hash\)\)\)) show  newline
+ newline
+(Benefits:) show ( ) show (-) show ( ) show (Identical) show ( ) show (files) show ( ) show (stored) show ( ) show (once) show ( ) show (\(deduplication\)) show ( ) show (-) show ( ) show (Integrity) show  newline
+(verification) show ( ) show (on) show ( ) show (every) show ( ) show (read) show ( ) show (-) show ( ) show (Immutable) show ( ) show (objects) show ( ) show (enable) show ( ) show (safe) show ( ) show (caching) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SYNCHRONIZATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Change) show ( ) show (Detection) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (FUSE) show ( ) show (layer) show ( ) show (captures) show ( ) show (all) show ( ) show (writes) show ( ) show (in) show ( ) show (real-time.) show ( ) show (No) show ( ) show (separate) show ( ) show (sync) show ( ) show (needed) show  newline
+(for) show ( ) show (local) show ( ) show (changes.) show  newline
+ newline
+(For) show ( ) show (multi-device) show ( ) show (sync,) show ( ) show (the) show ( ) show (manifest) show ( ) show (includes) show ( ) show (version) show ( ) show (vectors) show ( ) show (\(Memo-012\):) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(manifest-entry) show ( ) show (path) show ( ) show (hash) show ( ) show (metadata\)) show  newline
+(`\(entry) show  newline
+(\(path) show ( ) show (,path\)) show  newline
+(\(hash) show ( ) show (,hash\)) show  newline
+(\(metadata) show ( ) show (,metadata\)) show  newline
+(\(version-vector) show ( ) show (,local-node) show ( ) show (,lamport-clock\)\)\)) show  newline
+ newline
+ newline
+(Conflict) show ( ) show (Resolution) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(When) show ( ) show (merging) show ( ) show (manifests) show ( ) show (from) show ( ) show (different) show ( ) show (devices) show ( ) show (\(Memo-016) show ( ) show (lazy) show  newline
+(clustering\):) show  newline
+ newline
+(*) show ( ) show (Same) show ( ) show (hash) show ( ) show (-) show ( ) show (No) show ( ) show (conflict) show ( ) show (\(identical) show ( ) show (content\)) show  newline
+(*) show ( ) show (Different) show ( ) show (hash,) show ( ) show (one) show ( ) show (newer) show ( ) show (-) show ( ) show (Take) show ( ) show (newer) show  newline
+(*) show ( ) show (Different) show ( ) show (hash,) show ( ) show (concurrent) show ( ) show (-) show ( ) show (Conflict,) show ( ) show (apply) show ( ) show (lazy-resolve) show  newline
+ newline
+(Content-addressing) show ( ) show (eliminates) show ( ) show (most) show ( ) show (conflicts) show ( ) show (at) show ( ) show (the) show ( ) show (object) show ( ) show (level;) show ( ) show (the) show  newline
+(manifest's) show ( ) show (version) show ( ) show (vectors) show ( ) show (resolve) show ( ) show (the) show ( ) show (remainder.) show ( ) show (Lazy) show ( ) show (clustering) show ( ) show (defers) show  newline
+(conflicts) show ( ) show (to) show ( ) show (user) show ( ) show (decision) show ( ) show (rather) show ( ) show (than) show ( ) show (attempting) show ( ) show (automatic) show ( ) show (resolution) show  newline
+(that) show ( ) show (may) show ( ) show (lose) show ( ) show (work.) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(merge-manifests) show ( ) show (local) show ( ) show (remote\)) show  newline
+(\(for-each) show  newline
+(\(lambda) show ( ) show (\(path\)) show  newline
+(\(let) show ( ) show (\(\(l) show ( ) show (\(manifest-lookup) show ( ) show (local) show ( ) show (path\)\)) show  newline
+(\(r) show ( ) show (\(manifest-lookup) show ( ) show (remote) show ( ) show (path\)\)\)) show  newline
+(\(cond) show  newline
+(\(\(not) show ( ) show (l\)) show ( ) show (\(manifest-add!) show ( ) show (local) show ( ) show (r\)\)) show  newline
+(\(\(not) show ( ) show (r\)) show ( ) show ('keep-local\)) show  newline
+(\(\(equal?) show ( ) show (\(vault-file-hash) show ( ) show (l\)) show ( ) show (\(vault-file-hash) show ( ) show (r\)\)) show ( ) show ('identical\)) show  newline
+(\(\(version-newer?) show ( ) show (r) show ( ) show (l\)) show ( ) show (\(manifest-update!) show ( ) show (local) show ( ) show (r\)\)) show  newline
+(\(\(version-newer?) show ( ) show (l) show ( ) show (r\)) show ( ) show ('keep-local\)) show  newline
+(\(else) show ( ) show (\(queue-conflict!) show ( ) show (path) show ( ) show (l) show ( ) show (r\)\)\)\)\)) show  newline
+(\(union) show ( ) show (\(manifest-paths) show ( ) show (local\)) show ( ) show (\(manifest-paths) show ( ) show (remote\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOUNT) show ( ) show (COMMANDS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(REPL) show ( ) show (Interface) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(vault-mount) show ( ) show (point\)) show  newline
+("Mount) show ( ) show (vault) show ( ) show (at) show ( ) show (filesystem) show ( ) show (path") show  newline
+(\(fuse-main) show ( ) show (point) show  newline
+(`\(\(getattr) show ( ) show (.) show ( ) show (,fuse-getattr\)) show  newline
+(\(readdir) show ( ) show (.) show ( ) show (,fuse-readdir\)) show  newline
+(\(open) show ( ) show (.) show ( ) show (,fuse-open\)) show  newline
+(\(read) show ( ) show (.) show ( ) show (,fuse-read\)) show  newline
+(\(write) show ( ) show (.) show ( ) show (,fuse-write\)) show  newline
+(\(create) show ( ) show (.) show ( ) show (,fuse-create\)) show  newline
+(\(unlink) show ( ) show (.) show ( ) show (,fuse-unlink\)) show  newline
+(\(mkdir) show ( ) show (.) show ( ) show (,fuse-mkdir\)) show  newline
+(\(rmdir) show ( ) show (.) show ( ) show (,fuse-rmdir\)) show  newline
+(\(rename) show ( ) show (.) show ( ) show (,fuse-rename\)) show  newline
+(\(setxattr) show ( ) show (.) show ( ) show (,fuse-setxattr\)) show  newline
+(\(getxattr) show ( ) show (.) show ( ) show (,fuse-getxattr\)) show  newline
+(\(listxattr) show ( ) show (.) show ( ) show (,fuse-listxattr\)\)\)\)) show  newline
+(\(define) show ( ) show (\(vault-unmount) show ( ) show (point\)) show  newline
+("Unmount) show ( ) show (vault) show ( ) show (filesystem") show  newline
+(\(fuse-unmount) show ( ) show (point\)\)) show  newline
+ newline
+ newline
+(Command) show ( ) show (Line) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Mount) show  newline
+(cyberspace) show ( ) show (mount) show ( ) show (~/Cyberspace) show  newline
+(#) show ( ) show (Unmount) show  newline
+(cyberspace) show ( ) show (unmount) show ( ) show (~/Cyberspace) show  newline
+(#) show ( ) show (Or) show ( ) show (via) show ( ) show (REPL) show  newline
+($) show ( ) show (./repl) show  newline
+(>) show ( ) show (\(vault-mount) show ( ) show ("~/Cyberspace"\)) show  newline
+(Mounted) show ( ) show (vault) show ( ) show (at) show ( ) show (/Users/ddp/Cyberspace) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MACOS) show ( ) show (INTEGRATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(FUSE-T) show ( ) show (vs) show ( ) show (macFUSE) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(Table) show ( ) show (3:) show ( ) show (FUSE) show ( ) show (Implementation) show ( ) show (Options) show  newline
+ newline
+ newline
+(Feature) show ( ) show (macFUSE) show ( ) show (FUSE-T) show  newline
+(Kernel) show ( ) show (extension) show ( ) show (Yes) show ( ) show (\(deprecated\)) show ( ) show (No) show  newline
+(System) show ( ) show (extension) show ( ) show (Optional) show ( ) show (Uses) show ( ) show (NFS) show  newline
+(SIP) show ( ) show (compatible) show ( ) show (Requires) show ( ) show (disable) show ( ) show (Yes) show  newline
+(Performance) show ( ) show (Better) show ( ) show (Adequate) show  newline
+(Maintenance) show ( ) show (Active) show ( ) show (Active) show  newline
+ newline
+gsave
+margin 0 add ypos moveto (FUSE-T) show
+margin 42 add ypos moveto (recommended) show
+margin 114 add ypos moveto (for) show
+margin 138 add ypos moveto (new) show
+margin 162 add ypos moveto (installations--no) show
+margin 264 add ypos moveto (kernel) show
+margin 306 add ypos moveto (extension) show
+grestore
+newline
+(required.[^i1]) show  newline
+ newline
+([^i1]:) show ( ) show (Implementation:) show ( ) show (FUSE-T) show ( ) show (implements) show ( ) show (FUSE) show ( ) show (API) show ( ) show (over) show ( ) show (NFS) show ( ) show (loopback.) show  newline
+(Slightly) show ( ) show (higher) show ( ) show (latency) show ( ) show (but) show ( ) show (avoids) show ( ) show (Apple's) show ( ) show (kernel) show ( ) show (extension) show ( ) show (hostility.) show  newline
+ newline
+ newline
+(Installation) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (FUSE-T) show ( ) show (\(recommended\)) show  newline
+(brew) show ( ) show (install) show ( ) show (fuse-t) show  newline
+(#) show ( ) show (Or) show ( ) show (macFUSE) show ( ) show (\(if) show ( ) show (kernel) show ( ) show (ext) show ( ) show (acceptable\)) show  newline
+(brew) show ( ) show (install) show ( ) show (macfuse) show  newline
+ newline
+ newline
+(Finder) show ( ) show (Integration) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (mount) show ( ) show (appears) show ( ) show (as) show ( ) show (a) show ( ) show (regular) show ( ) show (volume) show ( ) show (in) show ( ) show (Finder.) show ( ) show (Optional) show  newline
+(.VolumeIcon.icns) show ( ) show (for) show ( ) show (custom) show ( ) show (icon.) show  newline
+ newline
+(Spotlight) show ( ) show (indexing) show ( ) show (can) show ( ) show (be) show ( ) show (enabled) show ( ) show (by) show ( ) show (implementing) show ( ) show (getxattr) show ( ) show (for) show  newline
+(com.apple.FinderInfo) show ( ) show (and) show ( ) show (related) show ( ) show (Spotlight) show ( ) show (attributes.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(INFORMATION) show ( ) show (FLOW) show ( ) show (MODEL) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 0 add ypos moveto (Wormholes) show
+margin 60 add ypos moveto (bridge) show
+margin 102 add ypos moveto (two) show
+margin 126 add ypos moveto (security) show
+margin 180 add ypos moveto (domains--the) show
+margin 252 add ypos moveto (macOS) show
+margin 288 add ypos moveto (filesystem) show
+margin 354 add ypos moveto (and) show
+margin 378 add ypos moveto (the) show
+grestore
+newline
+(vault.) show ( ) show (This) show ( ) show (section) show ( ) show (makes) show ( ) show (the) show ( ) show (information) show ( ) show (flow) show ( ) show (semantics) show ( ) show (explicit.[^s1]) show  newline
+ newline
+([^s1]:) show ( ) show (Security:) show ( ) show (Classic) show ( ) show (mandatory) show ( ) show (access) show ( ) show (control) show ( ) show (\(Bell-LaPadula,) show ( ) show (Biba\)) show  newline
+(uses) show ( ) show (security) show ( ) show (labels) show ( ) show (and) show ( ) show (lattice-based) show ( ) show (flow) show ( ) show (rules.) show ( ) show (We) show ( ) show (choose) show ( ) show (a) show ( ) show (simpler) show  newline
+(model:) show ( ) show (capability) show ( ) show (attenuation) show ( ) show (at) show ( ) show (the) show ( ) show (boundary,) show ( ) show (no) show ( ) show (lattice,) show ( ) show (no) show ( ) show (mandatory) show  newline
+(labels.) show  newline
+ newline
+ newline
+(Vault-Authoritative) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (vault) show ( ) show (is) show ( ) show (the) show ( ) show (source) show ( ) show (of) show ( ) show (truth.) show ( ) show (The) show ( ) show (filesystem) show ( ) show (mount) show ( ) show (is) show ( ) show (a) show  newline
+(capability-constrained) show ( ) show (view) show ( ) show (of) show ( ) show (vault) show ( ) show (contents,) show ( ) show (not) show ( ) show (a) show ( ) show (peer.) show ( ) show (Writes) show ( ) show (are) show  newline
+(ingested) show ( ) show (into) show ( ) show (the) show ( ) show (vault's) show ( ) show (content-addressed) show ( ) show (store;) show ( ) show (reads) show ( ) show (retrieve) show  newline
+(content) show ( ) show (by) show ( ) show (hash.) show ( ) show (The) show ( ) show (filesystem) show ( ) show (namespace) show ( ) show (is) show ( ) show (a) show ( ) show (manifest) show ( ) show (overlay.) show  newline
+(Unmounted,) show ( ) show (the) show ( ) show (projection) show ( ) show (vanishes;) show ( ) show (the) show ( ) show (vault) show ( ) show (remains.) show  newline
+ newline
+ newline
+(Bidirectional) show ( ) show (by) show ( ) show (Default) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+(Unless) show ( ) show (capabilities) show ( ) show (restrict) show ( ) show (it,) show ( ) show (data) show ( ) show (flows) show ( ) show (both) show ( ) show (ways) show ( ) show (through) show ( ) show (the) show  newline
+(wormhole.) show ( ) show (A) show ( ) show (read-only) show ( ) show (capability) show ( ) show (creates) show ( ) show (a) show ( ) show (one-way) show ( ) show (flow) show  newline
+gsave
+margin 0 add ypos moveto (\(vault) show
+% box char 2192 at col 6
+newpath margin 39 add 3 sub ypos 2 add moveto margin 39 add 3 add ypos lineto margin 39 add 3 sub ypos 2 sub lineto closepath fill
+margin 42 add ypos moveto (filesystem\);) show
+margin 120 add ypos moveto (a) show
+margin 132 add ypos moveto (write-only) show
+margin 198 add ypos moveto (capability) show
+margin 264 add ypos moveto (creates) show
+margin 312 add ypos moveto (the) show
+margin 336 add ypos moveto (reverse) show
+grestore
+newline
+gsave
+margin 0 add ypos moveto (\(filesystem) show
+% box char 2192 at col 11
+newpath margin 69 add 3 sub ypos 2 add moveto margin 69 add 3 add ypos lineto margin 69 add 3 sub ypos 2 sub lineto closepath fill
+margin 72 add ypos moveto (vault,) show
+margin 114 add ypos moveto (the) show
+margin 138 add ypos moveto (dropbox) show
+margin 186 add ypos moveto (pattern\).) show
+margin 246 add ypos moveto (The) show
+margin 270 add ypos moveto (default) show
+margin 318 add ypos moveto (read+write) show
+grestore
+newline
+(permits) show ( ) show (bidirectional) show ( ) show (flow.) show  newline
+ newline
+ newline
+(No) show ( ) show (Implicit) show ( ) show (Labels) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(Unlike) show ( ) show (VMS) show ( ) show (security) show ( ) show (classifications,) show ( ) show (vault) show ( ) show (objects) show ( ) show (carry) show ( ) show (no) show ( ) show (mandatory) show  newline
+(security) show ( ) show (labels.) show ( ) show (Flow) show ( ) show (control) show ( ) show (is) show ( ) show (purely) show ( ) show (through) show ( ) show (capability) show ( ) show (attenuation) show  newline
+(at) show ( ) show (the) show ( ) show (wormhole) show ( ) show (boundary.[^s2]) show  newline
+ newline
+([^s2]:) show ( ) show (Security:) show ( ) show (Mandatory) show ( ) show (labels) show ( ) show (require) show ( ) show (a) show ( ) show (trusted) show ( ) show (labeling) show ( ) show (authority) show  newline
+(and) show ( ) show (policy) show ( ) show (engine.) show ( ) show (We) show ( ) show (avoid) show ( ) show (this) show ( ) show (complexity.) show ( ) show (The) show ( ) show (tradeoff:) show ( ) show (no) show ( ) show (automatic) show  newline
+("top) show ( ) show (secret) show ( ) show (can't) show ( ) show (flow) show ( ) show (to) show ( ) show (unclassified") show ( ) show (enforcement.) show ( ) show (If) show ( ) show (an) show ( ) show (application) show  newline
+(requires) show ( ) show (labeled) show ( ) show (objects) show ( ) show (with) show ( ) show (mandatory) show ( ) show (flow) show ( ) show (rules,) show ( ) show (it) show ( ) show (must) show ( ) show (implement) show  newline
+(them) show ( ) show (at) show ( ) show (a) show ( ) show (layer) show ( ) show (above) show ( ) show (the) show ( ) show (wormhole.) show  newline
+ newline
+(The) show ( ) show (deeper) show ( ) show (rationale) show ( ) show (is) show ( ) show (human) show ( ) show (factors:) show ( ) show (labels) show ( ) show (are) show ( ) show (cognitively) show ( ) show (hostile.) show  newline
+(SELinux) show ( ) show (is) show ( ) show (technically) show ( ) show (sound) show ( ) show (but) show ( ) show (practically) show ( ) show (disabled) show ( ) show (on) show ( ) show (most) show ( ) show (systems) show  newline
+(because) show ( ) show (administrators) show ( ) show (cannot) show ( ) show (reason) show ( ) show (about) show ( ) show (label) show ( ) show (propagation) show ( ) show (correctly.) show  newline
+gsave
+margin 0 add ypos moveto (Capabilities) show
+margin 78 add ypos moveto (are) show
+margin 102 add ypos moveto (intuitive--"I) show
+margin 180 add ypos moveto (have) show
+margin 210 add ypos moveto (this,) show
+margin 246 add ypos moveto (I) show
+margin 258 add ypos moveto (can) show
+margin 282 add ypos moveto (use) show
+margin 306 add ypos moveto (it,) show
+margin 330 add ypos moveto (I) show
+margin 342 add ypos moveto (can) show
+margin 366 add ypos moveto (delegate) show
+grestore
+newline
+gsave
+margin 0 add ypos moveto (a) show
+margin 12 add ypos moveto (subset"--requiring) show
+margin 120 add ypos moveto (no) show
+margin 138 add ypos moveto (classification) show
+margin 228 add ypos moveto (decisions) show
+margin 288 add ypos moveto (and) show
+margin 312 add ypos moveto (producing) show
+margin 372 add ypos moveto (no) show
+margin 390 add ypos moveto ("why) show
+grestore
+newline
+(can't) show ( ) show (I) show ( ) show (access) show ( ) show (my) show ( ) show (own) show ( ) show (file") show ( ) show (mysteries.[^s2a]) show  newline
+ newline
+([^s2a]:) show ( ) show (Security:) show ( ) show (Experience) show ( ) show (with) show ( ) show (deployed) show ( ) show (MAC) show ( ) show (systems) show ( ) show (\(SEVMS,) show ( ) show (SELinux,) show  newline
+(Windows) show ( ) show (MIC\)) show ( ) show (shows) show ( ) show (that) show ( ) show (label) show ( ) show (complexity) show ( ) show (defeats) show ( ) show (usability.) show ( ) show (SEVMS) show ( ) show (was) show ( ) show (a) show  newline
+(layered) show ( ) show (product) show ( ) show (on) show ( ) show (VMS) show ( ) show (providing) show ( ) show (B1-level) show ( ) show (security) show  newline
+gsave
+margin 0 add ypos moveto (classifications--powerful) show
+margin 150 add ypos moveto (but) show
+margin 174 add ypos moveto (rarely) show
+margin 216 add ypos moveto (deployed) show
+margin 270 add ypos moveto (outside) show
+margin 318 add ypos moveto (government) show
+grestore
+newline
+(contracts.) show ( ) show (Users) show ( ) show (misconfigure) show ( ) show (labels,) show ( ) show (administrators) show ( ) show (disable) show  newline
+(enforcement,) show ( ) show (and) show ( ) show (the) show ( ) show (security) show ( ) show (model) show ( ) show (exists) show ( ) show (only) show ( ) show (on) show ( ) show (paper.) show ( ) show (Capability) show  newline
+(attenuation) show ( ) show (succeeds) show ( ) show (because) show ( ) show (it) show ( ) show (matches) show ( ) show (human) show ( ) show (intuition) show ( ) show (about) show ( ) show (possession) show  newline
+(and) show ( ) show (delegation.) show  newline
+ newline
+ newline
+(Audit) show ( ) show (as) show ( ) show (Flow) show ( ) show (Record) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(Every) show ( ) show (crossing) show ( ) show (\(read) show ( ) show (or) show ( ) show (write\)) show ( ) show (is) show ( ) show (logged.) show ( ) show (The) show ( ) show (audit) show ( ) show (trail) show ( ) show (IS) show ( ) show (the) show ( ) show (flow) show  newline
+(history.) show ( ) show (Post-hoc) show ( ) show (analysis) show ( ) show (can) show ( ) show (reconstruct) show ( ) show (what) show ( ) show (data) show ( ) show (moved) show ( ) show (through) show ( ) show (which) show  newline
+(wormholes,) show ( ) show (when,) show ( ) show (and) show ( ) show (under) show ( ) show (what) show ( ) show (authority.) show  newline
+ newline
+(This) show ( ) show (is) show ( ) show (the) show ( ) show (key) show ( ) show (assurance) show ( ) show (property:) show ( ) show (you) show ( ) show (cannot) show ( ) show (prove) show ( ) show (that) show ( ) show (information) show  newline
+(didn't) show ( ) show (flow) show ( ) show (\(covert) show ( ) show (channels) show ( ) show (exist) show ( ) show (in) show ( ) show (any) show ( ) show (real) show ( ) show (system\),) show ( ) show (but) show ( ) show (you) show ( ) show (can) show  newline
+(prove) show ( ) show (what) show ( ) show (DID) show ( ) show (flow) show ( ) show (and) show ( ) show (reconstruct) show ( ) show (the) show ( ) show (path) show ( ) show (post-hoc.) show ( ) show (The) show ( ) show (audit) show ( ) show (trail) show  newline
+gsave
+margin 0 add ypos moveto (provides) show
+margin 54 add ypos moveto (accountability) show
+margin 144 add ypos moveto (rather) show
+margin 186 add ypos moveto (than) show
+margin 216 add ypos moveto (prevention--a) show
+margin 294 add ypos moveto (pragmatic) show
+margin 354 add ypos moveto (tradeoff) show
+grestore
+newline
+(that) show ( ) show (scales) show ( ) show (to) show ( ) show (real-world) show ( ) show (use.[^s3]) show  newline
+ newline
+([^s3]:) show ( ) show (Security:) show ( ) show (Mandatory) show ( ) show (access) show ( ) show (control) show ( ) show (aims) show ( ) show (to) show ( ) show (prevent) show ( ) show (unauthorized) show  newline
+(flows.) show ( ) show (We) show ( ) show (aim) show ( ) show (to) show ( ) show (detect) show ( ) show (and) show ( ) show (attribute) show ( ) show (them.) show ( ) show (Prevention) show ( ) show (requires) show ( ) show (trusting) show  newline
+(the) show ( ) show (entire) show ( ) show (stack;) show ( ) show (detection) show ( ) show (requires) show ( ) show (only) show ( ) show (trusting) show ( ) show (the) show ( ) show (audit) show ( ) show (log.) show ( ) show (For) show  newline
+(most) show ( ) show (threat) show ( ) show (models,) show ( ) show (accountable) show ( ) show (flow) show ( ) show (is) show ( ) show (sufficient.) show  newline
+ newline
+(Audit) show ( ) show (is) show ( ) show (orthogonal) show ( ) show (to) show ( ) show (authorization.) show ( ) show (The) show ( ) show (capability) show ( ) show (check) show ( ) show (determines) show  newline
+(what) show ( ) show (is) show ( ) show (permitted;) show ( ) show (audit) show ( ) show (records) show ( ) show (what) show ( ) show (occurred.) show ( ) show (The) show ( ) show (audit) show ( ) show (trail) show ( ) show (is) show ( ) show (never) show  newline
+gsave
+margin 0 add ypos moveto (consulted) show
+margin 60 add ypos moveto (to) show
+margin 78 add ypos moveto (decide) show
+margin 120 add ypos moveto (whether) show
+margin 168 add ypos moveto (to) show
+margin 186 add ypos moveto (allow) show
+margin 222 add ypos moveto (an) show
+margin 240 add ypos moveto (operation--only) show
+margin 330 add ypos moveto (to) show
+margin 348 add ypos moveto (reconstruct) show
+grestore
+newline
+(flow) show ( ) show (history) show ( ) show (after) show ( ) show (the) show ( ) show (fact.) show  newline
+ newline
+ newline
+(Capability) show ( ) show (as) show ( ) show (Flow) show ( ) show (Constraint) show  newline
+newpath margin ypos moveto margin 174 add ypos lineto stroke
+newline
+ newline
+(Table) show ( ) show (4:) show ( ) show (Capability) show ( ) show (and) show ( ) show (Information) show ( ) show (Flow) show  newline
+ newline
+ newline
+(Capabilities) show ( ) show (Flow) show ( ) show (Direction) show ( ) show (Pattern) show  newline
+gsave
+margin 12 add ypos moveto (read) show
+margin 42 add ypos moveto (without) show
+margin 90 add ypos moveto (write) show
+margin 138 add ypos moveto (vault) show
+% box char 2192 at col 28
+newpath margin 171 add 3 sub ypos 2 add moveto margin 171 add 3 add ypos lineto margin 171 add 3 sub ypos 2 sub lineto closepath fill
+margin 174 add ypos moveto (filesystem) show
+margin 240 add ypos moveto (only) show
+margin 282 add ypos moveto (Browse,) show
+margin 330 add ypos moveto (export) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (write) show
+margin 48 add ypos moveto (without) show
+margin 96 add ypos moveto (read) show
+margin 138 add ypos moveto (filesystem) show
+% box char 2192 at col 33
+newpath margin 201 add 3 sub ypos 2 add moveto margin 201 add 3 add ypos lineto margin 201 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (vault) show
+margin 240 add ypos moveto (only) show
+margin 282 add ypos moveto (Dropbox,) show
+margin 336 add ypos moveto (ingest) show
+grestore
+newline
+(read+write) show ( ) show (bidirectional) show ( ) show (Full) show ( ) show (sync) show  newline
+(neither) show ( ) show (no) show ( ) show (data) show ( ) show (flow) show ( ) show (Metadata-only) show ( ) show (mount) show  newline
+ newline
+ newline
+(Reference) show ( ) show (Monitor) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (wormhole) show ( ) show (acts) show ( ) show (as) show ( ) show (a) show ( ) show (reference) show ( ) show (monitor) show ( ) show (at) show ( ) show (the) show ( ) show (domain) show ( ) show (boundary.) show ( ) show (Every) show  newline
+(operation) show ( ) show (crosses) show ( ) show (the) show ( ) show (monitor,) show ( ) show (which) show ( ) show (validates) show ( ) show (capability,) show ( ) show (enforces) show ( ) show (rate) show  newline
+(limits) show ( ) show (\(Memo-032\),) show ( ) show (and) show ( ) show (records) show ( ) show (the) show ( ) show (audit) show ( ) show (trail) show ( ) show (\(Memo-003\).) show ( ) show (The) show ( ) show (monitor) show  newline
+(is) show ( ) show (complete) show ( ) show (\(all) show ( ) show (crossings) show ( ) show (pass) show ( ) show (through) show ( ) show (it\)) show ( ) show (and) show ( ) show (verifiable) show ( ) show (\(audit) show  newline
+(enables) show ( ) show (post-hoc) show ( ) show (analysis\).) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(wormhole-flow-guard) show ( ) show (wormhole) show ( ) show (operation) show ( ) show (object\)) show  newline
+("Reference) show ( ) show (monitor) show ( ) show (for) show ( ) show (wormhole) show ( ) show (operations") show  newline
+(\(let) show ( ) show (\(\(caps) show ( ) show (\(wormhole-capabilities) show ( ) show (wormhole\)\)\)) show  newline
+(\(unless) show ( ) show (\(memq) show ( ) show (operation) show ( ) show (caps\)) show  newline
+(\(wormhole-audit) show ( ) show ('denied) show ( ) show (operation) show ( ) show (object\)) show  newline
+(\(error) show ( ) show ('capability-denied) show ( ) show (operation\)\)) show  newline
+(\(unless) show ( ) show (\(rate-limit-ok?) show ( ) show (wormhole\)) show  newline
+(\(wormhole-audit) show ( ) show ('rate-limited) show ( ) show (operation) show ( ) show (object\)) show  newline
+(\(error) show ( ) show ('rate-limited\)\)) show  newline
+(\(wormhole-audit) show ( ) show ('permitted) show ( ) show (operation) show ( ) show (object\)) show  newline
+(`\(permitted) show ( ) show (,operation) show ( ) show (,object\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Permissions) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(FUSE) show ( ) show (daemon) show ( ) show (runs) show ( ) show (as) show ( ) show (user,) show ( ) show (not) show ( ) show (root.) show ( ) show (Respects) show ( ) show (vault) show ( ) show (ACLs.) show  newline
+ newline
+ newline
+(Content) show ( ) show (Integrity) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(Every) show ( ) show (read) show ( ) show (verifies) show ( ) show (content) show ( ) show (hash.) show ( ) show (Corruption) show ( ) show (detected) show ( ) show (immediately.) show  newline
+ newline
+ newline
+(Metadata) show ( ) show (Trust) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(Metadata) show ( ) show (is) show ( ) show (stored) show ( ) show (separately) show ( ) show (from) show ( ) show (content.) show ( ) show (A) show ( ) show (compromised) show ( ) show (metadata) show ( ) show (store) show  newline
+(cannot) show ( ) show (alter) show ( ) show (file) show ( ) show (contents) show ( ) show (\(hashes) show ( ) show (won't) show ( ) show (match\).) show  newline
+ newline
+ newline
+(Mount) show ( ) show (Security) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(vault-mount) show ( ) show (point) show ( ) show (#!key) show ( ) show (\(allow-other) show ( ) show (#f\)\)) show  newline
+(;;) show ( ) show (allow-other) show ( ) show (permits) show ( ) show (other) show ( ) show (users) show ( ) show (to) show ( ) show (access) show ( ) show (mount) show  newline
+(;;) show ( ) show (Default:) show ( ) show (owner) show ( ) show (only) show  newline
+(...\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DEPENDENCIES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Component) show ( ) show (Purpose) show  newline
+(FUSE-T) show ( ) show (or) show ( ) show (macFUSE) show ( ) show (Userspace) show ( ) show (filesystem) show  newline
+(libfuse) show ( ) show (FUSE) show ( ) show (library) show  newline
+(Scheme) show ( ) show (FFI) show ( ) show (Bindings) show ( ) show (to) show ( ) show (libfuse) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Memo-012:) show ( ) show (Lamport) show ( ) show (Clocks) show  newline
+(*) show ( ) show (Memo-016:) show ( ) show (Lazy) show ( ) show (Clustering) show  newline
+(*) show ( ) show (Memo-020:) show ( ) show (Content-Addressed) show ( ) show (Storage) show  newline
+(*) show ( ) show (FUSE) show ( ) show (documentation:) show ( ) show (https://libfuse.github.io/) show  newline
+(*) show ( ) show (FUSE-T:) show ( ) show (https://github.com/macos-fuse-t/fuse-t) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-07) show  newline
+(*) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

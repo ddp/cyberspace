@@ -15,236 +15,706 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0049: TCB Access Control and Audit Integration) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo establishes the principle that access control and auditing) show newline
-(must be designed together, not separately. Every access control decision) show newline
-(point produces three outputs: a decision, an effect, and a record. Audit) show newline
-(policy is per-realm, with lean defaults.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Security systems often treat auditing as an afterthought—bolted on) show newline
-(after access control is designed. This leads to:) show newline
-() show newline
-(  * Incomplete coverage: Some decisions are never logged) show newline
-(  * Inconsistent records: Different formats at different points) show newline
-(  * Performance surprises: Auditing added late without cost analysis) show newline
-(  * Policy gaps: No framework for what to log when) show newline
-() show newline
-(These failures arise from treating auditing as an afterthought. Access) show newline
-(control without auditing cannot detect attacks; auditing without access) show newline
-(control cannot prevent them. Co-design ensures both work together from) show newline
-(the start.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DESIGN PRINCIPLE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Access control and auditing are co-designed, not bolted on.) show newline
-() show newline
-(Every access control point has three outputs:) show newline
-() show newline
-() show newline
-(    ┌─────────────────────────────────────┐) show newline
-(    │         Access Control Point        │) show newline
-(    ├─────────────────────────────────────┤) show newline
-(    │ Input:  principal, action, context  │) show newline
-(    ├─────────────────────────────────────┤) show newline
-(    │ Output: decision \(grant | refuse\)   │) show newline
-(    │         effect   \(what happens\)     │) show newline
-(    │         record   \(audit entry\)      │) show newline
-(    │                  ↓                  │) show newline
-(    │         policy → lean: print        │) show newline
-(    │                  paranoid: append   │) show newline
-(    └─────────────────────────────────────┘) show newline
-() show newline
-() show newline
-(The Three Outputs) show newline
-(-----------------) show newline
-() show newline
-(  * Decision: Grant or refuse the requested action) show newline
-(  * Effect: The consequence of the decision \(action performed, or refusal message\)) show newline
-(  * Record: An audit entry capturing what happened) show newline
-() show newline
-() show newline
-(Auditable vs. Audited) show newline
-(---------------------) show newline
-() show newline
-(  * Auditable: The mechanism exists to log the event) show newline
-(  * Audited: The event is actively being logged) show newline
-() show newline
-(All access control decisions are auditable. Whether they are audited) show newline
-(depends on realm policy.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PER-REALM AUDIT POLICY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Each realm configures its own audit policy. The default is lean.) show newline
-() show newline
-() show newline
-(Policy Levels) show newline
-(-------------) show newline
-() show newline
-() show newline
-(  Level      Description                                ) show newline
-(  lean       Minimal auditing, low overhead \(default\)   ) show newline
-(  standard   Security-relevant events audited           ) show newline
-(  paranoid   All access decisions audited               ) show newline
-() show newline
-() show newline
-(Event Categories) show newline
-(----------------) show newline
-() show newline
-() show newline
-(  Event                 Lean    Standard   Paranoid   ) show newline
-(  Successful joins      audit   audit      audit      ) show newline
-(  Join refusals         print   audit      audit      ) show newline
-(  Delegations           audit   audit      audit      ) show newline
-(  Revocations           audit   audit      audit      ) show newline
-(  Capability grants     audit   audit      audit      ) show newline
-(  Capability refusals   print   audit      audit      ) show newline
-(  Object reads          —     —        audit      ) show newline
-(  Object writes         print   audit      audit      ) show newline
-() show newline
-() show newline
-(Configuration) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    \(realm-audit-policy 'lean\)      ; default) show newline
-(    \(realm-audit-policy 'standard\)) show newline
-(    \(realm-audit-policy 'paranoid\)) show newline
-(    ;; Or fine-grained:) show newline
-(    \(realm-audit-policy) show newline
-(      '\(\(joins . audit\)) show newline
-(        \(refusals . print\)) show newline
-(        \(delegations . audit\)) show newline
-(        \(reads . none\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION PATTERN) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(When implementing an access control point:) show newline
-() show newline
-() show newline
-(    \(define \(access-control-point principal action context\)) show newline
-(      "Template for access control with co-designed auditing") show newline
-(      ;; 1. Make the decision) show newline
-(      \(let \(\(decision \(evaluate-policy principal action context\)\)\)) show newline
-(        ;; 2. Record based on policy) show newline
-(        \(case \(realm-audit-policy\)) show newline
-(          \(\(paranoid\)) show newline
-(           \(audit-append) show newline
-(             actor: principal) show newline
-(             action: `\(,action ,@context\)) show newline
-(             motivation: \(if \(eq? decision 'grant\)) show newline
-(                             "Access granted") show newline
-(                             "Access refused"\)\)\)) show newline
-(          \(\(standard\)) show newline
-(           \(when \(or \(eq? decision 'grant\)) show newline
-(                     \(security-relevant? action\)\)) show newline
-(             \(audit-append ...\)\)\)) show newline
-(          \(\(lean\)) show newline
-(           \(when \(eq? decision 'refuse\)) show newline
-(             \(print \(format "~a Refused: ~a" action \(refuse-reason\)\)\)\)\)\)) show newline
-(        ;; 3. Effect) show newline
-(        \(if \(eq? decision 'grant\)) show newline
-(            \(perform-action action context\)) show newline
-(            \(refuse-with-reason action context\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(VOCABULARY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Consistent terminology for access control outcomes:) show newline
-() show newline
-() show newline
-(  Outcome             Verb         Usage                                                   ) show newline
-(  Execution fails     Evaporated   "Execution Evaporated: Signature verification failed"   ) show newline
-(  Join denied         Refused      "Join Refused: No valid attestation"                    ) show newline
-(  Capability denied   Refused      "Capability Refused: Insufficient authority"            ) show newline
-(  Operation blocked   Refused      "Operation Refused: Policy violation"                   ) show newline
-() show newline
-(Avoid: terminated, aborted, ended, failed \(where possible\).) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Refusal Patterns) show newline
-(----------------) show newline
-() show newline
-(A pattern of refusals may indicate: - Misconfiguration \(legitimate users) show newline
-(being blocked\) - Attack probing \(malicious principals testing) show newline
-(boundaries\) - Policy too restrictive \(needs adjustment\)) show newline
-() show newline
-(Standard and paranoid policies audit refusals to enable pattern) show newline
-(detection.) show newline
-() show newline
-() show newline
-(Audit Cost) show newline
-(----------) show newline
-() show newline
-(Each audit entry is: - Cryptographically signed \(Ed25519\) - Hash-chained) show newline
-(to previous entry - Persisted to storage) show newline
-() show newline
-(Lean policy minimizes this overhead for high-throughput realms.) show newline
-() show newline
-() show newline
-(Audit Integrity) show newline
-(---------------) show newline
-() show newline
-(Audit entries themselves are tamper-evident. An attacker cannot: -) show newline
-(Delete entries \(breaks hash chain\) - Modify entries \(invalidates) show newline
-(signature\) - Reorder entries \(violates sequence numbers\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Memo-003: Cryptographic Audit Trail) show newline
-(  * Memo-004: SPKI Authorization) show newline
-(  * Memo-046: Security Architecture) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(- 2026-01-10: Initial draft) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0049:) show ( ) show (TCB) show ( ) show (Access) show ( ) show (Control) show ( ) show (and) show ( ) show (Audit) show ( ) show (Integration) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (establishes) show ( ) show (the) show ( ) show (principle) show ( ) show (that) show ( ) show (access) show ( ) show (control) show ( ) show (and) show ( ) show (auditing) show  newline
+(must) show ( ) show (be) show ( ) show (designed) show ( ) show (together,) show ( ) show (not) show ( ) show (separately.) show ( ) show (Every) show ( ) show (access) show ( ) show (control) show ( ) show (decision) show  newline
+(point) show ( ) show (produces) show ( ) show (three) show ( ) show (outputs:) show ( ) show (a) show ( ) show (decision,) show ( ) show (an) show ( ) show (effect,) show ( ) show (and) show ( ) show (a) show ( ) show (record.) show ( ) show (Audit) show  newline
+(policy) show ( ) show (is) show ( ) show (per-realm,) show ( ) show (with) show ( ) show (lean) show ( ) show (defaults.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 0 add ypos moveto (Security) show
+margin 54 add ypos moveto (systems) show
+margin 102 add ypos moveto (often) show
+margin 138 add ypos moveto (treat) show
+margin 174 add ypos moveto (auditing) show
+margin 228 add ypos moveto (as) show
+margin 246 add ypos moveto (an) show
+margin 264 add ypos moveto (afterthought--bolted) show
+margin 384 add ypos moveto (on) show
+grestore
+newline
+(after) show ( ) show (access) show ( ) show (control) show ( ) show (is) show ( ) show (designed.) show ( ) show (This) show ( ) show (leads) show ( ) show (to:) show  newline
+ newline
+(*) show ( ) show (Incomplete) show ( ) show (coverage:) show ( ) show (Some) show ( ) show (decisions) show ( ) show (are) show ( ) show (never) show ( ) show (logged) show  newline
+(*) show ( ) show (Inconsistent) show ( ) show (records:) show ( ) show (Different) show ( ) show (formats) show ( ) show (at) show ( ) show (different) show ( ) show (points) show  newline
+(*) show ( ) show (Performance) show ( ) show (surprises:) show ( ) show (Auditing) show ( ) show (added) show ( ) show (late) show ( ) show (without) show ( ) show (cost) show ( ) show (analysis) show  newline
+(*) show ( ) show (Policy) show ( ) show (gaps:) show ( ) show (No) show ( ) show (framework) show ( ) show (for) show ( ) show (what) show ( ) show (to) show ( ) show (log) show ( ) show (when) show  newline
+ newline
+(These) show ( ) show (failures) show ( ) show (arise) show ( ) show (from) show ( ) show (treating) show ( ) show (auditing) show ( ) show (as) show ( ) show (an) show ( ) show (afterthought.) show ( ) show (Access) show  newline
+(control) show ( ) show (without) show ( ) show (auditing) show ( ) show (cannot) show ( ) show (detect) show ( ) show (attacks;) show ( ) show (auditing) show ( ) show (without) show ( ) show (access) show  newline
+(control) show ( ) show (cannot) show ( ) show (prevent) show ( ) show (them.) show ( ) show (Co-design) show ( ) show (ensures) show ( ) show (both) show ( ) show (work) show ( ) show (together) show ( ) show (from) show  newline
+(the) show ( ) show (start.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DESIGN) show ( ) show (PRINCIPLE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Access) show ( ) show (control) show ( ) show (and) show ( ) show (auditing) show ( ) show (are) show ( ) show (co-designed,) show ( ) show (not) show ( ) show (bolted) show ( ) show (on.) show  newline
+ newline
+(Every) show ( ) show (access) show ( ) show (control) show ( ) show (point) show ( ) show (has) show ( ) show (three) show ( ) show (outputs:) show  newline
+ newline
+ newline
+gsave
+% box char 250c at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2510 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+newpath margin 255 add ypos moveto margin 255 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 84 add ypos moveto (Access) show
+margin 126 add ypos moveto (Control) show
+margin 174 add ypos moveto (Point) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2524 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (Input:) show
+margin 84 add ypos moveto (principal,) show
+margin 150 add ypos moveto (action,) show
+margin 198 add ypos moveto (context) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2524 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (Output:) show
+margin 84 add ypos moveto (decision) show
+margin 138 add ypos moveto (\(grant) show
+margin 180 add ypos moveto (|) show
+margin 192 add ypos moveto (refuse\)) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 84 add ypos moveto (effect) show
+margin 138 add ypos moveto (\(what) show
+margin 174 add ypos moveto (happens\)) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 84 add ypos moveto (record) show
+margin 138 add ypos moveto (\(audit) show
+margin 180 add ypos moveto (entry\)) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2193 at col 23
+newpath margin 141 add 2 sub ypos 6 add moveto margin 141 add ypos 6 sub lineto margin 141 add 2 add ypos 6 add lineto closepath fill
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 84 add ypos moveto (policy) show
+% box char 2192 at col 21
+newpath margin 129 add 3 sub ypos 2 add moveto margin 129 add 3 add ypos lineto margin 129 add 3 sub ypos 2 sub lineto closepath fill
+margin 138 add ypos moveto (lean:) show
+margin 174 add ypos moveto (print) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 138 add ypos moveto (paranoid:) show
+margin 198 add ypos moveto (append) show
+% box char 2502 at col 42
+newpath margin 255 add ypos 6 sub moveto margin 255 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2518 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add ypos lineto stroke
+newpath margin 255 add ypos 6 add moveto margin 255 add ypos lineto stroke
+grestore
+newline
+ newline
+ newline
+(The) show ( ) show (Three) show ( ) show (Outputs) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Decision:) show ( ) show (Grant) show ( ) show (or) show ( ) show (refuse) show ( ) show (the) show ( ) show (requested) show ( ) show (action) show  newline
+(*) show ( ) show (Effect:) show ( ) show (The) show ( ) show (consequence) show ( ) show (of) show ( ) show (the) show ( ) show (decision) show ( ) show (\(action) show ( ) show (performed,) show ( ) show (or) show ( ) show (refusal) show ( ) show (message\)) show  newline
+(*) show ( ) show (Record:) show ( ) show (An) show ( ) show (audit) show ( ) show (entry) show ( ) show (capturing) show ( ) show (what) show ( ) show (happened) show  newline
+ newline
+ newline
+(Auditable) show ( ) show (vs.) show ( ) show (Audited) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Auditable:) show ( ) show (The) show ( ) show (mechanism) show ( ) show (exists) show ( ) show (to) show ( ) show (log) show ( ) show (the) show ( ) show (event) show  newline
+(*) show ( ) show (Audited:) show ( ) show (The) show ( ) show (event) show ( ) show (is) show ( ) show (actively) show ( ) show (being) show ( ) show (logged) show  newline
+ newline
+(All) show ( ) show (access) show ( ) show (control) show ( ) show (decisions) show ( ) show (are) show ( ) show (auditable.) show ( ) show (Whether) show ( ) show (they) show ( ) show (are) show ( ) show (audited) show  newline
+(depends) show ( ) show (on) show ( ) show (realm) show ( ) show (policy.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PER-REALM) show ( ) show (AUDIT) show ( ) show (POLICY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Each) show ( ) show (realm) show ( ) show (configures) show ( ) show (its) show ( ) show (own) show ( ) show (audit) show ( ) show (policy.) show ( ) show (The) show ( ) show (default) show ( ) show (is) show ( ) show (lean.) show  newline
+ newline
+ newline
+(Policy) show ( ) show (Levels) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(Level) show ( ) show (Description) show  newline
+(lean) show ( ) show (Minimal) show ( ) show (auditing,) show ( ) show (low) show ( ) show (overhead) show ( ) show (\(default\)) show  newline
+(standard) show ( ) show (Security-relevant) show ( ) show (events) show ( ) show (audited) show  newline
+(paranoid) show ( ) show (All) show ( ) show (access) show ( ) show (decisions) show ( ) show (audited) show  newline
+ newline
+ newline
+(Event) show ( ) show (Categories) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(Event) show ( ) show (Lean) show ( ) show (Standard) show ( ) show (Paranoid) show  newline
+(Successful) show ( ) show (joins) show ( ) show (audit) show ( ) show (audit) show ( ) show (audit) show  newline
+(Join) show ( ) show (refusals) show ( ) show (print) show ( ) show (audit) show ( ) show (audit) show  newline
+(Delegations) show ( ) show (audit) show ( ) show (audit) show ( ) show (audit) show  newline
+(Revocations) show ( ) show (audit) show ( ) show (audit) show ( ) show (audit) show  newline
+(Capability) show ( ) show (grants) show ( ) show (audit) show ( ) show (audit) show ( ) show (audit) show  newline
+(Capability) show ( ) show (refusals) show ( ) show (print) show ( ) show (audit) show ( ) show (audit) show  newline
+gsave
+margin 12 add ypos moveto (Object) show
+margin 54 add ypos moveto (reads) show
+margin 144 add ypos moveto (--) show
+margin 180 add ypos moveto (--) show
+margin 234 add ypos moveto (audit) show
+grestore
+newline
+(Object) show ( ) show (writes) show ( ) show (print) show ( ) show (audit) show ( ) show (audit) show  newline
+ newline
+ newline
+(Configuration) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(realm-audit-policy) show ( ) show ('lean\)) show ( ) show (;) show ( ) show (default) show  newline
+(\(realm-audit-policy) show ( ) show ('standard\)) show  newline
+(\(realm-audit-policy) show ( ) show ('paranoid\)) show  newline
+(;;) show ( ) show (Or) show ( ) show (fine-grained:) show  newline
+(\(realm-audit-policy) show  newline
+('\(\(joins) show ( ) show (.) show ( ) show (audit\)) show  newline
+(\(refusals) show ( ) show (.) show ( ) show (print\)) show  newline
+(\(delegations) show ( ) show (.) show ( ) show (audit\)) show  newline
+(\(reads) show ( ) show (.) show ( ) show (none\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show ( ) show (PATTERN) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(When) show ( ) show (implementing) show ( ) show (an) show ( ) show (access) show ( ) show (control) show ( ) show (point:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(access-control-point) show ( ) show (principal) show ( ) show (action) show ( ) show (context\)) show  newline
+("Template) show ( ) show (for) show ( ) show (access) show ( ) show (control) show ( ) show (with) show ( ) show (co-designed) show ( ) show (auditing") show  newline
+(;;) show ( ) show (1.) show ( ) show (Make) show ( ) show (the) show ( ) show (decision) show  newline
+(\(let) show ( ) show (\(\(decision) show ( ) show (\(evaluate-policy) show ( ) show (principal) show ( ) show (action) show ( ) show (context\)\)\)) show  newline
+(;;) show ( ) show (2.) show ( ) show (Record) show ( ) show (based) show ( ) show (on) show ( ) show (policy) show  newline
+(\(case) show ( ) show (\(realm-audit-policy\)) show  newline
+(\(\(paranoid\)) show  newline
+(\(audit-append) show  newline
+(actor:) show ( ) show (principal) show  newline
+(action:) show ( ) show (`\(,action) show ( ) show (,@context\)) show  newline
+(motivation:) show ( ) show (\(if) show ( ) show (\(eq?) show ( ) show (decision) show ( ) show ('grant\)) show  newline
+("Access) show ( ) show (granted") show  newline
+("Access) show ( ) show (refused"\)\)\)) show  newline
+(\(\(standard\)) show  newline
+(\(when) show ( ) show (\(or) show ( ) show (\(eq?) show ( ) show (decision) show ( ) show ('grant\)) show  newline
+(\(security-relevant?) show ( ) show (action\)\)) show  newline
+(\(audit-append) show ( ) show (...\)\)\)) show  newline
+(\(\(lean\)) show  newline
+(\(when) show ( ) show (\(eq?) show ( ) show (decision) show ( ) show ('refuse\)) show  newline
+(\(print) show ( ) show (\(format) show ( ) show ("~a) show ( ) show (Refused:) show ( ) show (~a") show ( ) show (action) show ( ) show (\(refuse-reason\)\)\)\)\)\)) show  newline
+(;;) show ( ) show (3.) show ( ) show (Effect) show  newline
+(\(if) show ( ) show (\(eq?) show ( ) show (decision) show ( ) show ('grant\)) show  newline
+(\(perform-action) show ( ) show (action) show ( ) show (context\)) show  newline
+(\(refuse-with-reason) show ( ) show (action) show ( ) show (context\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(VOCABULARY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Consistent) show ( ) show (terminology) show ( ) show (for) show ( ) show (access) show ( ) show (control) show ( ) show (outcomes:) show  newline
+ newline
+ newline
+(Outcome) show ( ) show (Verb) show ( ) show (Usage) show  newline
+(Execution) show ( ) show (fails) show ( ) show (Evaporated) show ( ) show ("Execution) show ( ) show (Evaporated:) show ( ) show (Signature) show ( ) show (verification) show ( ) show (failed") show  newline
+(Join) show ( ) show (denied) show ( ) show (Refused) show ( ) show ("Join) show ( ) show (Refused:) show ( ) show (No) show ( ) show (valid) show ( ) show (attestation") show  newline
+(Capability) show ( ) show (denied) show ( ) show (Refused) show ( ) show ("Capability) show ( ) show (Refused:) show ( ) show (Insufficient) show ( ) show (authority") show  newline
+(Operation) show ( ) show (blocked) show ( ) show (Refused) show ( ) show ("Operation) show ( ) show (Refused:) show ( ) show (Policy) show ( ) show (violation") show  newline
+ newline
+(Avoid:) show ( ) show (terminated,) show ( ) show (aborted,) show ( ) show (ended,) show ( ) show (failed) show ( ) show (\(where) show ( ) show (possible\).) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Refusal) show ( ) show (Patterns) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(A) show ( ) show (pattern) show ( ) show (of) show ( ) show (refusals) show ( ) show (may) show ( ) show (indicate:) show ( ) show (-) show ( ) show (Misconfiguration) show ( ) show (\(legitimate) show ( ) show (users) show  newline
+(being) show ( ) show (blocked\)) show ( ) show (-) show ( ) show (Attack) show ( ) show (probing) show ( ) show (\(malicious) show ( ) show (principals) show ( ) show (testing) show  newline
+(boundaries\)) show ( ) show (-) show ( ) show (Policy) show ( ) show (too) show ( ) show (restrictive) show ( ) show (\(needs) show ( ) show (adjustment\)) show  newline
+ newline
+(Standard) show ( ) show (and) show ( ) show (paranoid) show ( ) show (policies) show ( ) show (audit) show ( ) show (refusals) show ( ) show (to) show ( ) show (enable) show ( ) show (pattern) show  newline
+(detection.) show  newline
+ newline
+ newline
+(Audit) show ( ) show (Cost) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+(Each) show ( ) show (audit) show ( ) show (entry) show ( ) show (is:) show ( ) show (-) show ( ) show (Cryptographically) show ( ) show (signed) show ( ) show (\(Ed25519\)) show ( ) show (-) show ( ) show (Hash-chained) show  newline
+(to) show ( ) show (previous) show ( ) show (entry) show ( ) show (-) show ( ) show (Persisted) show ( ) show (to) show ( ) show (storage) show  newline
+ newline
+(Lean) show ( ) show (policy) show ( ) show (minimizes) show ( ) show (this) show ( ) show (overhead) show ( ) show (for) show ( ) show (high-throughput) show ( ) show (realms.) show  newline
+ newline
+ newline
+(Audit) show ( ) show (Integrity) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(Audit) show ( ) show (entries) show ( ) show (themselves) show ( ) show (are) show ( ) show (tamper-evident.) show ( ) show (An) show ( ) show (attacker) show ( ) show (cannot:) show ( ) show (-) show  newline
+(Delete) show ( ) show (entries) show ( ) show (\(breaks) show ( ) show (hash) show ( ) show (chain\)) show ( ) show (-) show ( ) show (Modify) show ( ) show (entries) show ( ) show (\(invalidates) show  newline
+(signature\)) show ( ) show (-) show ( ) show (Reorder) show ( ) show (entries) show ( ) show (\(violates) show ( ) show (sequence) show ( ) show (numbers\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Memo-003:) show ( ) show (Cryptographic) show ( ) show (Audit) show ( ) show (Trail) show  newline
+(*) show ( ) show (Memo-004:) show ( ) show (SPKI) show ( ) show (Authorization) show  newline
+(*) show ( ) show (Memo-046:) show ( ) show (Security) show ( ) show (Architecture) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(-) show ( ) show (2026-01-10:) show ( ) show (Initial) show ( ) show (draft) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

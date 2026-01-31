@@ -15,410 +15,676 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0044: Imprint Protocol) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(CIP establishes secure channels between Cyberspace nodes using stateless) show newline
-(cookies for DoS resistance, ephemeral key exchange for forward secrecy,) show newline
-(and capability attestation for authorization. Each imprint is an) show newline
-(authoritative affirmation of trust - signed and sealed by the issuing) show newline
-(principal in their realm. No X.509. No CA hierarchy. No algorithm) show newline
-(negotiation.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(TLS is complex: - Certificate chains require PKI - Algorithm negotiation) show newline
-(invites downgrade attacks - State allocated before client proven real -) show newline
-(Identity exposed before encryption) show newline
-() show newline
-(PHOTURIS \(1995\) had better ideas: - Cookies before crypto - Identity) show newline
-(under encryption - Simple state machine) show newline
-() show newline
-(CIP resurrects these ideas with modern primitives.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PROTOCOL OVERVIEW) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    Initiator                          Responder) show newline
-(        |                                   |) show newline
-(        |-------- KNOCK \(version\) -------->|  Stateless) show newline
-(        |<-------- COOKIE -----------------|  Stateless) show newline
-(        |                                   |) show newline
-(        |-------- EXCHANGE \(eph key\) ----->|  State committed) show newline
-(        |<------- EXCHANGE \(eph key\) ------|) show newline
-(        |                                   |) show newline
-(        |========= encrypted below ========|) show newline
-(        |                                   |) show newline
-(        |-------- ATTEST \(identity\) ------>|) show newline
-(        |<------- ATTEST \(identity\) -------|) show newline
-(        |                                   |) show newline
-(        |-------- OFFER \(capabilities\) --->|) show newline
-(        |<------- OFFER \(capabilities\) ----|) show newline
-(        |                                   |) show newline
-(        |-------- CONFIRM \(transcript\) --->|) show newline
-(        |<------- CONFIRM \(transcript\) ----|) show newline
-(        |                                   |) show newline
-(        |========= CHANNEL OPEN ===========|) show newline
-(        |                                   |) show newline
-(        |<----------- DATA -------------->|) show newline
-() show newline
-(10 messages to establish. Unlimited encrypted DATA after.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MESSAGE FORMAT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(All messages use TLV encoding:) show newline
-() show newline
-() show newline
-(    ┌──────┬────────┬──────────────────┐) show newline
-(    │ Type │ Length │ Payload          │) show newline
-(    │ 1B   │ 4B BE  │ variable         │) show newline
-(    └──────┴────────┴──────────────────┘) show newline
-() show newline
-() show newline
-(Message Types) show newline
-(-------------) show newline
-() show newline
-() show newline
-(  Type   Name       Direction       ) show newline
-(  0x01   KNOCK      I → R         ) show newline
-(  0x02   COOKIE     R → I         ) show newline
-(  0x03   EXCHANGE   bidirectional   ) show newline
-(  0x04   ATTEST     bidirectional   ) show newline
-(  0x05   OFFER      bidirectional   ) show newline
-(  0x06   CONFIRM    bidirectional   ) show newline
-(  0x10   DATA       bidirectional   ) show newline
-(  0xFF   CLOSE      bidirectional   ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PHASE 1: KNOCK) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Initiator announces intent and protocol version.) show newline
-() show newline
-() show newline
-(    KNOCK payload:) show newline
-(      "CIP/" VERSIONMAJOR "." VERSIONMINOR) show newline
-(    Example: "CIP/1.0") show newline
-() show newline
-(Responder checks version compatibility: - Major mismatch: reject) show newline
-(\(incompatible suites\) - Minor mismatch: accept \(backward compatible\)) show newline
-() show newline
-(Responder allocates no state.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PHASE 2: COOKIE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Responder returns stateless cookie.) show newline
-() show newline
-() show newline
-(    \(define \(make-cookie remote-addr remote-port\)) show newline
-(      \(let \(\(data \(string-append) show newline
-(                    \(blob->string cookie-secret\)) show newline
-(                    remote-addr) show newline
-(                    \(number->string remote-port\)) show newline
-(                    \(number->string cookie-epoch*\)\)\)) show newline
-(             \(hash \(blake2b-hash \(string->blob data\)\)\)\)) show newline
-(        \(substring hash 0 16\)\)\)) show newline
-() show newline
-(Cookie properties: - Stateless: Responder doesn't store it -) show newline
-(Unforgeable: Requires server secret - Expiring: Epoch rotation) show newline
-(invalidates old cookies - Address-bound: Different address = different) show newline
-(cookie) show newline
-() show newline
-(Responder still allocates no state.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PHASE 3: EXCHANGE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Both parties exchange ephemeral public keys.) show newline
-() show newline
-(Initiator sends:) show newline
-() show newline
-() show newline
-(    EXCHANGE payload:) show newline
-(      cookie-r "|" cookie-i "|" ephemeral-public-hex) show newline
-() show newline
-(- cookie-r: Echo of responder's cookie \(proves receipt\) - cookie-i:) show newline
-(Initiator's random cookie \(for key derivation\) - ephemeral-public:) show newline
-(X25519 public key) show newline
-() show newline
-(Responder verifies cookie echo, then responds with same format.) show newline
-() show newline
-(State now committed. Keys derived.) show newline
-() show newline
-() show newline
-(Key Derivation) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    \(define \(derive-session-keys shared-secret cookie-i cookie-r\)) show newline
-(      \(let* \(\(ikm \(blob-append shared-secret) show newline
-(                               \(string->blob cookie-i\)) show newline
-(                               \(string->blob cookie-r\)\)\)) show newline
-(             \(prk \(blake2b-hash ikm\)\)) show newline
-(             \(k-ir \(blake2b-hash \(blob-append prk "initiator->responder"\)\)\)) show newline
-(             \(k-ri \(blake2b-hash \(blob-append prk "responder->initiator"\)\)\)\)) show newline
-(        \(values \(take k-ir 32\) \(take k-ri 32\)\)\)\)) show newline
-() show newline
-(Directional keys prevent reflection attacks.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PHASE 4: ATTEST) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(All subsequent messages encrypted.) show newline
-() show newline
-(Both parties prove identity using Simple Public Key Infrastructure) show newline
-(\(SPKI\) principals.) show newline
-() show newline
-() show newline
-(    ATTEST payload \(encrypted\):) show newline
-(      principal-hash "|" signature) show newline
-() show newline
-(- principal-hash: SPKI principal \(hex-encoded public key hash\) -) show newline
-(signature: Ed25519 signature over transcript) show newline
-() show newline
-(Identity is cryptographic, not nominal. A principal is identified solely) show newline
-(by its public key hash, never by a human-readable name. This is a prime) show newline
-(directive.) show newline
-() show newline
-(The attestation is the principal's authoritative affirmation of their) show newline
-(own trust: I vouch for this channel. This is not a bearer token - it is) show newline
-(my sealed declaration, bound to my realm.) show newline
-() show newline
-(Transcript for signing:) show newline
-() show newline
-() show newline
-(    cookie-i || cookie-r || ephemeral-public) show newline
-() show newline
-() show newline
-(Anonymous Attestation \(Optional\)) show newline
-(--------------------------------) show newline
-() show newline
-(For privacy, use Chaum-style blind signatures:) show newline
-() show newline
-() show newline
-(    \(define \(blind-attest capability-hash\)) show newline
-(      ;; Prove authorization without revealing identity) show newline
-(      \(blind-sign capability-hash \(blind-factor\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PHASE 5: OFFER) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Exchange authorized capabilities as SPKI tags.) show newline
-() show newline
-() show newline
-(    OFFER payload \(encrypted\):) show newline
-(      \(tag \( set capability ...\)\)) show newline
-(    Example: "\(tag \( set read write replicate\)\)") show newline
-() show newline
-(Capabilities follow Memo-021 \(Capability Delegation\): - Only offer what) show newline
-(you hold - Attenuation only, no amplification - Explicit, not ambient -) show newline
-(Expressed as SPKI tag s-expressions) show newline
-() show newline
-(Future: Full SPKI auth-certs with issuer signatures.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PHASE 6: CONFIRM) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Bind entire transcript.) show newline
-() show newline
-() show newline
-(    CONFIRM payload \(encrypted\):) show newline
-(      BLAKE2b\(cookie-i || cookie-r || their-principal\)) show newline
-() show newline
-(Both parties must produce matching hashes. Any tampering detected.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DATA PHASE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Channel open. Encrypted messaging.) show newline
-() show newline
-() show newline
-(    DATA payload:) show newline
-(      ChaCha20-Poly1305\(key, nonce, plaintext\)) show newline
-() show newline
-(Nonce construction:) show newline
-() show newline
-() show newline
-(    nonce = sequence-number \(8 bytes\) || 0x00000000 \(4 bytes\)) show newline
-() show newline
-(Sequence numbers: - Start at 0 - Increment per message - Prevent replay) show newline
-(- Separate counters per direction) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ALGORITHM SUITES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(No runtime negotiation. Version determines suite.) show newline
-() show newline
-() show newline
-(CIP/1.x \(Current\)) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(  Function       Algorithm           ) show newline
-(  Key Exchange   X25519              ) show newline
-(  Signatures     Ed25519             ) show newline
-(  AEAD           ChaCha20-Poly1305   ) show newline
-(  Hash           BLAKE2b             ) show newline
-(  KDF            HKDF-BLAKE2b        ) show newline
-() show newline
-() show newline
-(CIP/2.x \(Reserved: Post-Quantum\)) show newline
-(--------------------------------) show newline
-() show newline
-() show newline
-(  Function       Algorithm           ) show newline
-(  Key Exchange   Kyber-1024          ) show newline
-(  Signatures     Dilithium3          ) show newline
-(  AEAD           ChaCha20-Poly1305   ) show newline
-(  Hash           BLAKE2b             ) show newline
-() show newline
-() show newline
-(CIP/3.x \(Reserved: Hybrid\)) show newline
-(--------------------------) show newline
-() show newline
-() show newline
-(  Function       Algorithm             ) show newline
-(  Key Exchange   X25519 + Kyber        ) show newline
-(  Signatures     Ed25519 + Dilithium   ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY PROPERTIES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(DoS Resistance) show newline
-(--------------) show newline
-() show newline
-() show newline
-(  Attack             Defense                         ) show newline
-(  SYN flood          Cookie proves return path       ) show newline
-(  Amplification      No response until cookie echo   ) show newline
-(  State exhaustion   No state until Phase 3          ) show newline
-() show newline
-() show newline
-(Forward Secrecy) show newline
-(---------------) show newline
-() show newline
-(Ephemeral X25519 keys: - Generated per session - Destroyed after key) show newline
-(derivation - Compromise of long-term key doesn't expose past sessions) show newline
-() show newline
-() show newline
-(Identity Protection \(SPKI Native\)) show newline
-(---------------------------------) show newline
-() show newline
-(Principal identity: - Is the public key hash \(not a name, not a) show newline
-(certificate\) - Only revealed after encryption established - Only) show newline
-(revealed to authenticated peer - Never in plaintext on wire -) show newline
-(Self-certifying: principal = hash\(public_key\)) show newline
-() show newline
-() show newline
-(Replay Protection) show newline
-(-----------------) show newline
-() show newline
-(  * Sequence numbers per direction) show newline
-(  * Nonce never reused \(fatal if violated\)) show newline
-(  * AEAD authentication fails on replay) show newline
-() show newline
-(Each security property addresses a specific attack class. DoS resistance) show newline
-(prevents resource exhaustion before authentication; forward secrecy) show newline
-(limits damage from key compromise; identity protection prevents traffic) show newline
-(analysis; replay protection ensures message freshness.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(COMPARISON) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(  Property                TLS 1.3   IKEv2     CIP       ) show newline
-(  Messages to establish   2-3       4+        10        ) show newline
-(  DoS resistance          Limited   Cookies   Cookies   ) show newline
-(  Algorithm negotiation   Yes       Yes       No        ) show newline
-(  Certificate required    Yes       Yes       No        ) show newline
-(  Identity protection     Partial   Yes       Yes       ) show newline
-(  Capability binding      No        No        Yes       ) show newline
-() show newline
-(CIP trades fewer round-trips for simplicity and capability integration.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    ;; Initiator) show newline
-(    \(define ch \(node-connect "remote.host" 4433\)\)) show newline
-(    \(channel-send ch '\(request object-hash\)\)) show newline
-(    \(channel-recv ch\)) show newline
-(    ;; Responder) show newline
-(    \(node-listen 4433 "my-node"\)) show newline
-(    \(define ch \(node-accept\)\)) show newline
-(    \(let \(\(msg \(channel-recv ch\)\)\)) show newline
-(      \(channel-send ch \(process msg\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Karn, P. & Simpson, W. \(1999\). PHOTURIS. RFC 2522.) show newline
-(  * Karn, P. & Simpson, W. \(1999\). PHOTURIS Extended Schemes. RFC 2523.) show newline
-(  * Bernstein, D.J. \(2006\). Curve25519.) show newline
-(  * Bernstein, D.J. \(2008\). ChaCha20.) show newline
-(  * Memo-021: Capability Delegation) show newline
-(  * Memo-040: Security Architecture) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(- 2026-01-07: Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0044:) show ( ) show (Imprint) show ( ) show (Protocol) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(CIP) show ( ) show (establishes) show ( ) show (secure) show ( ) show (channels) show ( ) show (between) show ( ) show (Cyberspace) show ( ) show (nodes) show ( ) show (using) show ( ) show (stateless) show  newline
+(cookies) show ( ) show (for) show ( ) show (DoS) show ( ) show (resistance,) show ( ) show (ephemeral) show ( ) show (key) show ( ) show (exchange) show ( ) show (for) show ( ) show (forward) show ( ) show (secrecy,) show  newline
+(and) show ( ) show (capability) show ( ) show (attestation) show ( ) show (for) show ( ) show (authorization.) show ( ) show (Each) show ( ) show (imprint) show ( ) show (is) show ( ) show (an) show  newline
+(authoritative) show ( ) show (affirmation) show ( ) show (of) show ( ) show (trust) show ( ) show (-) show ( ) show (signed) show ( ) show (and) show ( ) show (sealed) show ( ) show (by) show ( ) show (the) show ( ) show (issuing) show  newline
+(principal) show ( ) show (in) show ( ) show (their) show ( ) show (realm.) show ( ) show (No) show ( ) show (X.509.) show ( ) show (No) show ( ) show (CA) show ( ) show (hierarchy.) show ( ) show (No) show ( ) show (algorithm) show  newline
+(negotiation.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(TLS) show ( ) show (is) show ( ) show (complex:) show ( ) show (-) show ( ) show (Certificate) show ( ) show (chains) show ( ) show (require) show ( ) show (PKI) show ( ) show (-) show ( ) show (Algorithm) show ( ) show (negotiation) show  newline
+(invites) show ( ) show (downgrade) show ( ) show (attacks) show ( ) show (-) show ( ) show (State) show ( ) show (allocated) show ( ) show (before) show ( ) show (client) show ( ) show (proven) show ( ) show (real) show ( ) show (-) show  newline
+(Identity) show ( ) show (exposed) show ( ) show (before) show ( ) show (encryption) show  newline
+ newline
+(PHOTURIS) show ( ) show (\(1995\)) show ( ) show (had) show ( ) show (better) show ( ) show (ideas:) show ( ) show (-) show ( ) show (Cookies) show ( ) show (before) show ( ) show (crypto) show ( ) show (-) show ( ) show (Identity) show  newline
+(under) show ( ) show (encryption) show ( ) show (-) show ( ) show (Simple) show ( ) show (state) show ( ) show (machine) show  newline
+ newline
+(CIP) show ( ) show (resurrects) show ( ) show (these) show ( ) show (ideas) show ( ) show (with) show ( ) show (modern) show ( ) show (primitives.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PROTOCOL) show ( ) show (OVERVIEW) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Initiator) show ( ) show (Responder) show  newline
+(|) show ( ) show (|) show  newline
+(|--------) show ( ) show (KNOCK) show ( ) show (\(version\)) show ( ) show (-------->|) show ( ) show (Stateless) show  newline
+(|<--------) show ( ) show (COOKIE) show ( ) show (-----------------|) show ( ) show (Stateless) show  newline
+(|) show ( ) show (|) show  newline
+(|--------) show ( ) show (EXCHANGE) show ( ) show (\(eph) show ( ) show (key\)) show ( ) show (----->|) show ( ) show (State) show ( ) show (committed) show  newline
+(|<-------) show ( ) show (EXCHANGE) show ( ) show (\(eph) show ( ) show (key\)) show ( ) show (------|) show  newline
+(|) show ( ) show (|) show  newline
+(|=========) show ( ) show (encrypted) show ( ) show (below) show ( ) show (========|) show  newline
+(|) show ( ) show (|) show  newline
+(|--------) show ( ) show (ATTEST) show ( ) show (\(identity\)) show ( ) show (------>|) show  newline
+(|<-------) show ( ) show (ATTEST) show ( ) show (\(identity\)) show ( ) show (-------|) show  newline
+(|) show ( ) show (|) show  newline
+(|--------) show ( ) show (OFFER) show ( ) show (\(capabilities\)) show ( ) show (--->|) show  newline
+(|<-------) show ( ) show (OFFER) show ( ) show (\(capabilities\)) show ( ) show (----|) show  newline
+(|) show ( ) show (|) show  newline
+(|--------) show ( ) show (CONFIRM) show ( ) show (\(transcript\)) show ( ) show (--->|) show  newline
+(|<-------) show ( ) show (CONFIRM) show ( ) show (\(transcript\)) show ( ) show (----|) show  newline
+(|) show ( ) show (|) show  newline
+(|=========) show ( ) show (CHANNEL) show ( ) show (OPEN) show ( ) show (===========|) show  newline
+(|) show ( ) show (|) show  newline
+(|<-----------) show ( ) show (DATA) show ( ) show (-------------->|) show  newline
+ newline
+(10) show ( ) show (messages) show ( ) show (to) show ( ) show (establish.) show ( ) show (Unlimited) show ( ) show (encrypted) show ( ) show (DATA) show ( ) show (after.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MESSAGE) show ( ) show (FORMAT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(All) show ( ) show (messages) show ( ) show (use) show ( ) show (TLV) show ( ) show (encoding:) show  newline
+ newline
+ newline
+gsave
+% box char 250c at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 252c at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+newpath margin 69 add ypos moveto margin 69 add ypos 6 sub lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 252c at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+newpath margin 123 add ypos moveto margin 123 add ypos 6 sub lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2510 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add ypos lineto stroke
+newpath margin 237 add ypos moveto margin 237 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (Type) show
+% box char 2502 at col 11
+newpath margin 69 add ypos 6 sub moveto margin 69 add ypos 6 add lineto stroke
+margin 78 add ypos moveto (Length) show
+% box char 2502 at col 20
+newpath margin 123 add ypos 6 sub moveto margin 123 add ypos 6 add lineto stroke
+margin 132 add ypos moveto (Payload) show
+% box char 2502 at col 39
+newpath margin 237 add ypos 6 sub moveto margin 237 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (1B) show
+% box char 2502 at col 11
+newpath margin 69 add ypos 6 sub moveto margin 69 add ypos 6 add lineto stroke
+margin 78 add ypos moveto (4B) show
+margin 96 add ypos moveto (BE) show
+% box char 2502 at col 20
+newpath margin 123 add ypos 6 sub moveto margin 123 add ypos 6 add lineto stroke
+margin 132 add ypos moveto (variable) show
+% box char 2502 at col 39
+newpath margin 237 add ypos 6 sub moveto margin 237 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2534 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+newpath margin 69 add ypos 6 add moveto margin 69 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2534 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+newpath margin 123 add ypos 6 add moveto margin 123 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2518 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add ypos lineto stroke
+newpath margin 237 add ypos 6 add moveto margin 237 add ypos lineto stroke
+grestore
+newline
+ newline
+ newline
+(Message) show ( ) show (Types) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(Type) show ( ) show (Name) show ( ) show (Direction) show  newline
+gsave
+margin 12 add ypos moveto (0x01) show
+margin 54 add ypos moveto (KNOCK) show
+margin 120 add ypos moveto (I) show
+% box char 2192 at col 22
+newpath margin 135 add 3 sub ypos 2 add moveto margin 135 add 3 add ypos lineto margin 135 add 3 sub ypos 2 sub lineto closepath fill
+margin 144 add ypos moveto (R) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (0x02) show
+margin 54 add ypos moveto (COOKIE) show
+margin 120 add ypos moveto (R) show
+% box char 2192 at col 22
+newpath margin 135 add 3 sub ypos 2 add moveto margin 135 add 3 add ypos lineto margin 135 add 3 sub ypos 2 sub lineto closepath fill
+margin 144 add ypos moveto (I) show
+grestore
+newline
+(0x03) show ( ) show (EXCHANGE) show ( ) show (bidirectional) show  newline
+(0x04) show ( ) show (ATTEST) show ( ) show (bidirectional) show  newline
+(0x05) show ( ) show (OFFER) show ( ) show (bidirectional) show  newline
+(0x06) show ( ) show (CONFIRM) show ( ) show (bidirectional) show  newline
+(0x10) show ( ) show (DATA) show ( ) show (bidirectional) show  newline
+(0xFF) show ( ) show (CLOSE) show ( ) show (bidirectional) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PHASE) show ( ) show (1:) show ( ) show (KNOCK) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Initiator) show ( ) show (announces) show ( ) show (intent) show ( ) show (and) show ( ) show (protocol) show ( ) show (version.) show  newline
+ newline
+ newline
+(KNOCK) show ( ) show (payload:) show  newline
+("CIP/") show ( ) show (VERSIONMAJOR) show ( ) show (".") show ( ) show (VERSIONMINOR) show  newline
+(Example:) show ( ) show ("CIP/1.0") show  newline
+ newline
+(Responder) show ( ) show (checks) show ( ) show (version) show ( ) show (compatibility:) show ( ) show (-) show ( ) show (Major) show ( ) show (mismatch:) show ( ) show (reject) show  newline
+(\(incompatible) show ( ) show (suites\)) show ( ) show (-) show ( ) show (Minor) show ( ) show (mismatch:) show ( ) show (accept) show ( ) show (\(backward) show ( ) show (compatible\)) show  newline
+ newline
+(Responder) show ( ) show (allocates) show ( ) show (no) show ( ) show (state.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PHASE) show ( ) show (2:) show ( ) show (COOKIE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Responder) show ( ) show (returns) show ( ) show (stateless) show ( ) show (cookie.) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(make-cookie) show ( ) show (remote-addr) show ( ) show (remote-port\)) show  newline
+(\(let) show ( ) show (\(\(data) show ( ) show (\(string-append) show  newline
+(\(blob->string) show ( ) show (cookie-secret\)) show  newline
+(remote-addr) show  newline
+(\(number->string) show ( ) show (remote-port\)) show  newline
+(\(number->string) show ( ) show (cookie-epoch*\)\)\)) show  newline
+(\(hash) show ( ) show (\(blake2b-hash) show ( ) show (\(string->blob) show ( ) show (data\)\)\)\)) show  newline
+(\(substring) show ( ) show (hash) show ( ) show (0) show ( ) show (16\)\)\)) show  newline
+ newline
+(Cookie) show ( ) show (properties:) show ( ) show (-) show ( ) show (Stateless:) show ( ) show (Responder) show ( ) show (doesn't) show ( ) show (store) show ( ) show (it) show ( ) show (-) show  newline
+(Unforgeable:) show ( ) show (Requires) show ( ) show (server) show ( ) show (secret) show ( ) show (-) show ( ) show (Expiring:) show ( ) show (Epoch) show ( ) show (rotation) show  newline
+(invalidates) show ( ) show (old) show ( ) show (cookies) show ( ) show (-) show ( ) show (Address-bound:) show ( ) show (Different) show ( ) show (address) show ( ) show (=) show ( ) show (different) show  newline
+(cookie) show  newline
+ newline
+(Responder) show ( ) show (still) show ( ) show (allocates) show ( ) show (no) show ( ) show (state.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PHASE) show ( ) show (3:) show ( ) show (EXCHANGE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Both) show ( ) show (parties) show ( ) show (exchange) show ( ) show (ephemeral) show ( ) show (public) show ( ) show (keys.) show  newline
+ newline
+(Initiator) show ( ) show (sends:) show  newline
+ newline
+ newline
+(EXCHANGE) show ( ) show (payload:) show  newline
+(cookie-r) show ( ) show ("|") show ( ) show (cookie-i) show ( ) show ("|") show ( ) show (ephemeral-public-hex) show  newline
+ newline
+(-) show ( ) show (cookie-r:) show ( ) show (Echo) show ( ) show (of) show ( ) show (responder's) show ( ) show (cookie) show ( ) show (\(proves) show ( ) show (receipt\)) show ( ) show (-) show ( ) show (cookie-i:) show  newline
+(Initiator's) show ( ) show (random) show ( ) show (cookie) show ( ) show (\(for) show ( ) show (key) show ( ) show (derivation\)) show ( ) show (-) show ( ) show (ephemeral-public:) show  newline
+(X25519) show ( ) show (public) show ( ) show (key) show  newline
+ newline
+(Responder) show ( ) show (verifies) show ( ) show (cookie) show ( ) show (echo,) show ( ) show (then) show ( ) show (responds) show ( ) show (with) show ( ) show (same) show ( ) show (format.) show  newline
+ newline
+(State) show ( ) show (now) show ( ) show (committed.) show ( ) show (Keys) show ( ) show (derived.) show  newline
+ newline
+ newline
+(Key) show ( ) show (Derivation) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(derive-session-keys) show ( ) show (shared-secret) show ( ) show (cookie-i) show ( ) show (cookie-r\)) show  newline
+(\(let*) show ( ) show (\(\(ikm) show ( ) show (\(blob-append) show ( ) show (shared-secret) show  newline
+(\(string->blob) show ( ) show (cookie-i\)) show  newline
+(\(string->blob) show ( ) show (cookie-r\)\)\)) show  newline
+(\(prk) show ( ) show (\(blake2b-hash) show ( ) show (ikm\)\)) show  newline
+(\(k-ir) show ( ) show (\(blake2b-hash) show ( ) show (\(blob-append) show ( ) show (prk) show ( ) show ("initiator->responder"\)\)\)) show  newline
+(\(k-ri) show ( ) show (\(blake2b-hash) show ( ) show (\(blob-append) show ( ) show (prk) show ( ) show ("responder->initiator"\)\)\)\)) show  newline
+(\(values) show ( ) show (\(take) show ( ) show (k-ir) show ( ) show (32\)) show ( ) show (\(take) show ( ) show (k-ri) show ( ) show (32\)\)\)\)) show  newline
+ newline
+(Directional) show ( ) show (keys) show ( ) show (prevent) show ( ) show (reflection) show ( ) show (attacks.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PHASE) show ( ) show (4:) show ( ) show (ATTEST) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(All) show ( ) show (subsequent) show ( ) show (messages) show ( ) show (encrypted.) show  newline
+ newline
+(Both) show ( ) show (parties) show ( ) show (prove) show ( ) show (identity) show ( ) show (using) show ( ) show (Simple) show ( ) show (Public) show ( ) show (Key) show ( ) show (Infrastructure) show  newline
+(\(SPKI\)) show ( ) show (principals.) show  newline
+ newline
+ newline
+(ATTEST) show ( ) show (payload) show ( ) show (\(encrypted\):) show  newline
+(principal-hash) show ( ) show ("|") show ( ) show (signature) show  newline
+ newline
+(-) show ( ) show (principal-hash:) show ( ) show (SPKI) show ( ) show (principal) show ( ) show (\(hex-encoded) show ( ) show (public) show ( ) show (key) show ( ) show (hash\)) show ( ) show (-) show  newline
+(signature:) show ( ) show (Ed25519) show ( ) show (signature) show ( ) show (over) show ( ) show (transcript) show  newline
+ newline
+(Identity) show ( ) show (is) show ( ) show (cryptographic,) show ( ) show (not) show ( ) show (nominal.) show ( ) show (A) show ( ) show (principal) show ( ) show (is) show ( ) show (identified) show ( ) show (solely) show  newline
+(by) show ( ) show (its) show ( ) show (public) show ( ) show (key) show ( ) show (hash,) show ( ) show (never) show ( ) show (by) show ( ) show (a) show ( ) show (human-readable) show ( ) show (name.) show ( ) show (This) show ( ) show (is) show ( ) show (a) show ( ) show (prime) show  newline
+(directive.) show  newline
+ newline
+(The) show ( ) show (attestation) show ( ) show (is) show ( ) show (the) show ( ) show (principal's) show ( ) show (authoritative) show ( ) show (affirmation) show ( ) show (of) show ( ) show (their) show  newline
+(own) show ( ) show (trust:) show ( ) show (I) show ( ) show (vouch) show ( ) show (for) show ( ) show (this) show ( ) show (channel.) show ( ) show (This) show ( ) show (is) show ( ) show (not) show ( ) show (a) show ( ) show (bearer) show ( ) show (token) show ( ) show (-) show ( ) show (it) show ( ) show (is) show  newline
+(my) show ( ) show (sealed) show ( ) show (declaration,) show ( ) show (bound) show ( ) show (to) show ( ) show (my) show ( ) show (realm.) show  newline
+ newline
+(Transcript) show ( ) show (for) show ( ) show (signing:) show  newline
+ newline
+ newline
+(cookie-i) show ( ) show (||) show ( ) show (cookie-r) show ( ) show (||) show ( ) show (ephemeral-public) show  newline
+ newline
+ newline
+(Anonymous) show ( ) show (Attestation) show ( ) show (\(Optional\)) show  newline
+newpath margin ypos moveto margin 192 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (privacy,) show ( ) show (use) show ( ) show (Chaum-style) show ( ) show (blind) show ( ) show (signatures:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(blind-attest) show ( ) show (capability-hash\)) show  newline
+(;;) show ( ) show (Prove) show ( ) show (authorization) show ( ) show (without) show ( ) show (revealing) show ( ) show (identity) show  newline
+(\(blind-sign) show ( ) show (capability-hash) show ( ) show (\(blind-factor\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PHASE) show ( ) show (5:) show ( ) show (OFFER) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Exchange) show ( ) show (authorized) show ( ) show (capabilities) show ( ) show (as) show ( ) show (SPKI) show ( ) show (tags.) show  newline
+ newline
+ newline
+(OFFER) show ( ) show (payload) show ( ) show (\(encrypted\):) show  newline
+(\(tag) show ( ) show (\() show ( ) show (set) show ( ) show (capability) show ( ) show (...\)\)) show  newline
+(Example:) show ( ) show ("\(tag) show ( ) show (\() show ( ) show (set) show ( ) show (read) show ( ) show (write) show ( ) show (replicate\)\)") show  newline
+ newline
+(Capabilities) show ( ) show (follow) show ( ) show (Memo-021) show ( ) show (\(Capability) show ( ) show (Delegation\):) show ( ) show (-) show ( ) show (Only) show ( ) show (offer) show ( ) show (what) show  newline
+(you) show ( ) show (hold) show ( ) show (-) show ( ) show (Attenuation) show ( ) show (only,) show ( ) show (no) show ( ) show (amplification) show ( ) show (-) show ( ) show (Explicit,) show ( ) show (not) show ( ) show (ambient) show ( ) show (-) show  newline
+(Expressed) show ( ) show (as) show ( ) show (SPKI) show ( ) show (tag) show ( ) show (s-expressions) show  newline
+ newline
+(Future:) show ( ) show (Full) show ( ) show (SPKI) show ( ) show (auth-certs) show ( ) show (with) show ( ) show (issuer) show ( ) show (signatures.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PHASE) show ( ) show (6:) show ( ) show (CONFIRM) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Bind) show ( ) show (entire) show ( ) show (transcript.) show  newline
+ newline
+ newline
+(CONFIRM) show ( ) show (payload) show ( ) show (\(encrypted\):) show  newline
+(BLAKE2b\(cookie-i) show ( ) show (||) show ( ) show (cookie-r) show ( ) show (||) show ( ) show (their-principal\)) show  newline
+ newline
+(Both) show ( ) show (parties) show ( ) show (must) show ( ) show (produce) show ( ) show (matching) show ( ) show (hashes.) show ( ) show (Any) show ( ) show (tampering) show ( ) show (detected.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DATA) show ( ) show (PHASE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Channel) show ( ) show (open.) show ( ) show (Encrypted) show ( ) show (messaging.) show  newline
+ newline
+ newline
+(DATA) show ( ) show (payload:) show  newline
+(ChaCha20-Poly1305\(key,) show ( ) show (nonce,) show ( ) show (plaintext\)) show  newline
+ newline
+(Nonce) show ( ) show (construction:) show  newline
+ newline
+ newline
+(nonce) show ( ) show (=) show ( ) show (sequence-number) show ( ) show (\(8) show ( ) show (bytes\)) show ( ) show (||) show ( ) show (0x00000000) show ( ) show (\(4) show ( ) show (bytes\)) show  newline
+ newline
+(Sequence) show ( ) show (numbers:) show ( ) show (-) show ( ) show (Start) show ( ) show (at) show ( ) show (0) show ( ) show (-) show ( ) show (Increment) show ( ) show (per) show ( ) show (message) show ( ) show (-) show ( ) show (Prevent) show ( ) show (replay) show  newline
+(-) show ( ) show (Separate) show ( ) show (counters) show ( ) show (per) show ( ) show (direction) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ALGORITHM) show ( ) show (SUITES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(No) show ( ) show (runtime) show ( ) show (negotiation.) show ( ) show (Version) show ( ) show (determines) show ( ) show (suite.) show  newline
+ newline
+ newline
+(CIP/1.x) show ( ) show (\(Current\)) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(Function) show ( ) show (Algorithm) show  newline
+(Key) show ( ) show (Exchange) show ( ) show (X25519) show  newline
+(Signatures) show ( ) show (Ed25519) show  newline
+(AEAD) show ( ) show (ChaCha20-Poly1305) show  newline
+(Hash) show ( ) show (BLAKE2b) show  newline
+(KDF) show ( ) show (HKDF-BLAKE2b) show  newline
+ newline
+ newline
+(CIP/2.x) show ( ) show (\(Reserved:) show ( ) show (Post-Quantum\)) show  newline
+newpath margin ypos moveto margin 192 add ypos lineto stroke
+newline
+ newline
+ newline
+(Function) show ( ) show (Algorithm) show  newline
+(Key) show ( ) show (Exchange) show ( ) show (Kyber-1024) show  newline
+(Signatures) show ( ) show (Dilithium3) show  newline
+(AEAD) show ( ) show (ChaCha20-Poly1305) show  newline
+(Hash) show ( ) show (BLAKE2b) show  newline
+ newline
+ newline
+(CIP/3.x) show ( ) show (\(Reserved:) show ( ) show (Hybrid\)) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+ newline
+(Function) show ( ) show (Algorithm) show  newline
+(Key) show ( ) show (Exchange) show ( ) show (X25519) show ( ) show (+) show ( ) show (Kyber) show  newline
+(Signatures) show ( ) show (Ed25519) show ( ) show (+) show ( ) show (Dilithium) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (PROPERTIES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(DoS) show ( ) show (Resistance) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(Attack) show ( ) show (Defense) show  newline
+(SYN) show ( ) show (flood) show ( ) show (Cookie) show ( ) show (proves) show ( ) show (return) show ( ) show (path) show  newline
+(Amplification) show ( ) show (No) show ( ) show (response) show ( ) show (until) show ( ) show (cookie) show ( ) show (echo) show  newline
+(State) show ( ) show (exhaustion) show ( ) show (No) show ( ) show (state) show ( ) show (until) show ( ) show (Phase) show ( ) show (3) show  newline
+ newline
+ newline
+(Forward) show ( ) show (Secrecy) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(Ephemeral) show ( ) show (X25519) show ( ) show (keys:) show ( ) show (-) show ( ) show (Generated) show ( ) show (per) show ( ) show (session) show ( ) show (-) show ( ) show (Destroyed) show ( ) show (after) show ( ) show (key) show  newline
+(derivation) show ( ) show (-) show ( ) show (Compromise) show ( ) show (of) show ( ) show (long-term) show ( ) show (key) show ( ) show (doesn't) show ( ) show (expose) show ( ) show (past) show ( ) show (sessions) show  newline
+ newline
+ newline
+(Identity) show ( ) show (Protection) show ( ) show (\(SPKI) show ( ) show (Native\)) show  newline
+newpath margin ypos moveto margin 198 add ypos lineto stroke
+newline
+ newline
+(Principal) show ( ) show (identity:) show ( ) show (-) show ( ) show (Is) show ( ) show (the) show ( ) show (public) show ( ) show (key) show ( ) show (hash) show ( ) show (\(not) show ( ) show (a) show ( ) show (name,) show ( ) show (not) show ( ) show (a) show  newline
+(certificate\)) show ( ) show (-) show ( ) show (Only) show ( ) show (revealed) show ( ) show (after) show ( ) show (encryption) show ( ) show (established) show ( ) show (-) show ( ) show (Only) show  newline
+(revealed) show ( ) show (to) show ( ) show (authenticated) show ( ) show (peer) show ( ) show (-) show ( ) show (Never) show ( ) show (in) show ( ) show (plaintext) show ( ) show (on) show ( ) show (wire) show ( ) show (-) show  newline
+(Self-certifying:) show ( ) show (principal) show ( ) show (=) show ( ) show (hash\(public_key\)) show  newline
+ newline
+ newline
+(Replay) show ( ) show (Protection) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Sequence) show ( ) show (numbers) show ( ) show (per) show ( ) show (direction) show  newline
+(*) show ( ) show (Nonce) show ( ) show (never) show ( ) show (reused) show ( ) show (\(fatal) show ( ) show (if) show ( ) show (violated\)) show  newline
+(*) show ( ) show (AEAD) show ( ) show (authentication) show ( ) show (fails) show ( ) show (on) show ( ) show (replay) show  newline
+ newline
+(Each) show ( ) show (security) show ( ) show (property) show ( ) show (addresses) show ( ) show (a) show ( ) show (specific) show ( ) show (attack) show ( ) show (class.) show ( ) show (DoS) show ( ) show (resistance) show  newline
+(prevents) show ( ) show (resource) show ( ) show (exhaustion) show ( ) show (before) show ( ) show (authentication;) show ( ) show (forward) show ( ) show (secrecy) show  newline
+(limits) show ( ) show (damage) show ( ) show (from) show ( ) show (key) show ( ) show (compromise;) show ( ) show (identity) show ( ) show (protection) show ( ) show (prevents) show ( ) show (traffic) show  newline
+(analysis;) show ( ) show (replay) show ( ) show (protection) show ( ) show (ensures) show ( ) show (message) show ( ) show (freshness.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(COMPARISON) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Property) show ( ) show (TLS) show ( ) show (1.3) show ( ) show (IKEv2) show ( ) show (CIP) show  newline
+(Messages) show ( ) show (to) show ( ) show (establish) show ( ) show (2-3) show ( ) show (4+) show ( ) show (10) show  newline
+(DoS) show ( ) show (resistance) show ( ) show (Limited) show ( ) show (Cookies) show ( ) show (Cookies) show  newline
+(Algorithm) show ( ) show (negotiation) show ( ) show (Yes) show ( ) show (Yes) show ( ) show (No) show  newline
+(Certificate) show ( ) show (required) show ( ) show (Yes) show ( ) show (Yes) show ( ) show (No) show  newline
+(Identity) show ( ) show (protection) show ( ) show (Partial) show ( ) show (Yes) show ( ) show (Yes) show  newline
+(Capability) show ( ) show (binding) show ( ) show (No) show ( ) show (No) show ( ) show (Yes) show  newline
+ newline
+(CIP) show ( ) show (trades) show ( ) show (fewer) show ( ) show (round-trips) show ( ) show (for) show ( ) show (simplicity) show ( ) show (and) show ( ) show (capability) show ( ) show (integration.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Initiator) show  newline
+(\(define) show ( ) show (ch) show ( ) show (\(node-connect) show ( ) show ("remote.host") show ( ) show (4433\)\)) show  newline
+(\(channel-send) show ( ) show (ch) show ( ) show ('\(request) show ( ) show (object-hash\)\)) show  newline
+(\(channel-recv) show ( ) show (ch\)) show  newline
+(;;) show ( ) show (Responder) show  newline
+(\(node-listen) show ( ) show (4433) show ( ) show ("my-node"\)) show  newline
+(\(define) show ( ) show (ch) show ( ) show (\(node-accept\)\)) show  newline
+(\(let) show ( ) show (\(\(msg) show ( ) show (\(channel-recv) show ( ) show (ch\)\)\)) show  newline
+(\(channel-send) show ( ) show (ch) show ( ) show (\(process) show ( ) show (msg\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Karn,) show ( ) show (P.) show ( ) show (&) show ( ) show (Simpson,) show ( ) show (W.) show ( ) show (\(1999\).) show ( ) show (PHOTURIS.) show ( ) show (RFC) show ( ) show (2522.) show  newline
+(*) show ( ) show (Karn,) show ( ) show (P.) show ( ) show (&) show ( ) show (Simpson,) show ( ) show (W.) show ( ) show (\(1999\).) show ( ) show (PHOTURIS) show ( ) show (Extended) show ( ) show (Schemes.) show ( ) show (RFC) show ( ) show (2523.) show  newline
+(*) show ( ) show (Bernstein,) show ( ) show (D.J.) show ( ) show (\(2006\).) show ( ) show (Curve25519.) show  newline
+(*) show ( ) show (Bernstein,) show ( ) show (D.J.) show ( ) show (\(2008\).) show ( ) show (ChaCha20.) show  newline
+(*) show ( ) show (Memo-021:) show ( ) show (Capability) show ( ) show (Delegation) show  newline
+(*) show ( ) show (Memo-040:) show ( ) show (Security) show ( ) show (Architecture) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(-) show ( ) show (2026-01-07:) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

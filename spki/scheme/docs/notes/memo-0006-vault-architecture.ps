@@ -15,293 +15,821 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0006: Vault Architecture) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies the Vault system for the Library of Cyberspace:) show newline
-(cryptographically sealed version control with Simple Public Key) show newline
-(Infrastructure \(SPKI\) authorization, progressive metadata, archival) show newline
-(support, and integrated audit trails.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Git is powerful but lacks:) show newline
-() show newline
-(  * Cryptographic sealing - GPG signing is optional and awkward) show newline
-(  * Authorization model - Anyone with access can commit) show newline
-(  * Archival features - No first-class backup/restore) show newline
-(  * Audit integration - History is mutable) show newline
-() show newline
-(These gaps leave security as an afterthought rather than a foundation,) show newline
-(requiring external tools and manual discipline to achieve what should be) show newline
-(built-in.) show newline
-() show newline
-(The Vault wraps Git with:) show newline
-() show newline
-(  * seal- commands that cryptographically sign operations) show newline
-(  * SPKI certificates for authorization) show newline
-(  * Three archive formats for different use cases) show newline
-(  * Integrated audit trail for non-repudiation) show newline
-() show newline
-(The seal- prefix makes cryptographic operations explicit; security is) show newline
-(not hidden behind flags or configuration but part of the command) show newline
-(vocabulary.) show newline
-() show newline
-() show newline
-(                        ╭────────────────────────────────╮) show newline
-(                        │         CYBERSPACE VAULT       │) show newline
-(                        ├────────────────────────────────┤) show newline
-(                        │  seal-commit    seal-release   │) show newline
-(                        │  seal-archive   seal-publish   │) show newline
-(                        │  seal-verify    seal-subscribe │) show newline
-(                        ├────────────────────────────────┤) show newline
-(                        │         Audit Trail            │) show newline
-(                        ├────────────────────────────────┤) show newline
-(                        │         SPKI Certs             │) show newline
-(                        ├────────────────────────────────┤) show newline
-(                        │            Git                 │) show newline
-(                        ╰────────────────────────────────╯) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CORE OPERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(seal-commit) show newline
-(-----------) show newline
-() show newline
-(Stage and commit changes in one operation.) show newline
-() show newline
-() show newline
-(    \(seal-commit message) show newline
-(      #!key files catalog subjects keywords description preserve\)) show newline
-() show newline
-(Parameters: - message - Commit message \(required\) - files - Specific) show newline
-(files to stage \(optional\) - catalog - Enable catalog metadata - subjects) show newline
-(- Subject headings - keywords - Search keywords - description - Extended) show newline
-(description - preserve - Enable preservation metadata) show newline
-() show newline
-(Process:) show newline
-() show newline
-(  * Stage specified files \(or all modified\)) show newline
-(  * Create git commit) show newline
-(  * Save metadata \(if catalog or preserve\)) show newline
-(  * Record in audit trail \(if signing key configured\)) show newline
-() show newline
-(Example:) show newline
-() show newline
-() show newline
-(    \(seal-commit "Add authentication module") show newline
-(      files: '\("auth.scm" "auth-test.scm"\)) show newline
-(      catalog: #t) show newline
-(      subjects: '\("security" "authentication"\)) show newline
-(      keywords: '\("login" "oauth"\)\)) show newline
-() show newline
-() show newline
-(seal-update) show newline
-(-----------) show newline
-() show newline
-(Pull latest changes from remote.) show newline
-() show newline
-() show newline
-(    \(seal-update #!key branch\)) show newline
-() show newline
-(Like svn update - fetches and fast-forwards.) show newline
-() show newline
-() show newline
-(seal-undo) show newline
-(---------) show newline
-() show newline
-(Undo changes.) show newline
-() show newline
-() show newline
-(    \(seal-undo #!key file hard\)) show newline
-() show newline
-(  * file) show newline
-(  * Restore specific file - hard) show newline
-(  * Discard all uncommitted changes) show newline
-() show newline
-() show newline
-(seal-history) show newline
-(------------) show newline
-() show newline
-(Show commit history.) show newline
-() show newline
-() show newline
-(    \(seal-history #!key count\)) show newline
-() show newline
-(Displays decorated graph log.) show newline
-() show newline
-() show newline
-(seal-branch / seal-merge) show newline
-(------------------------) show newline
-() show newline
-(Branch and merge operations.) show newline
-() show newline
-() show newline
-(    \(seal-branch "feature-auth" #!key from\)) show newline
-(    \(seal-merge "feature-auth" #!key strategy\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(VERSION MANAGEMENT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(seal-release) show newline
-(------------) show newline
-() show newline
-(Create cryptographically sealed release.) show newline
-() show newline
-() show newline
-(    \(seal-release version #!key message migrate-from\)) show newline
-() show newline
-(Parameters: - version - Semantic version \(X.Y.Z required\) - message -) show newline
-(Release notes - migrate-from - Previous version for migration tracking) show newline
-() show newline
-(Process:) show newline
-() show newline
-(  * Validate semantic version format) show newline
-(  * Get current commit hash) show newline
-(  * Create annotated git tag) show newline
-(  * Sign with SPKI \(if configured\)) show newline
-(  * Create migration marker \(if migrate-from specified\)) show newline
-() show newline
-(Signature Storage:) show newline
-() show newline
-() show newline
-(    ;; .vault/releases/1.0.0.sig) show newline
-(    \(signature) show newline
-(      \(version "1.0.0"\)) show newline
-(      \(hash "abc123..."\)) show newline
-(      \(manifest "\(release \\"1.0.0\\" \\"abc123\\" 1767685100\)"\)) show newline
-(      \(signature #${ed25519-signature}\)\)) show newline
-() show newline
-() show newline
-(seal-verify) show newline
-(-----------) show newline
-() show newline
-(Verify release signature.) show newline
-() show newline
-() show newline
-(    \(seal-verify version #!key verify-key\)) show newline
-() show newline
-(Process:) show newline
-() show newline
-(  * Load signature file) show newline
-(  * Recompute manifest hash) show newline
-(  * Verify Ed25519 signature) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ARCHIVAL SYSTEM) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(seal-archive) show newline
-(------------) show newline
-() show newline
-(Create sealed archive of a version.) show newline
-() show newline
-() show newline
-(    \(seal-archive version #!key format output\)) show newline
-() show newline
-(Formats:) show newline
-() show newline
-(#### Tarball \(default\)) show newline
-() show newline
-() show newline
-(    \(seal-archive "1.0.0" format: 'tarball\)) show newline
-() show newline
-(  * Standard gzipped tarball) show newline
-(  * No history included) show newline
-(  * Smallest size) show newline
-() show newline
-(#### Git Bundle) show newline
-() show newline
-() show newline
-(    \(seal-archive "1.0.0" format: 'bundle\)) show newline
-() show newline
-(  * Full git history) show newline
-(  * Can clone directly) show newline
-(  * Medium size) show newline
-() show newline
-(#### Cryptographic \(legacy\)) show newline
-() show newline
-() show newline
-(    \(seal-archive "1.0.0" format: 'cryptographic\)) show newline
-() show newline
-(  * Tarball + SHA-512 hash + Ed25519 signature) show newline
-(  * Tamper-evident) show newline
-(  * Manifest for verification) show newline
-() show newline
-(#### Zstd+Age \(preferred\)) show newline
-() show newline
-() show newline
-(    \(seal-archive "1.0.0" format: 'zstd-age\)) show newline
-() show newline
-(  * Zstd compression \(faster, better ratio than gzip\)) show newline
-(  * Age encryption \(X25519/Ed25519 compatible\)) show newline
-(  * SHA-512 hash + Ed25519 signature) show newline
-(  * Encrypted at rest) show newline
-() show newline
-(Cryptographic Archive Structure:) show newline
-() show newline
-() show newline
-(    vault-1.0.0.archive        # Manifest) show newline
-(    vault-1.0.0.archive.tar.gz # Tarball \(cryptographic\)) show newline
-() show newline
-(Zstd+Age Archive Structure:) show newline
-() show newline
-() show newline
-(    vault-1.0.0.archive            # Manifest) show newline
-(    vault-1.0.0.archive.tar.zst.age # Encrypted archive) show newline
-() show newline
-(Manifest \(cryptographic\):) show newline
-() show newline
-() show newline
-(    \(sealed-archive) show newline
-(      \(version "1.0.0"\)) show newline
-(      \(format cryptographic\)) show newline
-(      \(tarball "vault-1.0.0.archive.tar.gz"\)) show newline
-(      \(hash "sha512:..."\)) show newline
-(      \(signature "ed25519:..."\)\)) show newline
-() show newline
-(Manifest \(zstd-age\):) show newline
-() show newline
-() show newline
-(    \(sealed-archive) show newline
-(      \(version "1.0.0"\)) show newline
-(      \(format zstd-age\)) show newline
-(      \(archive "vault-1.0.0.archive.tar.zst.age"\)) show newline
-(      \(compression zstd\)) show newline
-(      \(encryption age\)) show newline
-(      \(recipients \("age1..."\)\)) show newline
-(      \(hash "sha512:..."\)) show newline
-(      \(signature "ed25519:..."\)\)) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0006:) show ( ) show (Vault) show ( ) show (Architecture) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (the) show ( ) show (Vault) show ( ) show (system) show ( ) show (for) show ( ) show (the) show ( ) show (Library) show ( ) show (of) show ( ) show (Cyberspace:) show  newline
+(cryptographically) show ( ) show (sealed) show ( ) show (version) show ( ) show (control) show ( ) show (with) show ( ) show (Simple) show ( ) show (Public) show ( ) show (Key) show  newline
+(Infrastructure) show ( ) show (\(SPKI\)) show ( ) show (authorization,) show ( ) show (progressive) show ( ) show (metadata,) show ( ) show (archival) show  newline
+(support,) show ( ) show (and) show ( ) show (integrated) show ( ) show (audit) show ( ) show (trails.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Git) show ( ) show (is) show ( ) show (powerful) show ( ) show (but) show ( ) show (lacks:) show  newline
+ newline
+(*) show ( ) show (Cryptographic) show ( ) show (sealing) show ( ) show (-) show ( ) show (GPG) show ( ) show (signing) show ( ) show (is) show ( ) show (optional) show ( ) show (and) show ( ) show (awkward) show  newline
+(*) show ( ) show (Authorization) show ( ) show (model) show ( ) show (-) show ( ) show (Anyone) show ( ) show (with) show ( ) show (access) show ( ) show (can) show ( ) show (commit) show  newline
+(*) show ( ) show (Archival) show ( ) show (features) show ( ) show (-) show ( ) show (No) show ( ) show (first-class) show ( ) show (backup/restore) show  newline
+(*) show ( ) show (Audit) show ( ) show (integration) show ( ) show (-) show ( ) show (History) show ( ) show (is) show ( ) show (mutable) show  newline
+ newline
+(These) show ( ) show (gaps) show ( ) show (leave) show ( ) show (security) show ( ) show (as) show ( ) show (an) show ( ) show (afterthought) show ( ) show (rather) show ( ) show (than) show ( ) show (a) show ( ) show (foundation,) show  newline
+(requiring) show ( ) show (external) show ( ) show (tools) show ( ) show (and) show ( ) show (manual) show ( ) show (discipline) show ( ) show (to) show ( ) show (achieve) show ( ) show (what) show ( ) show (should) show ( ) show (be) show  newline
+(built-in.) show  newline
+ newline
+(The) show ( ) show (Vault) show ( ) show (wraps) show ( ) show (Git) show ( ) show (with:) show  newline
+ newline
+(*) show ( ) show (seal-) show ( ) show (commands) show ( ) show (that) show ( ) show (cryptographically) show ( ) show (sign) show ( ) show (operations) show  newline
+(*) show ( ) show (SPKI) show ( ) show (certificates) show ( ) show (for) show ( ) show (authorization) show  newline
+(*) show ( ) show (Three) show ( ) show (archive) show ( ) show (formats) show ( ) show (for) show ( ) show (different) show ( ) show (use) show ( ) show (cases) show  newline
+(*) show ( ) show (Integrated) show ( ) show (audit) show ( ) show (trail) show ( ) show (for) show ( ) show (non-repudiation) show  newline
+ newline
+(The) show ( ) show (seal-) show ( ) show (prefix) show ( ) show (makes) show ( ) show (cryptographic) show ( ) show (operations) show ( ) show (explicit;) show ( ) show (security) show ( ) show (is) show  newline
+(not) show ( ) show (hidden) show ( ) show (behind) show ( ) show (flags) show ( ) show (or) show ( ) show (configuration) show ( ) show (but) show ( ) show (part) show ( ) show (of) show ( ) show (the) show ( ) show (command) show  newline
+(vocabulary.) show  newline
+ newline
+ newline
+gsave
+% box char 256d at col 24
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+newpath margin 147 add ypos moveto margin 147 add ypos 6 sub lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 256e at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add ypos lineto stroke
+newpath margin 345 add ypos moveto margin 345 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+margin 204 add ypos moveto (CYBERSPACE) show
+margin 270 add ypos moveto (VAULT) show
+% box char 2502 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2524 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+newpath margin 345 add 3 sub ypos moveto margin 345 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+margin 162 add ypos moveto (seal-commit) show
+margin 252 add ypos moveto (seal-release) show
+% box char 2502 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+margin 162 add ypos moveto (seal-archive) show
+margin 252 add ypos moveto (seal-publish) show
+% box char 2502 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+margin 162 add ypos moveto (seal-verify) show
+margin 252 add ypos moveto (seal-subscribe) show
+% box char 2502 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2524 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+newpath margin 345 add 3 sub ypos moveto margin 345 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+margin 204 add ypos moveto (Audit) show
+margin 240 add ypos moveto (Trail) show
+% box char 2502 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2524 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+newpath margin 345 add 3 sub ypos moveto margin 345 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+margin 204 add ypos moveto (SPKI) show
+margin 234 add ypos moveto (Certs) show
+% box char 2502 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2524 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+newpath margin 345 add 3 sub ypos moveto margin 345 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+margin 222 add ypos moveto (Git) show
+% box char 2502 at col 57
+newpath margin 345 add ypos 6 sub moveto margin 345 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2570 at col 24
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+newpath margin 147 add ypos 6 add moveto margin 147 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 256f at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add ypos lineto stroke
+newpath margin 345 add ypos 6 add moveto margin 345 add ypos lineto stroke
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CORE) show ( ) show (OPERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(seal-commit) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(Stage) show ( ) show (and) show ( ) show (commit) show ( ) show (changes) show ( ) show (in) show ( ) show (one) show ( ) show (operation.) show  newline
+ newline
+ newline
+(\(seal-commit) show ( ) show (message) show  newline
+(#!key) show ( ) show (files) show ( ) show (catalog) show ( ) show (subjects) show ( ) show (keywords) show ( ) show (description) show ( ) show (preserve\)) show  newline
+ newline
+(Parameters:) show ( ) show (-) show ( ) show (message) show ( ) show (-) show ( ) show (Commit) show ( ) show (message) show ( ) show (\(required\)) show ( ) show (-) show ( ) show (files) show ( ) show (-) show ( ) show (Specific) show  newline
+(files) show ( ) show (to) show ( ) show (stage) show ( ) show (\(optional\)) show ( ) show (-) show ( ) show (catalog) show ( ) show (-) show ( ) show (Enable) show ( ) show (catalog) show ( ) show (metadata) show ( ) show (-) show ( ) show (subjects) show  newline
+(-) show ( ) show (Subject) show ( ) show (headings) show ( ) show (-) show ( ) show (keywords) show ( ) show (-) show ( ) show (Search) show ( ) show (keywords) show ( ) show (-) show ( ) show (description) show ( ) show (-) show ( ) show (Extended) show  newline
+(description) show ( ) show (-) show ( ) show (preserve) show ( ) show (-) show ( ) show (Enable) show ( ) show (preservation) show ( ) show (metadata) show  newline
+ newline
+(Process:) show  newline
+ newline
+(*) show ( ) show (Stage) show ( ) show (specified) show ( ) show (files) show ( ) show (\(or) show ( ) show (all) show ( ) show (modified\)) show  newline
+(*) show ( ) show (Create) show ( ) show (git) show ( ) show (commit) show  newline
+(*) show ( ) show (Save) show ( ) show (metadata) show ( ) show (\(if) show ( ) show (catalog) show ( ) show (or) show ( ) show (preserve\)) show  newline
+(*) show ( ) show (Record) show ( ) show (in) show ( ) show (audit) show ( ) show (trail) show ( ) show (\(if) show ( ) show (signing) show ( ) show (key) show ( ) show (configured\)) show  newline
+ newline
+(Example:) show  newline
+ newline
+ newline
+(\(seal-commit) show ( ) show ("Add) show ( ) show (authentication) show ( ) show (module") show  newline
+(files:) show ( ) show ('\("auth.scm") show ( ) show ("auth-test.scm"\)) show  newline
+(catalog:) show ( ) show (#t) show  newline
+(subjects:) show ( ) show ('\("security") show ( ) show ("authentication"\)) show  newline
+(keywords:) show ( ) show ('\("login") show ( ) show ("oauth"\)\)) show  newline
+ newline
+ newline
+(seal-update) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(Pull) show ( ) show (latest) show ( ) show (changes) show ( ) show (from) show ( ) show (remote.) show  newline
+ newline
+ newline
+(\(seal-update) show ( ) show (#!key) show ( ) show (branch\)) show  newline
+ newline
+(Like) show ( ) show (svn) show ( ) show (update) show ( ) show (-) show ( ) show (fetches) show ( ) show (and) show ( ) show (fast-forwards.) show  newline
+ newline
+ newline
+(seal-undo) show  newline
+newpath margin ypos moveto margin 54 add ypos lineto stroke
+newline
+ newline
+(Undo) show ( ) show (changes.) show  newline
+ newline
+ newline
+(\(seal-undo) show ( ) show (#!key) show ( ) show (file) show ( ) show (hard\)) show  newline
+ newline
+(*) show ( ) show (file) show  newline
+(*) show ( ) show (Restore) show ( ) show (specific) show ( ) show (file) show ( ) show (-) show ( ) show (hard) show  newline
+(*) show ( ) show (Discard) show ( ) show (all) show ( ) show (uncommitted) show ( ) show (changes) show  newline
+ newline
+ newline
+(seal-history) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Show) show ( ) show (commit) show ( ) show (history.) show  newline
+ newline
+ newline
+(\(seal-history) show ( ) show (#!key) show ( ) show (count\)) show  newline
+ newline
+(Displays) show ( ) show (decorated) show ( ) show (graph) show ( ) show (log.) show  newline
+ newline
+ newline
+(seal-branch) show ( ) show (/) show ( ) show (seal-merge) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+(Branch) show ( ) show (and) show ( ) show (merge) show ( ) show (operations.) show  newline
+ newline
+ newline
+(\(seal-branch) show ( ) show ("feature-auth") show ( ) show (#!key) show ( ) show (from\)) show  newline
+(\(seal-merge) show ( ) show ("feature-auth") show ( ) show (#!key) show ( ) show (strategy\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(VERSION) show ( ) show (MANAGEMENT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(seal-release) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Create) show ( ) show (cryptographically) show ( ) show (sealed) show ( ) show (release.) show  newline
+ newline
+ newline
+(\(seal-release) show ( ) show (version) show ( ) show (#!key) show ( ) show (message) show ( ) show (migrate-from\)) show  newline
+ newline
+(Parameters:) show ( ) show (-) show ( ) show (version) show ( ) show (-) show ( ) show (Semantic) show ( ) show (version) show ( ) show (\(X.Y.Z) show ( ) show (required\)) show ( ) show (-) show ( ) show (message) show ( ) show (-) show  newline
+(Release) show ( ) show (notes) show ( ) show (-) show ( ) show (migrate-from) show ( ) show (-) show ( ) show (Previous) show ( ) show (version) show ( ) show (for) show ( ) show (migration) show ( ) show (tracking) show  newline
+ newline
+(Process:) show  newline
+ newline
+(*) show ( ) show (Validate) show ( ) show (semantic) show ( ) show (version) show ( ) show (format) show  newline
+(*) show ( ) show (Get) show ( ) show (current) show ( ) show (commit) show ( ) show (hash) show  newline
+(*) show ( ) show (Create) show ( ) show (annotated) show ( ) show (git) show ( ) show (tag) show  newline
+(*) show ( ) show (Sign) show ( ) show (with) show ( ) show (SPKI) show ( ) show (\(if) show ( ) show (configured\)) show  newline
+(*) show ( ) show (Create) show ( ) show (migration) show ( ) show (marker) show ( ) show (\(if) show ( ) show (migrate-from) show ( ) show (specified\)) show  newline
+ newline
+(Signature) show ( ) show (Storage:) show  newline
+ newline
+ newline
+(;;) show ( ) show (.vault/releases/1.0.0.sig) show  newline
+(\(signature) show  newline
+(\(version) show ( ) show ("1.0.0"\)) show  newline
+(\(hash) show ( ) show ("abc123..."\)) show  newline
+(\(manifest) show ( ) show ("\(release) show ( ) show (\\"1.0.0\\") show ( ) show (\\"abc123\\") show ( ) show (1767685100\)"\)) show  newline
+(\(signature) show ( ) show (#${ed25519-signature}\)\)) show  newline
+ newline
+ newline
+(seal-verify) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(Verify) show ( ) show (release) show ( ) show (signature.) show  newline
+ newline
+ newline
+(\(seal-verify) show ( ) show (version) show ( ) show (#!key) show ( ) show (verify-key\)) show  newline
+ newline
+(Process:) show  newline
+ newline
+(*) show ( ) show (Load) show ( ) show (signature) show ( ) show (file) show  newline
+(*) show ( ) show (Recompute) show ( ) show (manifest) show ( ) show (hash) show  newline
+(*) show ( ) show (Verify) show ( ) show (Ed25519) show ( ) show (signature) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ARCHIVAL) show ( ) show (SYSTEM) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(seal-archive) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Create) show ( ) show (sealed) show ( ) show (archive) show ( ) show (of) show ( ) show (a) show ( ) show (version.) show  newline
+ newline
+ newline
+(\(seal-archive) show ( ) show (version) show ( ) show (#!key) show ( ) show (format) show ( ) show (output\)) show  newline
+ newline
+(Formats:) show  newline
+ newline
+(####) show ( ) show (Tarball) show ( ) show (\(default\)) show  newline
+ newline
+ newline
+(\(seal-archive) show ( ) show ("1.0.0") show ( ) show (format:) show ( ) show ('tarball\)) show  newline
+ newline
+(*) show ( ) show (Standard) show ( ) show (gzipped) show ( ) show (tarball) show  newline
+(*) show ( ) show (No) show ( ) show (history) show ( ) show (included) show  newline
+(*) show ( ) show (Smallest) show ( ) show (size) show  newline
+ newline
+(####) show ( ) show (Git) show ( ) show (Bundle) show  newline
+ newline
+ newline
+(\(seal-archive) show ( ) show ("1.0.0") show ( ) show (format:) show ( ) show ('bundle\)) show  newline
+ newline
+(*) show ( ) show (Full) show ( ) show (git) show ( ) show (history) show  newline
+(*) show ( ) show (Can) show ( ) show (clone) show ( ) show (directly) show  newline
+(*) show ( ) show (Medium) show ( ) show (size) show  newline
+ newline
+(####) show ( ) show (Cryptographic) show ( ) show (\(legacy\)) show  newline
+ newline
+ newline
+(\(seal-archive) show ( ) show ("1.0.0") show ( ) show (format:) show ( ) show ('cryptographic\)) show  newline
+ newline
+(*) show ( ) show (Tarball) show ( ) show (+) show ( ) show (SHA-512) show ( ) show (hash) show ( ) show (+) show ( ) show (Ed25519) show ( ) show (signature) show  newline
+(*) show ( ) show (Tamper-evident) show  newline
+(*) show ( ) show (Manifest) show ( ) show (for) show ( ) show (verification) show  newline
+ newline
+(####) show ( ) show (Zstd+Age) show ( ) show (\(preferred\)) show  newline
+ newline
+ newline
+(\(seal-archive) show ( ) show ("1.0.0") show ( ) show (format:) show ( ) show ('zstd-age\)) show  newline
+ newline
+(*) show ( ) show (Zstd) show ( ) show (compression) show ( ) show (\(faster,) show ( ) show (better) show ( ) show (ratio) show ( ) show (than) show ( ) show (gzip\)) show  newline
+(*) show ( ) show (Age) show ( ) show (encryption) show ( ) show (\(X25519/Ed25519) show ( ) show (compatible\)) show  newline
+(*) show ( ) show (SHA-512) show ( ) show (hash) show ( ) show (+) show ( ) show (Ed25519) show ( ) show (signature) show  newline
+(*) show ( ) show (Encrypted) show ( ) show (at) show ( ) show (rest) show  newline
+ newline
+(Cryptographic) show ( ) show (Archive) show ( ) show (Structure:) show  newline
+ newline
+ newline
+(vault-1.0.0.archive) show ( ) show (#) show ( ) show (Manifest) show  newline
+(vault-1.0.0.archive.tar.gz) show ( ) show (#) show ( ) show (Tarball) show ( ) show (\(cryptographic\)) show  newline
+ newline
+(Zstd+Age) show ( ) show (Archive) show ( ) show (Structure:) show  newline
+ newline
+ newline
+(vault-1.0.0.archive) show ( ) show (#) show ( ) show (Manifest) show  newline
+(vault-1.0.0.archive.tar.zst.age) show ( ) show (#) show ( ) show (Encrypted) show ( ) show (archive) show  newline
+ newline
+(Manifest) show ( ) show (\(cryptographic\):) show  newline
+ newline
+ newline
+(\(sealed-archive) show  newline
+(\(version) show ( ) show ("1.0.0"\)) show  newline
+(\(format) show ( ) show (cryptographic\)) show  newline
+(\(tarball) show ( ) show ("vault-1.0.0.archive.tar.gz"\)) show  newline
+(\(hash) show ( ) show ("sha512:..."\)) show  newline
+(\(signature) show ( ) show ("ed25519:..."\)\)) show  newline
+ newline
+(Manifest) show ( ) show (\(zstd-age\):) show  newline
+ newline
+ newline
+(\(sealed-archive) show  newline
+(\(version) show ( ) show ("1.0.0"\)) show  newline
+(\(format) show ( ) show (zstd-age\)) show  newline
+(\(archive) show ( ) show ("vault-1.0.0.archive.tar.zst.age"\)) show  newline
+(\(compression) show ( ) show (zstd\)) show  newline
+(\(encryption) show ( ) show (age\)) show  newline
+(\(recipients) show ( ) show (\("age1..."\)\)) show  newline
+(\(hash) show ( ) show ("sha512:..."\)) show  newline
+(\(signature) show ( ) show ("ed25519:..."\)\)) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

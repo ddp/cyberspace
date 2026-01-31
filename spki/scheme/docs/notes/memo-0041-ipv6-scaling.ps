@@ -15,506 +15,693 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0041: Scaling Architecture for IPv6) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo defines the architectural changes required to scale Cyberspace) show newline
-(from a git-backed prototype to a native distributed system capable of) show newline
-(operating at IPv6 scale \(billions of realms, exabytes of content\). Git) show newline
-(becomes an export format; the vault becomes the source of truth.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TERMINOLOGY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Realm: A node's place in cyberspace - its vault, principal,) show newline
-(capabilities, and objects. Each realm is sovereign: local-first,) show newline
-(controlled by its operator. Realms federate by choice, sharing objects) show newline
-(according to trust relationships.) show newline
-() show newline
-(Vault: The local content-addressed object store \(.vault/\). The vault IS) show newline
-(the realm's storage - all objects, catalogs, audit trails, and) show newline
-(configuration live here.) show newline
-() show newline
-(Principal: A node's cryptographic identity \(Ed25519 public key\). The) show newline
-(principal identifies the realm to peers and signs its objects.) show newline
-() show newline
-(At IPv6 scale, cyberspace consists of billions of realms, each occupying) show newline
-(its own address space, each sovereign, each choosing what to share and) show newline
-(with whom.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Git served as an excellent prototype substrate: - Content-addressed) show newline
-(objects \(proof of concept\) - Merkle tree integrity \(validates the model\)) show newline
-(- Ubiquitous tooling \(bootstrap adoption\)) show newline
-() show newline
-(Git cannot scale to IPv6: - Full history on every clone - Repository as) show newline
-(replication unit \(too coarse\) - SHA-1 \(cryptographically broken\) - No) show newline
-(native federation or discovery - Merge semantics are wrong model) show newline
-() show newline
-(The internet has 2^128 addresses. Cyberspace should use them.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DESIGN PRINCIPLES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    1. Objects, not repositories) show newline
-(    2. Pull, not push) show newline
-(    3. Lazy, not eager) show newline
-(    4. Local-first, federate-second) show newline
-(    5. Trust math, not infrastructure) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CONTENT-ADDRESSED OBJECT STORE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Storage Model) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    .vault/) show newline
-(      objects/) show newline
-(        sha512-a1b2c3.../    # First 8 chars as directory) show newline
-(          a1b2c3d4e5f6...    # Full hash as filename \(S-expression\)) show newline
-(      catalog/) show newline
-(        manifest.sexp        # Vault catalog object) show newline
-(        bloom.sexp           # Bloom filter object) show newline
-(        indices/             # Secondary index objects) show newline
-(          by-signer.sexp) show newline
-(          by-type.sexp) show newline
-(      chunks/) show newline
-(        sha512-xxxx/         # Chunked large objects) show newline
-(      audit/) show newline
-(        head.sexp            # Current audit chain head) show newline
-(        chain/               # Audit entries \(hash-addressed\)) show newline
-() show newline
-() show newline
-(Object Format) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    \(cyberspace-object) show newline
-(      \(version 1\)) show newline
-(      \(type blob|tree|manifest|cert|audit\)) show newline
-(      \(size 1048576\)) show newline
-(      \(compression zstd|none\)) show newline
-(      \(hash "sha512:a1b2c3..."\)) show newline
-(      \(chunks \("sha512:..." "sha512:..." ...\)\)  ; If chunked) show newline
-(      \(signature "ed25519:..."\)) show newline
-(      \(timestamp 1736300000\)\)) show newline
-() show newline
-() show newline
-(Chunking Strategy) show newline
-(-----------------) show newline
-() show newline
-(Large objects split at content-defined boundaries \(Rabin) show newline
-(fingerprinting\). Chunk size adapts to link characteristics:) show newline
-() show newline
-() show newline
-(    Link Profile          RTT        Bandwidth    Target Chunk) show newline
-(    ─────────────────────────────────────────────────────────────) show newline
-(    Fiber/Datacenter     1-5ms      1Gbps+       256KB-1MB) show newline
-(    Cable/DSL            10-30ms    50-500Mbps   128KB) show newline
-(    Starlink             20-40ms    100-300Mbps  64KB) show newline
-(    LTE/5G               10-50ms    variable     32-128KB) show newline
-(    LoRa/Mesh            100ms+     kbps         4-16KB) show newline
-(    Sneakernet           ∞          ∞            no chunking) show newline
-(    Rabin parameters \(content-defined\):) show newline
-(      Min chunk:    4 KB   \(floor for all links\)) show newline
-(      Max chunk:    1 MB   \(ceiling for all links\)) show newline
-(      Target:       link-adaptive \(see above\)) show newline
-() show newline
-(Chunk size continuously adapts as links come and go. Mobile nodes may) show newline
-(switch from WiFi to LTE to Starlink - the transfer strategy adjusts in) show newline
-(real-time. Deduplication works across chunk sizes - same content, same) show newline
-(hash.) show newline
-() show newline
-() show newline
-(    \(define \(optimal-chunk-size link\)) show newline
-(      "Calculate target chunk size for link characteristics.") show newline
-(      \(let \(\(rtt-ms \(link-rtt link\)\)) show newline
-(            \(bandwidth-mbps \(link-bandwidth link\)\)\)) show newline
-(        \(cond) show newline
-(          \(\(< rtt-ms 10\)   \(* 256 1024\)\)   ; Datacenter) show newline
-(          \(\(< rtt-ms 30\)   \(* 128 1024\)\)   ; Cable/DSL) show newline
-(          \(\(< rtt-ms 50\)   \(* 64 1024\)\)    ; Starlink/LTE) show newline
-(          \(\(< rtt-ms 100\)  \(* 32 1024\)\)    ; Slow mobile) show newline
-(          \(else            \(* 8 1024\)\)\)\)\)  ; Constrained) show newline
-(    ;; Auto-tune from observed performance) show newline
-(    \(define \(auto-tune-chunk-size! link\)) show newline
-(      "Adjust chunk size based on transfer performance.") show newline
-(      \(let* \(\(samples \(link-transfer-samples link\)\)) show newline
-(             \(avg-throughput \(mean \(map sample-throughput samples\)\)\)) show newline
-(             \(avg-rtt \(mean \(map sample-rtt samples\)\)\)\)) show newline
-(        \(link-chunk-size-set! link \(optimal-chunk-size-for avg-rtt avg-throughput\)\)\)\)) show newline
-() show newline
-(Benefits:) show newline
-() show newline
-() show newline
-(      - Deduplication across objects \(hash-based\)) show newline
-(      - Partial sync \(fetch only missing chunks\)) show newline
-(      - Resumable transfers) show newline
-(      - Efficient diff) show newline
-(      - Link-optimal transfer sizes) show newline
-(      - Graceful degradation on constrained links) show newline
-() show newline
-() show newline
-(Hash Function) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    SHA-512 everywhere.) show newline
-(    Not SHA-256: We have the bits, use them.) show newline
-(    Not SHA-1: Broken.) show newline
-(    Not BLAKE3: Less analyzed, marginal speed gain irrelevant at network latency.) show newline
-(    SHA-512 is:) show newline
-(      - FIPS certified \(GovCloud path\)) show newline
-(      - 50 years of cryptanalysis) show newline
-(      - Hardware accelerated) show newline
-(      - Already in use \(audit trail, signatures\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CATALOG AND QUERY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The soup IS the catalog. No SQL. Objects are S-expressions, queries are) show newline
-(pattern matching.) show newline
-() show newline
-() show newline
-(The Soup Query Model) show newline
-(--------------------) show newline
-() show newline
-() show newline
-(    ;; Find objects by pattern) show newline
-(    \(soup-query) show newline
-(      '\(cyberspace-object) show newline
-(        \(type blob\)) show newline
-(        \(signer "ed25519:alice..."\)) show newline
-(        ?rest\)\)                        ; Match any object signed by Alice) show newline
-(    ;; Find by hash \(direct lookup\)) show newline
-(    \(soup-fetch "sha512:a1b2c3..."\)    ; O\(1\) content-addressed) show newline
-(    ;; Find by type) show newline
-(    \(soup-query '\(cyberspace-object \(type cert\) ?rest\)\)) show newline
-(    ;; Find by time range) show newline
-(    \(soup-query-range) show newline
-(      type: 'audit) show newline
-(      from: 1736000000) show newline
-(      to:   1736100000\)) show newline
-(    ;; Cursor-based iteration for large result sets) show newline
-(    \(soup-cursor) show newline
-(      '\(cyberspace-object \(type ?\) ?rest\)) show newline
-(      batch: 100\)) show newline
-() show newline
-() show newline
-(Object Catalog) show newline
-(--------------) show newline
-() show newline
-(The catalog is itself an object in the soup - a manifest of what the) show newline
-(vault contains:) show newline
-() show newline
-() show newline
-(    \(vault-catalog) show newline
-(      \(version 1\)) show newline
-(      \(realm "ed25519:principal..."\)) show newline
-(      \(object-count 150000\)) show newline
-(      \(types) show newline
-(        \(blob 100000\)) show newline
-(        \(tree 30000\)) show newline
-(        \(cert 15000\)) show newline
-(        \(audit 5000\)\)) show newline
-(      \(bloom-filter #${...}\)           ; Fast existence check) show newline
-(      \(updated 1736400000\)\)) show newline
-() show newline
-() show newline
-(Bloom Filter) show newline
-(------------) show newline
-() show newline
-(Fast existence check before network round-trip:) show newline
-() show newline
-() show newline
-(    \(define \(soup-maybe-contains? hash\)) show newline
-(      "Check bloom filter - false means definitely not, true means maybe") show newline
-(      \(let \(\(catalog \(soup-fetch-catalog\)\)\)) show newline
-(        \(bloom-test \(catalog-bloom catalog\) hash\)\)\)) show newline
-(    ;; Bloom parameters) show newline
-(    \(bloom-filter) show newline
-(      \(capacity 10000000\)              ; 10M objects) show newline
-(      \(false-positive 0.001\)           ; 0.1% FP rate) show newline
-(      \(bits #${...}\)\)) show newline
-() show newline
-() show newline
-(Audit Trail) show newline
-(-----------) show newline
-() show newline
-(The audit trail is a hash-chain of objects in the soup:) show newline
-() show newline
-() show newline
-(    \(audit-entry) show newline
-(      \(sequence 12345\)) show newline
-(      \(timestamp 1736300000\)) show newline
-(      \(lamport 67890\)) show newline
-(      \(actor "ed25519:subject..."\)) show newline
-(      \(action \(read "sha512:object..."\)\)) show newline
-(      \(previous "sha512:prev-entry..."\)  ; Chain link) show newline
-(      \(signature "ed25519:auditor..."\)\)) show newline
-(    ;; Query audit by walking the chain) show newline
-(    \(define \(audit-query actor from-seq\)) show newline
-(      "Walk audit chain, filter by actor") show newline
-(      \(soup-chain-walk) show newline
-(        start: \(audit-head\)) show newline
-(        filter: \(lambda \(entry\)) show newline
-(                  \(equal? \(entry-actor entry\) actor\)\)) show newline
-(        from: from-seq\)\)) show newline
-() show newline
-() show newline
-(Secondary Indices) show newline
-(-----------------) show newline
-() show newline
-(For queries that can't use content-addressing, the soup maintains) show newline
-(lightweight indices as objects:) show newline
-() show newline
-() show newline
-(    \(soup-index) show newline
-(      \(name "by-signer"\)) show newline
-(      \(key-type principal\)) show newline
-(      \(entries) show newline
-(        \(\("ed25519:alice..." \("sha512:obj1" "sha512:obj2" ...\)\)) show newline
-(         \("ed25519:bob..." \("sha512:obj3" "sha512:obj4" ...\)\)\)\)\)) show newline
-(    \(soup-index) show newline
-(      \(name "by-type"\)) show newline
-(      \(key-type symbol\)) show newline
-(      \(entries) show newline
-(        \(\(blob \("sha512:..." "sha512:..." ...\)\)) show newline
-(         \(cert \("sha512:..." "sha512:..." ...\)\)) show newline
-(         \(audit \("sha512:..." "sha512:..." ...\)\)\)\)\)) show newline
-() show newline
-(Indices are rebuilt on demand, not authoritative - the soup is truth.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DISCOVERY AND ROUTING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Realm Identity) show newline
-(--------------) show newline
-() show newline
-(Each realm has a principal \(Ed25519 public key\). This IS its identity:) show newline
-() show newline
-() show newline
-(    \(realm-identity) show newline
-(      \(principal "ed25519:a1b2c3..."\)) show newline
-(      \(addresses                          ; Where to reach this realm) show newline
-(        \(ipv6 "2001:db8::1" port: 7777\)) show newline
-(        \(ipv4 "192.0.2.1" port: 7777\)     ; Legacy) show newline
-(        \(onion "xxxx.onion" port: 7777\)\)  ; Tor) show newline
-(      \(role witness\)) show newline
-(      \(capabilities \(storage-gb 1000\) \(bandwidth-mbps 100\)\)) show newline
-(      \(signature "ed25519:..."\)\)) show newline
-() show newline
-() show newline
-(Peer Discovery) show newline
-(--------------) show newline
-() show newline
-(Bootstrap:) show newline
-() show newline
-() show newline
-(    \(bootstrap-peers) show newline
-(      \("ed25519:official1..." "bootstrap.cyberspace.org"\)) show newline
-(      \("ed25519:official2..." "bootstrap2.cyberspace.org"\)\)) show newline
-() show newline
-(Gossip Protocol:) show newline
-() show newline
-() show newline
-(    1. Realm joins, contacts bootstrap peer) show newline
-(    2. Receives partial peer list \(random subset\)) show newline
-(    3. Contacts those peers, exchanges lists) show newline
-(    4. Epidemic spread: O\(log n\) rounds to reach all realms) show newline
-(    5. Periodic refresh \(every 5 min on Starlink-friendly schedule\)) show newline
-() show newline
-(Distributed Hash Table \(Future\):) show newline
-() show newline
-() show newline
-(    Kademlia-style routing:) show newline
-(      - XOR distance metric on principal hashes) show newline
-(      - O\(log n\) lookups) show newline
-(      - Realms responsible for nearby hash ranges) show newline
-(      - Natural load balancing) show newline
-() show newline
-() show newline
-(Content Discovery) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    ;; "Who has this hash?") show newline
-(    \(content-locate "sha512:a1b2c3..."\)) show newline
-(    ;; Returns list of peers claiming to have it:) show newline
-(    \(\("ed25519:peer1..." \(latency-ms 50\) \(role full\)\)) show newline
-(     \("ed25519:peer2..." \(latency-ms 200\) \(role witness\)\)) show newline
-(     \("ed25519:peer3..." \(latency-ms 600\) \(role archiver\)\)\)) show newline
-(    ;; Fetch from best candidate) show newline
-(    \(content-fetch "sha512:a1b2c3..." from: "ed25519:peer1..."\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TRANSPORT PROTOCOL) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(End-to-End Encryption) show newline
-(---------------------) show newline
-() show newline
-(All network traffic is encrypted. The OS and network are not trusted.) show newline
-() show newline
-() show newline
-(    \(cyberspace-message) show newline
-(      \(version 1\)) show newline
-(      \(from "ed25519:sender..."\)) show newline
-(      \(to "ed25519:recipient..."\)        ; Or broadcast key) show newline
-(      \(ephemeral "x25519:..."\)           ; One-time key \(PFS\)) show newline
-(      \(nonce #${24-bytes}\)               ; Random nonce) show newline
-(      \(ciphertext #${...}\)               ; NaCl box: X25519 + XSalsa20-Poly1305) show newline
-(      \(signature "ed25519:..."\)\)         ; Sign the ciphertext) show newline
-() show newline
-(Encryption scheme: NaCl crypto_box \(libsodium\) - Key agreement: X25519) show newline
-(\(Curve25519 ECDH\) - Cipher: XSalsa20-Poly1305 - Perfect forward secrecy:) show newline
-(ephemeral keys per message) show newline
-() show newline
-(Decrypted payload:) show newline
-() show newline
-() show newline
-(    \(plaintext-payload) show newline
-(      \(type request|response|announce|gossip\)) show newline
-(      \(nonce 12345678\)                   ; Replay protection) show newline
-(      \(timestamp 1736300000\)) show newline
-(      \(body ...\)\)) show newline
-() show newline
-(Broadcast messages use a shared group key or are signed-only) show newline
-(\(announcements of public objects\).) show newline
-() show newline
-() show newline
-(Wire Format \(Encrypted\)) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(    ;; Sender encrypts) show newline
-(    \(define \(seal-message payload recipient-pubkey sender-keypair\)) show newline
-(      \(let \(\(ephemeral \(x25519-keypair\)\)) show newline
-(             \(shared \(x25519-shared \(ephemeral-secret ephemeral\) recipient-pubkey\)\)) show newline
-(             \(nonce \(random-bytes 24\)\)) show newline
-(             \(ciphertext \(crypto-box payload nonce shared\)\)\)) show newline
-(        `\(cyberspace-message) show newline
-(          \(version 1\)) show newline
-(          \(from ,\(keypair-public sender-keypair\)\)) show newline
-(          \(to ,recipient-pubkey\)) show newline
-(          \(ephemeral ,\(ephemeral-public ephemeral\)\)) show newline
-(          \(nonce ,nonce\)) show newline
-(          \(ciphertext ,ciphertext\)) show newline
-(          \(signature ,\(sign-message ciphertext sender-keypair\)\)\)\)\)) show newline
-(    ;; Recipient decrypts) show newline
-(    \(define \(open-message msg recipient-keypair\)) show newline
-(      \(let \(\(shared \(x25519-shared \(keypair-secret recipient-keypair\)) show newline
-(                                    \(message-ephemeral msg\)\)\)) show newline
-(             \(plaintext \(crypto-box-open \(message-ciphertext msg\)) show newline
-(                                         \(message-nonce msg\)) show newline
-(                                         shared\)\)\)) show newline
-(        \(and \(verify-signature msg \(message-from msg\)\)) show newline
-(             plaintext\)\)\)) show newline
-() show newline
-() show newline
-(Request Types) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    ;; Existence check) show newline
-(    \(have? \("sha512:..." "sha512:..." ...\)\)) show newline
-(    ;; Response: \(have \("sha512:..." "sha512:..."\) missing \("sha512:..."\)\)) show newline
-(    ;; Fetch object) show newline
-(    \(fetch "sha512:..."\)) show newline
-(    ;; Response: \(object ...\)) show newline
-(    ;; Fetch chunk range) show newline
-(    \(fetch-chunks "sha512:..." start: 5 count: 10\)) show newline
-(    ;; Response: \(chunks ...\)) show newline
-(    ;; Peer list exchange) show newline
-(    \(peers? limit: 50\)) show newline
-(    ;; Response: \(peers ...\)) show newline
-(    ;; Announce new content) show newline
-(    \(announce \("sha512:..." "sha512:..."\)\)) show newline
-(    ;; Response: \(ack\)) show newline
-() show newline
-() show newline
-(Transport Bindings) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    Native:     UDP/IPv6, port 7777 \(primary\)) show newline
-(    Fallback:   TCP/IPv6, port 7777 \(firewalls\)) show newline
-(    Legacy:     TCP/IPv4, port 7777 \(transition\)) show newline
-(    Stealth:    Tor onion service \(censorship resistance\)) show newline
-(    Offline:    USB drive, file copy \(sneakernet\)) show newline
-(    Export:     Git bundle \(GitHub compatibility\)) show newline
-() show newline
-() show newline
-(Link-Adaptive Transport) show newline
-(-----------------------) show newline
-() show newline
-(Transport parameters adapt to detected link type:) show newline
-() show newline
-() show newline
-(    \(transport-config) show newline
-(      \(link-detection auto\)          ; Probe RTT/bandwidth) show newline
-(      \(chunk-size adaptive\)          ; See Chunking Strategy) show newline
-(      \(batch-window-ms               ; Aggregate small messages) show newline
-(        \(fiber 50\)) show newline
-(        \(starlink 500\)) show newline
-(        \(lte 200\)) show newline
-(        \(lora 2000\)\)) show newline
-(      \(retry-strategy exponential\)) show newline
-(      \(max-in-flight                 ; Parallelism based on BDP) show newline
-(        \(fiber 100\)) show newline
-(        \(starlink 10\)) show newline
-(        \(lte 5\)) show newline
-(        \(lora 1\)\)) show newline
-(      \(keepalive-sec                 ; Idle timeout) show newline
-(        \(fiber 60\)) show newline
-(        \(starlink 300\)) show newline
-(        \(lte 120\)) show newline
-(        \(lora 600\)\)\)) show newline
-(    ;; Re-evaluate on link change) show newline
-(    \(define \(on-link-change! old-link new-link\)) show newline
-(      "Adjust transport when connectivity changes.") show newline
-(      \(let \(\(config \(detect-link-profile new-link\)\)\)) show newline
-(        \(transport-reconfigure! config\)) show newline
-(        \(log-link-transition old-link new-link\)\)\)) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0041:) show ( ) show (Scaling) show ( ) show (Architecture) show ( ) show (for) show ( ) show (IPv6) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (defines) show ( ) show (the) show ( ) show (architectural) show ( ) show (changes) show ( ) show (required) show ( ) show (to) show ( ) show (scale) show ( ) show (Cyberspace) show  newline
+(from) show ( ) show (a) show ( ) show (git-backed) show ( ) show (prototype) show ( ) show (to) show ( ) show (a) show ( ) show (native) show ( ) show (distributed) show ( ) show (system) show ( ) show (capable) show ( ) show (of) show  newline
+(operating) show ( ) show (at) show ( ) show (IPv6) show ( ) show (scale) show ( ) show (\(billions) show ( ) show (of) show ( ) show (realms,) show ( ) show (exabytes) show ( ) show (of) show ( ) show (content\).) show ( ) show (Git) show  newline
+(becomes) show ( ) show (an) show ( ) show (export) show ( ) show (format;) show ( ) show (the) show ( ) show (vault) show ( ) show (becomes) show ( ) show (the) show ( ) show (source) show ( ) show (of) show ( ) show (truth.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TERMINOLOGY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Realm:) show ( ) show (A) show ( ) show (node's) show ( ) show (place) show ( ) show (in) show ( ) show (cyberspace) show ( ) show (-) show ( ) show (its) show ( ) show (vault,) show ( ) show (principal,) show  newline
+(capabilities,) show ( ) show (and) show ( ) show (objects.) show ( ) show (Each) show ( ) show (realm) show ( ) show (is) show ( ) show (sovereign:) show ( ) show (local-first,) show  newline
+(controlled) show ( ) show (by) show ( ) show (its) show ( ) show (operator.) show ( ) show (Realms) show ( ) show (federate) show ( ) show (by) show ( ) show (choice,) show ( ) show (sharing) show ( ) show (objects) show  newline
+(according) show ( ) show (to) show ( ) show (trust) show ( ) show (relationships.) show  newline
+ newline
+(Vault:) show ( ) show (The) show ( ) show (local) show ( ) show (content-addressed) show ( ) show (object) show ( ) show (store) show ( ) show (\(.vault/\).) show ( ) show (The) show ( ) show (vault) show ( ) show (IS) show  newline
+(the) show ( ) show (realm's) show ( ) show (storage) show ( ) show (-) show ( ) show (all) show ( ) show (objects,) show ( ) show (catalogs,) show ( ) show (audit) show ( ) show (trails,) show ( ) show (and) show  newline
+(configuration) show ( ) show (live) show ( ) show (here.) show  newline
+ newline
+(Principal:) show ( ) show (A) show ( ) show (node's) show ( ) show (cryptographic) show ( ) show (identity) show ( ) show (\(Ed25519) show ( ) show (public) show ( ) show (key\).) show ( ) show (The) show  newline
+(principal) show ( ) show (identifies) show ( ) show (the) show ( ) show (realm) show ( ) show (to) show ( ) show (peers) show ( ) show (and) show ( ) show (signs) show ( ) show (its) show ( ) show (objects.) show  newline
+ newline
+(At) show ( ) show (IPv6) show ( ) show (scale,) show ( ) show (cyberspace) show ( ) show (consists) show ( ) show (of) show ( ) show (billions) show ( ) show (of) show ( ) show (realms,) show ( ) show (each) show ( ) show (occupying) show  newline
+(its) show ( ) show (own) show ( ) show (address) show ( ) show (space,) show ( ) show (each) show ( ) show (sovereign,) show ( ) show (each) show ( ) show (choosing) show ( ) show (what) show ( ) show (to) show ( ) show (share) show ( ) show (and) show  newline
+(with) show ( ) show (whom.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Git) show ( ) show (served) show ( ) show (as) show ( ) show (an) show ( ) show (excellent) show ( ) show (prototype) show ( ) show (substrate:) show ( ) show (-) show ( ) show (Content-addressed) show  newline
+(objects) show ( ) show (\(proof) show ( ) show (of) show ( ) show (concept\)) show ( ) show (-) show ( ) show (Merkle) show ( ) show (tree) show ( ) show (integrity) show ( ) show (\(validates) show ( ) show (the) show ( ) show (model\)) show  newline
+(-) show ( ) show (Ubiquitous) show ( ) show (tooling) show ( ) show (\(bootstrap) show ( ) show (adoption\)) show  newline
+ newline
+(Git) show ( ) show (cannot) show ( ) show (scale) show ( ) show (to) show ( ) show (IPv6:) show ( ) show (-) show ( ) show (Full) show ( ) show (history) show ( ) show (on) show ( ) show (every) show ( ) show (clone) show ( ) show (-) show ( ) show (Repository) show ( ) show (as) show  newline
+(replication) show ( ) show (unit) show ( ) show (\(too) show ( ) show (coarse\)) show ( ) show (-) show ( ) show (SHA-1) show ( ) show (\(cryptographically) show ( ) show (broken\)) show ( ) show (-) show ( ) show (No) show  newline
+(native) show ( ) show (federation) show ( ) show (or) show ( ) show (discovery) show ( ) show (-) show ( ) show (Merge) show ( ) show (semantics) show ( ) show (are) show ( ) show (wrong) show ( ) show (model) show  newline
+ newline
+(The) show ( ) show (internet) show ( ) show (has) show ( ) show (2^128) show ( ) show (addresses.) show ( ) show (Cyberspace) show ( ) show (should) show ( ) show (use) show ( ) show (them.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DESIGN) show ( ) show (PRINCIPLES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(1.) show ( ) show (Objects,) show ( ) show (not) show ( ) show (repositories) show  newline
+(2.) show ( ) show (Pull,) show ( ) show (not) show ( ) show (push) show  newline
+(3.) show ( ) show (Lazy,) show ( ) show (not) show ( ) show (eager) show  newline
+(4.) show ( ) show (Local-first,) show ( ) show (federate-second) show  newline
+(5.) show ( ) show (Trust) show ( ) show (math,) show ( ) show (not) show ( ) show (infrastructure) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CONTENT-ADDRESSED) show ( ) show (OBJECT) show ( ) show (STORE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Storage) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(.vault/) show  newline
+(objects/) show  newline
+(sha512-a1b2c3.../) show ( ) show (#) show ( ) show (First) show ( ) show (8) show ( ) show (chars) show ( ) show (as) show ( ) show (directory) show  newline
+(a1b2c3d4e5f6...) show ( ) show (#) show ( ) show (Full) show ( ) show (hash) show ( ) show (as) show ( ) show (filename) show ( ) show (\(S-expression\)) show  newline
+(catalog/) show  newline
+(manifest.sexp) show ( ) show (#) show ( ) show (Vault) show ( ) show (catalog) show ( ) show (object) show  newline
+(bloom.sexp) show ( ) show (#) show ( ) show (Bloom) show ( ) show (filter) show ( ) show (object) show  newline
+(indices/) show ( ) show (#) show ( ) show (Secondary) show ( ) show (index) show ( ) show (objects) show  newline
+(by-signer.sexp) show  newline
+(by-type.sexp) show  newline
+(chunks/) show  newline
+(sha512-xxxx/) show ( ) show (#) show ( ) show (Chunked) show ( ) show (large) show ( ) show (objects) show  newline
+(audit/) show  newline
+(head.sexp) show ( ) show (#) show ( ) show (Current) show ( ) show (audit) show ( ) show (chain) show ( ) show (head) show  newline
+(chain/) show ( ) show (#) show ( ) show (Audit) show ( ) show (entries) show ( ) show (\(hash-addressed\)) show  newline
+ newline
+ newline
+(Object) show ( ) show (Format) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(cyberspace-object) show  newline
+(\(version) show ( ) show (1\)) show  newline
+(\(type) show ( ) show (blob|tree|manifest|cert|audit\)) show  newline
+(\(size) show ( ) show (1048576\)) show  newline
+(\(compression) show ( ) show (zstd|none\)) show  newline
+(\(hash) show ( ) show ("sha512:a1b2c3..."\)) show  newline
+(\(chunks) show ( ) show (\("sha512:...") show ( ) show ("sha512:...") show ( ) show (...\)\)) show ( ) show (;) show ( ) show (If) show ( ) show (chunked) show  newline
+(\(signature) show ( ) show ("ed25519:..."\)) show  newline
+(\(timestamp) show ( ) show (1736300000\)\)) show  newline
+ newline
+ newline
+(Chunking) show ( ) show (Strategy) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(Large) show ( ) show (objects) show ( ) show (split) show ( ) show (at) show ( ) show (content-defined) show ( ) show (boundaries) show ( ) show (\(Rabin) show  newline
+(fingerprinting\).) show ( ) show (Chunk) show ( ) show (size) show ( ) show (adapts) show ( ) show (to) show ( ) show (link) show ( ) show (characteristics:) show  newline
+ newline
+ newline
+(Link) show ( ) show (Profile) show ( ) show (RTT) show ( ) show (Bandwidth) show ( ) show (Target) show ( ) show (Chunk) show  newline
+gsave
+% box char 2500 at col 4
+newpath margin 27 add 3 sub ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2500 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2500 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2500 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2500 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add 3 add ypos lineto stroke
+% box char 2500 at col 62
+newpath margin 375 add 3 sub ypos moveto margin 375 add 3 add ypos lineto stroke
+% box char 2500 at col 63
+newpath margin 381 add 3 sub ypos moveto margin 381 add 3 add ypos lineto stroke
+% box char 2500 at col 64
+newpath margin 387 add 3 sub ypos moveto margin 387 add 3 add ypos lineto stroke
+grestore
+newline
+(Fiber/Datacenter) show ( ) show (1-5ms) show ( ) show (1Gbps+) show ( ) show (256KB-1MB) show  newline
+(Cable/DSL) show ( ) show (10-30ms) show ( ) show (50-500Mbps) show ( ) show (128KB) show  newline
+(Starlink) show ( ) show (20-40ms) show ( ) show (100-300Mbps) show ( ) show (64KB) show  newline
+(LTE/5G) show ( ) show (10-50ms) show ( ) show (variable) show ( ) show (32-128KB) show  newline
+(LoRa/Mesh) show ( ) show (100ms+) show ( ) show (kbps) show ( ) show (4-16KB) show  newline
+gsave
+margin 24 add ypos moveto (Sneakernet) show
+margin 150 add ypos moveto () show
+margin 216 add ypos moveto () show
+margin 294 add ypos moveto (no) show
+margin 312 add ypos moveto (chunking) show
+grestore
+newline
+(Rabin) show ( ) show (parameters) show ( ) show (\(content-defined\):) show  newline
+(Min) show ( ) show (chunk:) show ( ) show (4) show ( ) show (KB) show ( ) show (\(floor) show ( ) show (for) show ( ) show (all) show ( ) show (links\)) show  newline
+(Max) show ( ) show (chunk:) show ( ) show (1) show ( ) show (MB) show ( ) show (\(ceiling) show ( ) show (for) show ( ) show (all) show ( ) show (links\)) show  newline
+(Target:) show ( ) show (link-adaptive) show ( ) show (\(see) show ( ) show (above\)) show  newline
+ newline
+(Chunk) show ( ) show (size) show ( ) show (continuously) show ( ) show (adapts) show ( ) show (as) show ( ) show (links) show ( ) show (come) show ( ) show (and) show ( ) show (go.) show ( ) show (Mobile) show ( ) show (nodes) show ( ) show (may) show  newline
+(switch) show ( ) show (from) show ( ) show (WiFi) show ( ) show (to) show ( ) show (LTE) show ( ) show (to) show ( ) show (Starlink) show ( ) show (-) show ( ) show (the) show ( ) show (transfer) show ( ) show (strategy) show ( ) show (adjusts) show ( ) show (in) show  newline
+(real-time.) show ( ) show (Deduplication) show ( ) show (works) show ( ) show (across) show ( ) show (chunk) show ( ) show (sizes) show ( ) show (-) show ( ) show (same) show ( ) show (content,) show ( ) show (same) show  newline
+(hash.) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(optimal-chunk-size) show ( ) show (link\)) show  newline
+("Calculate) show ( ) show (target) show ( ) show (chunk) show ( ) show (size) show ( ) show (for) show ( ) show (link) show ( ) show (characteristics.") show  newline
+(\(let) show ( ) show (\(\(rtt-ms) show ( ) show (\(link-rtt) show ( ) show (link\)\)) show  newline
+(\(bandwidth-mbps) show ( ) show (\(link-bandwidth) show ( ) show (link\)\)\)) show  newline
+(\(cond) show  newline
+(\(\(<) show ( ) show (rtt-ms) show ( ) show (10\)) show ( ) show (\(*) show ( ) show (256) show ( ) show (1024\)\)) show ( ) show (;) show ( ) show (Datacenter) show  newline
+(\(\(<) show ( ) show (rtt-ms) show ( ) show (30\)) show ( ) show (\(*) show ( ) show (128) show ( ) show (1024\)\)) show ( ) show (;) show ( ) show (Cable/DSL) show  newline
+(\(\(<) show ( ) show (rtt-ms) show ( ) show (50\)) show ( ) show (\(*) show ( ) show (64) show ( ) show (1024\)\)) show ( ) show (;) show ( ) show (Starlink/LTE) show  newline
+(\(\(<) show ( ) show (rtt-ms) show ( ) show (100\)) show ( ) show (\(*) show ( ) show (32) show ( ) show (1024\)\)) show ( ) show (;) show ( ) show (Slow) show ( ) show (mobile) show  newline
+(\(else) show ( ) show (\(*) show ( ) show (8) show ( ) show (1024\)\)\)\)\)) show ( ) show (;) show ( ) show (Constrained) show  newline
+(;;) show ( ) show (Auto-tune) show ( ) show (from) show ( ) show (observed) show ( ) show (performance) show  newline
+(\(define) show ( ) show (\(auto-tune-chunk-size!) show ( ) show (link\)) show  newline
+("Adjust) show ( ) show (chunk) show ( ) show (size) show ( ) show (based) show ( ) show (on) show ( ) show (transfer) show ( ) show (performance.") show  newline
+(\(let*) show ( ) show (\(\(samples) show ( ) show (\(link-transfer-samples) show ( ) show (link\)\)) show  newline
+(\(avg-throughput) show ( ) show (\(mean) show ( ) show (\(map) show ( ) show (sample-throughput) show ( ) show (samples\)\)\)) show  newline
+(\(avg-rtt) show ( ) show (\(mean) show ( ) show (\(map) show ( ) show (sample-rtt) show ( ) show (samples\)\)\)\)) show  newline
+(\(link-chunk-size-set!) show ( ) show (link) show ( ) show (\(optimal-chunk-size-for) show ( ) show (avg-rtt) show ( ) show (avg-throughput\)\)\)\)) show  newline
+ newline
+(Benefits:) show  newline
+ newline
+ newline
+(-) show ( ) show (Deduplication) show ( ) show (across) show ( ) show (objects) show ( ) show (\(hash-based\)) show  newline
+(-) show ( ) show (Partial) show ( ) show (sync) show ( ) show (\(fetch) show ( ) show (only) show ( ) show (missing) show ( ) show (chunks\)) show  newline
+(-) show ( ) show (Resumable) show ( ) show (transfers) show  newline
+(-) show ( ) show (Efficient) show ( ) show (diff) show  newline
+(-) show ( ) show (Link-optimal) show ( ) show (transfer) show ( ) show (sizes) show  newline
+(-) show ( ) show (Graceful) show ( ) show (degradation) show ( ) show (on) show ( ) show (constrained) show ( ) show (links) show  newline
+ newline
+ newline
+(Hash) show ( ) show (Function) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(SHA-512) show ( ) show (everywhere.) show  newline
+(Not) show ( ) show (SHA-256:) show ( ) show (We) show ( ) show (have) show ( ) show (the) show ( ) show (bits,) show ( ) show (use) show ( ) show (them.) show  newline
+(Not) show ( ) show (SHA-1:) show ( ) show (Broken.) show  newline
+(Not) show ( ) show (BLAKE3:) show ( ) show (Less) show ( ) show (analyzed,) show ( ) show (marginal) show ( ) show (speed) show ( ) show (gain) show ( ) show (irrelevant) show ( ) show (at) show ( ) show (network) show ( ) show (latency.) show  newline
+(SHA-512) show ( ) show (is:) show  newline
+(-) show ( ) show (FIPS) show ( ) show (certified) show ( ) show (\(GovCloud) show ( ) show (path\)) show  newline
+(-) show ( ) show (50) show ( ) show (years) show ( ) show (of) show ( ) show (cryptanalysis) show  newline
+(-) show ( ) show (Hardware) show ( ) show (accelerated) show  newline
+(-) show ( ) show (Already) show ( ) show (in) show ( ) show (use) show ( ) show (\(audit) show ( ) show (trail,) show ( ) show (signatures\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CATALOG) show ( ) show (AND) show ( ) show (QUERY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (soup) show ( ) show (IS) show ( ) show (the) show ( ) show (catalog.) show ( ) show (No) show ( ) show (SQL.) show ( ) show (Objects) show ( ) show (are) show ( ) show (S-expressions,) show ( ) show (queries) show ( ) show (are) show  newline
+(pattern) show ( ) show (matching.) show  newline
+ newline
+ newline
+(The) show ( ) show (Soup) show ( ) show (Query) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Find) show ( ) show (objects) show ( ) show (by) show ( ) show (pattern) show  newline
+(\(soup-query) show  newline
+('\(cyberspace-object) show  newline
+(\(type) show ( ) show (blob\)) show  newline
+(\(signer) show ( ) show ("ed25519:alice..."\)) show  newline
+(?rest\)\)) show ( ) show (;) show ( ) show (Match) show ( ) show (any) show ( ) show (object) show ( ) show (signed) show ( ) show (by) show ( ) show (Alice) show  newline
+(;;) show ( ) show (Find) show ( ) show (by) show ( ) show (hash) show ( ) show (\(direct) show ( ) show (lookup\)) show  newline
+(\(soup-fetch) show ( ) show ("sha512:a1b2c3..."\)) show ( ) show (;) show ( ) show (O\(1\)) show ( ) show (content-addressed) show  newline
+(;;) show ( ) show (Find) show ( ) show (by) show ( ) show (type) show  newline
+(\(soup-query) show ( ) show ('\(cyberspace-object) show ( ) show (\(type) show ( ) show (cert\)) show ( ) show (?rest\)\)) show  newline
+(;;) show ( ) show (Find) show ( ) show (by) show ( ) show (time) show ( ) show (range) show  newline
+(\(soup-query-range) show  newline
+(type:) show ( ) show ('audit) show  newline
+(from:) show ( ) show (1736000000) show  newline
+(to:) show ( ) show (1736100000\)) show  newline
+(;;) show ( ) show (Cursor-based) show ( ) show (iteration) show ( ) show (for) show ( ) show (large) show ( ) show (result) show ( ) show (sets) show  newline
+(\(soup-cursor) show  newline
+('\(cyberspace-object) show ( ) show (\(type) show ( ) show (?\)) show ( ) show (?rest\)) show  newline
+(batch:) show ( ) show (100\)) show  newline
+ newline
+ newline
+(Object) show ( ) show (Catalog) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (catalog) show ( ) show (is) show ( ) show (itself) show ( ) show (an) show ( ) show (object) show ( ) show (in) show ( ) show (the) show ( ) show (soup) show ( ) show (-) show ( ) show (a) show ( ) show (manifest) show ( ) show (of) show ( ) show (what) show ( ) show (the) show  newline
+(vault) show ( ) show (contains:) show  newline
+ newline
+ newline
+(\(vault-catalog) show  newline
+(\(version) show ( ) show (1\)) show  newline
+(\(realm) show ( ) show ("ed25519:principal..."\)) show  newline
+(\(object-count) show ( ) show (150000\)) show  newline
+(\(types) show  newline
+(\(blob) show ( ) show (100000\)) show  newline
+(\(tree) show ( ) show (30000\)) show  newline
+(\(cert) show ( ) show (15000\)) show  newline
+(\(audit) show ( ) show (5000\)\)) show  newline
+(\(bloom-filter) show ( ) show (#${...}\)) show ( ) show (;) show ( ) show (Fast) show ( ) show (existence) show ( ) show (check) show  newline
+(\(updated) show ( ) show (1736400000\)\)) show  newline
+ newline
+ newline
+(Bloom) show ( ) show (Filter) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Fast) show ( ) show (existence) show ( ) show (check) show ( ) show (before) show ( ) show (network) show ( ) show (round-trip:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(soup-maybe-contains?) show ( ) show (hash\)) show  newline
+("Check) show ( ) show (bloom) show ( ) show (filter) show ( ) show (-) show ( ) show (false) show ( ) show (means) show ( ) show (definitely) show ( ) show (not,) show ( ) show (true) show ( ) show (means) show ( ) show (maybe") show  newline
+(\(let) show ( ) show (\(\(catalog) show ( ) show (\(soup-fetch-catalog\)\)\)) show  newline
+(\(bloom-test) show ( ) show (\(catalog-bloom) show ( ) show (catalog\)) show ( ) show (hash\)\)\)) show  newline
+(;;) show ( ) show (Bloom) show ( ) show (parameters) show  newline
+(\(bloom-filter) show  newline
+(\(capacity) show ( ) show (10000000\)) show ( ) show (;) show ( ) show (10M) show ( ) show (objects) show  newline
+(\(false-positive) show ( ) show (0.001\)) show ( ) show (;) show ( ) show (0.1%) show ( ) show (FP) show ( ) show (rate) show  newline
+(\(bits) show ( ) show (#${...}\)\)) show  newline
+ newline
+ newline
+(Audit) show ( ) show (Trail) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (audit) show ( ) show (trail) show ( ) show (is) show ( ) show (a) show ( ) show (hash-chain) show ( ) show (of) show ( ) show (objects) show ( ) show (in) show ( ) show (the) show ( ) show (soup:) show  newline
+ newline
+ newline
+(\(audit-entry) show  newline
+(\(sequence) show ( ) show (12345\)) show  newline
+(\(timestamp) show ( ) show (1736300000\)) show  newline
+(\(lamport) show ( ) show (67890\)) show  newline
+(\(actor) show ( ) show ("ed25519:subject..."\)) show  newline
+(\(action) show ( ) show (\(read) show ( ) show ("sha512:object..."\)\)) show  newline
+(\(previous) show ( ) show ("sha512:prev-entry..."\)) show ( ) show (;) show ( ) show (Chain) show ( ) show (link) show  newline
+(\(signature) show ( ) show ("ed25519:auditor..."\)\)) show  newline
+(;;) show ( ) show (Query) show ( ) show (audit) show ( ) show (by) show ( ) show (walking) show ( ) show (the) show ( ) show (chain) show  newline
+(\(define) show ( ) show (\(audit-query) show ( ) show (actor) show ( ) show (from-seq\)) show  newline
+("Walk) show ( ) show (audit) show ( ) show (chain,) show ( ) show (filter) show ( ) show (by) show ( ) show (actor") show  newline
+(\(soup-chain-walk) show  newline
+(start:) show ( ) show (\(audit-head\)) show  newline
+(filter:) show ( ) show (\(lambda) show ( ) show (\(entry\)) show  newline
+(\(equal?) show ( ) show (\(entry-actor) show ( ) show (entry\)) show ( ) show (actor\)\)) show  newline
+(from:) show ( ) show (from-seq\)\)) show  newline
+ newline
+ newline
+(Secondary) show ( ) show (Indices) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (queries) show ( ) show (that) show ( ) show (can't) show ( ) show (use) show ( ) show (content-addressing,) show ( ) show (the) show ( ) show (soup) show ( ) show (maintains) show  newline
+(lightweight) show ( ) show (indices) show ( ) show (as) show ( ) show (objects:) show  newline
+ newline
+ newline
+(\(soup-index) show  newline
+(\(name) show ( ) show ("by-signer"\)) show  newline
+(\(key-type) show ( ) show (principal\)) show  newline
+(\(entries) show  newline
+(\(\("ed25519:alice...") show ( ) show (\("sha512:obj1") show ( ) show ("sha512:obj2") show ( ) show (...\)\)) show  newline
+(\("ed25519:bob...") show ( ) show (\("sha512:obj3") show ( ) show ("sha512:obj4") show ( ) show (...\)\)\)\)\)) show  newline
+(\(soup-index) show  newline
+(\(name) show ( ) show ("by-type"\)) show  newline
+(\(key-type) show ( ) show (symbol\)) show  newline
+(\(entries) show  newline
+(\(\(blob) show ( ) show (\("sha512:...") show ( ) show ("sha512:...") show ( ) show (...\)\)) show  newline
+(\(cert) show ( ) show (\("sha512:...") show ( ) show ("sha512:...") show ( ) show (...\)\)) show  newline
+(\(audit) show ( ) show (\("sha512:...") show ( ) show ("sha512:...") show ( ) show (...\)\)\)\)\)) show  newline
+ newline
+(Indices) show ( ) show (are) show ( ) show (rebuilt) show ( ) show (on) show ( ) show (demand,) show ( ) show (not) show ( ) show (authoritative) show ( ) show (-) show ( ) show (the) show ( ) show (soup) show ( ) show (is) show ( ) show (truth.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DISCOVERY) show ( ) show (AND) show ( ) show (ROUTING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Realm) show ( ) show (Identity) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(Each) show ( ) show (realm) show ( ) show (has) show ( ) show (a) show ( ) show (principal) show ( ) show (\(Ed25519) show ( ) show (public) show ( ) show (key\).) show ( ) show (This) show ( ) show (IS) show ( ) show (its) show ( ) show (identity:) show  newline
+ newline
+ newline
+(\(realm-identity) show  newline
+(\(principal) show ( ) show ("ed25519:a1b2c3..."\)) show  newline
+(\(addresses) show ( ) show (;) show ( ) show (Where) show ( ) show (to) show ( ) show (reach) show ( ) show (this) show ( ) show (realm) show  newline
+(\(ipv6) show ( ) show ("2001:db8::1") show ( ) show (port:) show ( ) show (7777\)) show  newline
+(\(ipv4) show ( ) show ("192.0.2.1") show ( ) show (port:) show ( ) show (7777\)) show ( ) show (;) show ( ) show (Legacy) show  newline
+(\(onion) show ( ) show ("xxxx.onion") show ( ) show (port:) show ( ) show (7777\)\)) show ( ) show (;) show ( ) show (Tor) show  newline
+(\(role) show ( ) show (witness\)) show  newline
+(\(capabilities) show ( ) show (\(storage-gb) show ( ) show (1000\)) show ( ) show (\(bandwidth-mbps) show ( ) show (100\)\)) show  newline
+(\(signature) show ( ) show ("ed25519:..."\)\)) show  newline
+ newline
+ newline
+(Peer) show ( ) show (Discovery) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(Bootstrap:) show  newline
+ newline
+ newline
+(\(bootstrap-peers) show  newline
+(\("ed25519:official1...") show ( ) show ("bootstrap.cyberspace.org"\)) show  newline
+(\("ed25519:official2...") show ( ) show ("bootstrap2.cyberspace.org"\)\)) show  newline
+ newline
+(Gossip) show ( ) show (Protocol:) show  newline
+ newline
+ newline
+(1.) show ( ) show (Realm) show ( ) show (joins,) show ( ) show (contacts) show ( ) show (bootstrap) show ( ) show (peer) show  newline
+(2.) show ( ) show (Receives) show ( ) show (partial) show ( ) show (peer) show ( ) show (list) show ( ) show (\(random) show ( ) show (subset\)) show  newline
+(3.) show ( ) show (Contacts) show ( ) show (those) show ( ) show (peers,) show ( ) show (exchanges) show ( ) show (lists) show  newline
+(4.) show ( ) show (Epidemic) show ( ) show (spread:) show ( ) show (O\(log) show ( ) show (n\)) show ( ) show (rounds) show ( ) show (to) show ( ) show (reach) show ( ) show (all) show ( ) show (realms) show  newline
+(5.) show ( ) show (Periodic) show ( ) show (refresh) show ( ) show (\(every) show ( ) show (5) show ( ) show (min) show ( ) show (on) show ( ) show (Starlink-friendly) show ( ) show (schedule\)) show  newline
+ newline
+(Distributed) show ( ) show (Hash) show ( ) show (Table) show ( ) show (\(Future\):) show  newline
+ newline
+ newline
+(Kademlia-style) show ( ) show (routing:) show  newline
+(-) show ( ) show (XOR) show ( ) show (distance) show ( ) show (metric) show ( ) show (on) show ( ) show (principal) show ( ) show (hashes) show  newline
+(-) show ( ) show (O\(log) show ( ) show (n\)) show ( ) show (lookups) show  newline
+(-) show ( ) show (Realms) show ( ) show (responsible) show ( ) show (for) show ( ) show (nearby) show ( ) show (hash) show ( ) show (ranges) show  newline
+(-) show ( ) show (Natural) show ( ) show (load) show ( ) show (balancing) show  newline
+ newline
+ newline
+(Content) show ( ) show (Discovery) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show ("Who) show ( ) show (has) show ( ) show (this) show ( ) show (hash?") show  newline
+(\(content-locate) show ( ) show ("sha512:a1b2c3..."\)) show  newline
+(;;) show ( ) show (Returns) show ( ) show (list) show ( ) show (of) show ( ) show (peers) show ( ) show (claiming) show ( ) show (to) show ( ) show (have) show ( ) show (it:) show  newline
+(\(\("ed25519:peer1...") show ( ) show (\(latency-ms) show ( ) show (50\)) show ( ) show (\(role) show ( ) show (full\)\)) show  newline
+(\("ed25519:peer2...") show ( ) show (\(latency-ms) show ( ) show (200\)) show ( ) show (\(role) show ( ) show (witness\)\)) show  newline
+(\("ed25519:peer3...") show ( ) show (\(latency-ms) show ( ) show (600\)) show ( ) show (\(role) show ( ) show (archiver\)\)\)) show  newline
+(;;) show ( ) show (Fetch) show ( ) show (from) show ( ) show (best) show ( ) show (candidate) show  newline
+(\(content-fetch) show ( ) show ("sha512:a1b2c3...") show ( ) show (from:) show ( ) show ("ed25519:peer1..."\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TRANSPORT) show ( ) show (PROTOCOL) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(End-to-End) show ( ) show (Encryption) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(All) show ( ) show (network) show ( ) show (traffic) show ( ) show (is) show ( ) show (encrypted.) show ( ) show (The) show ( ) show (OS) show ( ) show (and) show ( ) show (network) show ( ) show (are) show ( ) show (not) show ( ) show (trusted.) show  newline
+ newline
+ newline
+(\(cyberspace-message) show  newline
+(\(version) show ( ) show (1\)) show  newline
+(\(from) show ( ) show ("ed25519:sender..."\)) show  newline
+(\(to) show ( ) show ("ed25519:recipient..."\)) show ( ) show (;) show ( ) show (Or) show ( ) show (broadcast) show ( ) show (key) show  newline
+(\(ephemeral) show ( ) show ("x25519:..."\)) show ( ) show (;) show ( ) show (One-time) show ( ) show (key) show ( ) show (\(PFS\)) show  newline
+(\(nonce) show ( ) show (#${24-bytes}\)) show ( ) show (;) show ( ) show (Random) show ( ) show (nonce) show  newline
+(\(ciphertext) show ( ) show (#${...}\)) show ( ) show (;) show ( ) show (NaCl) show ( ) show (box:) show ( ) show (X25519) show ( ) show (+) show ( ) show (XSalsa20-Poly1305) show  newline
+(\(signature) show ( ) show ("ed25519:..."\)\)) show ( ) show (;) show ( ) show (Sign) show ( ) show (the) show ( ) show (ciphertext) show  newline
+ newline
+(Encryption) show ( ) show (scheme:) show ( ) show (NaCl) show ( ) show (crypto_box) show ( ) show (\(libsodium\)) show ( ) show (-) show ( ) show (Key) show ( ) show (agreement:) show ( ) show (X25519) show  newline
+(\(Curve25519) show ( ) show (ECDH\)) show ( ) show (-) show ( ) show (Cipher:) show ( ) show (XSalsa20-Poly1305) show ( ) show (-) show ( ) show (Perfect) show ( ) show (forward) show ( ) show (secrecy:) show  newline
+(ephemeral) show ( ) show (keys) show ( ) show (per) show ( ) show (message) show  newline
+ newline
+(Decrypted) show ( ) show (payload:) show  newline
+ newline
+ newline
+(\(plaintext-payload) show  newline
+(\(type) show ( ) show (request|response|announce|gossip\)) show  newline
+(\(nonce) show ( ) show (12345678\)) show ( ) show (;) show ( ) show (Replay) show ( ) show (protection) show  newline
+(\(timestamp) show ( ) show (1736300000\)) show  newline
+(\(body) show ( ) show (...\)\)) show  newline
+ newline
+(Broadcast) show ( ) show (messages) show ( ) show (use) show ( ) show (a) show ( ) show (shared) show ( ) show (group) show ( ) show (key) show ( ) show (or) show ( ) show (are) show ( ) show (signed-only) show  newline
+(\(announcements) show ( ) show (of) show ( ) show (public) show ( ) show (objects\).) show  newline
+ newline
+ newline
+(Wire) show ( ) show (Format) show ( ) show (\(Encrypted\)) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Sender) show ( ) show (encrypts) show  newline
+(\(define) show ( ) show (\(seal-message) show ( ) show (payload) show ( ) show (recipient-pubkey) show ( ) show (sender-keypair\)) show  newline
+(\(let) show ( ) show (\(\(ephemeral) show ( ) show (\(x25519-keypair\)\)) show  newline
+(\(shared) show ( ) show (\(x25519-shared) show ( ) show (\(ephemeral-secret) show ( ) show (ephemeral\)) show ( ) show (recipient-pubkey\)\)) show  newline
+(\(nonce) show ( ) show (\(random-bytes) show ( ) show (24\)\)) show  newline
+(\(ciphertext) show ( ) show (\(crypto-box) show ( ) show (payload) show ( ) show (nonce) show ( ) show (shared\)\)\)) show  newline
+(`\(cyberspace-message) show  newline
+(\(version) show ( ) show (1\)) show  newline
+(\(from) show ( ) show (,\(keypair-public) show ( ) show (sender-keypair\)\)) show  newline
+(\(to) show ( ) show (,recipient-pubkey\)) show  newline
+(\(ephemeral) show ( ) show (,\(ephemeral-public) show ( ) show (ephemeral\)\)) show  newline
+(\(nonce) show ( ) show (,nonce\)) show  newline
+(\(ciphertext) show ( ) show (,ciphertext\)) show  newline
+(\(signature) show ( ) show (,\(sign-message) show ( ) show (ciphertext) show ( ) show (sender-keypair\)\)\)\)\)) show  newline
+(;;) show ( ) show (Recipient) show ( ) show (decrypts) show  newline
+(\(define) show ( ) show (\(open-message) show ( ) show (msg) show ( ) show (recipient-keypair\)) show  newline
+(\(let) show ( ) show (\(\(shared) show ( ) show (\(x25519-shared) show ( ) show (\(keypair-secret) show ( ) show (recipient-keypair\)) show  newline
+(\(message-ephemeral) show ( ) show (msg\)\)\)) show  newline
+(\(plaintext) show ( ) show (\(crypto-box-open) show ( ) show (\(message-ciphertext) show ( ) show (msg\)) show  newline
+(\(message-nonce) show ( ) show (msg\)) show  newline
+(shared\)\)\)) show  newline
+(\(and) show ( ) show (\(verify-signature) show ( ) show (msg) show ( ) show (\(message-from) show ( ) show (msg\)\)) show  newline
+(plaintext\)\)\)) show  newline
+ newline
+ newline
+(Request) show ( ) show (Types) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Existence) show ( ) show (check) show  newline
+(\(have?) show ( ) show (\("sha512:...") show ( ) show ("sha512:...") show ( ) show (...\)\)) show  newline
+(;;) show ( ) show (Response:) show ( ) show (\(have) show ( ) show (\("sha512:...") show ( ) show ("sha512:..."\)) show ( ) show (missing) show ( ) show (\("sha512:..."\)\)) show  newline
+(;;) show ( ) show (Fetch) show ( ) show (object) show  newline
+(\(fetch) show ( ) show ("sha512:..."\)) show  newline
+(;;) show ( ) show (Response:) show ( ) show (\(object) show ( ) show (...\)) show  newline
+(;;) show ( ) show (Fetch) show ( ) show (chunk) show ( ) show (range) show  newline
+(\(fetch-chunks) show ( ) show ("sha512:...") show ( ) show (start:) show ( ) show (5) show ( ) show (count:) show ( ) show (10\)) show  newline
+(;;) show ( ) show (Response:) show ( ) show (\(chunks) show ( ) show (...\)) show  newline
+(;;) show ( ) show (Peer) show ( ) show (list) show ( ) show (exchange) show  newline
+(\(peers?) show ( ) show (limit:) show ( ) show (50\)) show  newline
+(;;) show ( ) show (Response:) show ( ) show (\(peers) show ( ) show (...\)) show  newline
+(;;) show ( ) show (Announce) show ( ) show (new) show ( ) show (content) show  newline
+(\(announce) show ( ) show (\("sha512:...") show ( ) show ("sha512:..."\)\)) show  newline
+(;;) show ( ) show (Response:) show ( ) show (\(ack\)) show  newline
+ newline
+ newline
+(Transport) show ( ) show (Bindings) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(Native:) show ( ) show (UDP/IPv6,) show ( ) show (port) show ( ) show (7777) show ( ) show (\(primary\)) show  newline
+(Fallback:) show ( ) show (TCP/IPv6,) show ( ) show (port) show ( ) show (7777) show ( ) show (\(firewalls\)) show  newline
+(Legacy:) show ( ) show (TCP/IPv4,) show ( ) show (port) show ( ) show (7777) show ( ) show (\(transition\)) show  newline
+(Stealth:) show ( ) show (Tor) show ( ) show (onion) show ( ) show (service) show ( ) show (\(censorship) show ( ) show (resistance\)) show  newline
+(Offline:) show ( ) show (USB) show ( ) show (drive,) show ( ) show (file) show ( ) show (copy) show ( ) show (\(sneakernet\)) show  newline
+(Export:) show ( ) show (Git) show ( ) show (bundle) show ( ) show (\(GitHub) show ( ) show (compatibility\)) show  newline
+ newline
+ newline
+(Link-Adaptive) show ( ) show (Transport) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(Transport) show ( ) show (parameters) show ( ) show (adapt) show ( ) show (to) show ( ) show (detected) show ( ) show (link) show ( ) show (type:) show  newline
+ newline
+ newline
+(\(transport-config) show  newline
+(\(link-detection) show ( ) show (auto\)) show ( ) show (;) show ( ) show (Probe) show ( ) show (RTT/bandwidth) show  newline
+(\(chunk-size) show ( ) show (adaptive\)) show ( ) show (;) show ( ) show (See) show ( ) show (Chunking) show ( ) show (Strategy) show  newline
+(\(batch-window-ms) show ( ) show (;) show ( ) show (Aggregate) show ( ) show (small) show ( ) show (messages) show  newline
+(\(fiber) show ( ) show (50\)) show  newline
+(\(starlink) show ( ) show (500\)) show  newline
+(\(lte) show ( ) show (200\)) show  newline
+(\(lora) show ( ) show (2000\)\)) show  newline
+(\(retry-strategy) show ( ) show (exponential\)) show  newline
+(\(max-in-flight) show ( ) show (;) show ( ) show (Parallelism) show ( ) show (based) show ( ) show (on) show ( ) show (BDP) show  newline
+(\(fiber) show ( ) show (100\)) show  newline
+(\(starlink) show ( ) show (10\)) show  newline
+(\(lte) show ( ) show (5\)) show  newline
+(\(lora) show ( ) show (1\)\)) show  newline
+(\(keepalive-sec) show ( ) show (;) show ( ) show (Idle) show ( ) show (timeout) show  newline
+(\(fiber) show ( ) show (60\)) show  newline
+(\(starlink) show ( ) show (300\)) show  newline
+(\(lte) show ( ) show (120\)) show  newline
+(\(lora) show ( ) show (600\)\)\)) show  newline
+(;;) show ( ) show (Re-evaluate) show ( ) show (on) show ( ) show (link) show ( ) show (change) show  newline
+(\(define) show ( ) show (\(on-link-change!) show ( ) show (old-link) show ( ) show (new-link\)) show  newline
+("Adjust) show ( ) show (transport) show ( ) show (when) show ( ) show (connectivity) show ( ) show (changes.") show  newline
+(\(let) show ( ) show (\(\(config) show ( ) show (\(detect-link-profile) show ( ) show (new-link\)\)\)) show  newline
+(\(transport-reconfigure!) show ( ) show (config\)) show  newline
+(\(log-link-transition) show ( ) show (old-link) show ( ) show (new-link\)\)\)) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

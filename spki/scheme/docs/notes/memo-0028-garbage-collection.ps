@@ -15,1042 +15,1610 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0028: Garbage Collection) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies garbage collection for the Library of Cyberspace:) show newline
-(how vaults identify and reclaim storage from unreferenced objects while) show newline
-(preserving pinned content, respecting tombstones, and maintaining audit) show newline
-(trails. Content-addressed storage requires careful GC to avoid data) show newline
-(loss.) show newline
-() show newline
-(The Library of Cyberspace is an archival system. The default is) show newline
-(preservation, not collection. Objects evaporate only with explicit) show newline
-(consent.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PHILOSOPHY: THE SOUP PRESERVES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The soup is not a runtime heap. It is a library.) show newline
-() show newline
-(In runtime garbage collection, the goal is to reclaim memory quickly.) show newline
-(Young objects die young. Old objects survive. Collect aggressively.) show newline
-() show newline
-(In archival garbage collection, the opposite holds:) show newline
-() show newline
-(  * Old objects are precious) show newline
-(  * They have survived, been referenced, replicated) show newline
-(  * Young objects are suspect) show newline
-(  * They may be transient, failed, or temporary) show newline
-(  * Deletion is violence) show newline
-(  * Once collected, an object is gone from this vault forever) show newline
-(  * Preservation is the default) show newline
-(  * When in doubt, keep it) show newline
-() show newline
-(This inverts the runtime GC assumption that most objects die young; in) show newline
-(an archive, age confers value.) show newline
-() show newline
-(The Library of Alexandria burned once. We will not let it burn again.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Content-addressed storage accumulates objects forever unless actively) show newline
-(pruned:) show newline
-() show newline
-(  * Orphaned objects) show newline
-(  * No longer referenced by any root) show newline
-(  * Superseded versions) show newline
-(  * Old versions after updates) show newline
-(  * Failed uploads) show newline
-(  * Partial or abandoned writes) show newline
-(  * Temporary objects) show newline
-(  * Intermediate computation results) show newline
-() show newline
-(Without collection, storage grows without bound; the question is not) show newline
-(whether to collect but how conservatively.) show newline
-() show newline
-(But deletion is dangerous:) show newline
-() show newline
-(  * Hash as capability) show newline
-(  * Someone may hold the hash) show newline
-(  * Lazy replication) show newline
-(  * Remote vaults may need it later) show newline
-(  * Audit requirements) show newline
-(  * May need historical data) show newline
-(  * Resurrection) show newline
-(  * Deleted objects may be re-added) show newline
-() show newline
-(Each risk represents a real failure mode; premature collection has) show newline
-(caused data loss in every major distributed system.) show newline
-() show newline
-(GC must be conservative, consensual, and auditable.) show newline
-() show newline
-(The default is: never collect. Collection requires explicit action.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(OBJECT LIFECYCLE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(States) show newline
-(------) show newline
-() show newline
-() show newline
-(                        ┌─────────┐) show newline
-(              write     │         │) show newline
-(            ─────────►  │  LIVE   │) show newline
-(                        │         │) show newline
-(                        └────┬────┘) show newline
-(                             │) show newline
-(                  ┌──────────┼──────────┐) show newline
-(                  │          │          │) show newline
-(                  ▼          ▼          ▼) show newline
-(             ┌────────┐ ┌────────┐ ┌────────┐) show newline
-(             │PINNED  │ │TOMBSTONE│ │ORPHANED│) show newline
-(             └────────┘ └────────┘ └───┬────┘) show newline
-(                                       │) show newline
-(                                       │ GC) show newline
-(                                       ▼) show newline
-(                                  ┌────────┐) show newline
-(                                  │COLLECTED│) show newline
-(                                  └────────┘) show newline
-() show newline
-() show newline
-(State Transitions) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    \(define \(object-state hash\)) show newline
-(      \(cond) show newline
-(        \(\(pinned? hash\) 'pinned\)) show newline
-(        \(\(tombstoned? hash\) 'tombstone\)) show newline
-(        \(\(referenced? hash\) 'live\)) show newline
-(        \(else 'orphaned\)\)\)) show newline
-(    \(define \(can-collect? hash\)) show newline
-(      \(and \(eq? \(object-state hash\) 'orphaned\)) show newline
-(           \(not \(in-grace-period? hash\)\)) show newline
-(           \(not \(pending-replication? hash\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCE COUNTING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Direct References) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    ;; Track incoming references) show newline
-(    \(define ref-counts \(make-hash-table\)\)) show newline
-(    \(define \(add-reference from-hash to-hash\)) show newline
-(      \(let \(\(count \(hash-table-ref ref-counts to-hash 0\)\)\)) show newline
-(        \(hash-table-set! ref-counts to-hash \(+ count 1\)\)) show newline
-(        \(audit-append action: \(add-ref ,from-hash ,to-hash\)\)\)\)) show newline
-(    \(define \(remove-reference from-hash to-hash\)) show newline
-(      \(let \(\(count \(hash-table-ref ref-counts to-hash 0\)\)\)) show newline
-(        \(hash-table-set! ref-counts to-hash \(max 0 \(- count 1\)\)\)) show newline
-(        \(audit-append action: \(remove-ref ,from-hash ,to-hash\)\)\)\)) show newline
-(    \(define \(reference-count hash\)) show newline
-(      \(hash-table-ref ref-counts hash 0\)\)) show newline
-() show newline
-() show newline
-(Root References) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    ;; GC roots - objects that are always reachable) show newline
-(    \(define gc-roots \(make-hash-set\)\)) show newline
-(    \(define \(add-gc-root hash reason\)) show newline
-(      \(hash-set-add! gc-roots hash\)) show newline
-(      \(audit-append action: \(add-root ,hash ,reason\)\)\)) show newline
-(    \(define \(remove-gc-root hash\)) show newline
-(      \(hash-set-remove! gc-roots hash\)) show newline
-(      \(audit-append action: \(remove-root ,hash\)\)\)) show newline
-(    \(define \(gc-root? hash\)) show newline
-(      \(hash-set-member? gc-roots hash\)\)) show newline
-() show newline
-() show newline
-(Implicit Roots) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    ;; Some objects are implicitly rooted) show newline
-(    \(define \(implicit-root? hash\)) show newline
-(      \(or \(pinned? hash\)) show newline
-(          \(soup-object-type? hash 'certificate\)  ; Certs are roots) show newline
-(          \(soup-object-type? hash 'audit-entry\)  ; Audit is sacred) show newline
-(          \(recent-write? hash\)\)\)                 ; Grace period) show newline
-() show newline
-() show newline
-(Cycle Detection) show newline
-(---------------) show newline
-() show newline
-(Reference counting alone cannot detect cycles \(A→B→C→A\). The soup) show newline
-(uses mark-and-sweep as the authoritative reachability test, with) show newline
-(reference counts as a fast path for common cases.) show newline
-() show newline
-() show newline
-(    ;; Reference counting is advisory, not authoritative) show newline
-(    \(define \(fast-unreachable? hash\)) show newline
-(      "Quick check - zero refs MIGHT mean unreachable") show newline
-(      \(and \(zero? \(reference-count hash\)\)) show newline
-(           \(not \(gc-root? hash\)\)) show newline
-(           \(not \(implicit-root? hash\)\)\)\)) show newline
-(    ;; Mark-and-sweep is authoritative) show newline
-(    \(define \(truly-unreachable? hash marked-set\)) show newline
-(      "Authoritative check - not in marked set means unreachable") show newline
-(      \(not \(hash-set-member? marked-set hash\)\)\)) show newline
-(    ;; Cycle detection via mark-and-sweep) show newline
-(    \(define \(detect-cycles\)) show newline
-(      "Find reference cycles \(objects that reference each other but are unreachable\)") show newline
-(      \(let* \(\(marked \(mark-reachable\)\)) show newline
-(             \(all-hashes \(all-object-hashes\)\)) show newline
-(             \(unmarked \(filter \(lambda \(h\) \(not \(hash-set-member? marked h\)\)\) all-hashes\)\)) show newline
-(             \(with-refs \(filter \(lambda \(h\) \(> \(reference-count h\) 0\)\) unmarked\)\)\)) show newline
-(        ;; These have refs but are unreachable - they're in cycles) show newline
-(        with-refs\)\)) show newline
-() show newline
-(In archival mode, cycles are preserved \(they may be intentional - e.g.,) show newline
-(bidirectional links\). Only explicit evaporation removes them.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MARK AND SWEEP) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Tricolor Abstraction) show newline
-(--------------------) show newline
-() show newline
-(The naive recursive mark algorithm risks stack overflow on deep object) show newline
-(graphs. The tricolor abstraction provides:) show newline
-() show newline
-(  * White: Unvisited, potentially garbage) show newline
-(  * Gray: Visited but references not yet scanned) show newline
-(  * Black: Visited and all references scanned) show newline
-() show newline
-() show newline
-(    ;; Tricolor sets - explicit worklist avoids stack overflow) show newline
-(    \(define white-set \(make-hash-set\)\)  ; Candidates for collection) show newline
-(    \(define gray-set \(make-hash-set\)\)   ; Work queue) show newline
-(    \(define black-set \(make-hash-set\)\)  ; Proven reachable) show newline
-(    \(define \(tricolor-init\)) show newline
-(      "Initialize: all objects are white") show newline
-(      \(hash-set-clear! white-set\)) show newline
-(      \(hash-set-clear! gray-set\)) show newline
-(      \(hash-set-clear! black-set\)) show newline
-(      \(for-each \(lambda \(h\) \(hash-set-add! white-set h\)\)) show newline
-(                \(all-object-hashes\)\)\)) show newline
-(    \(define \(shade-gray! hash\)) show newline
-(      "Move object from white to gray \(discovered\)") show newline
-(      \(when \(hash-set-member? white-set hash\)) show newline
-(        \(hash-set-remove! white-set hash\)) show newline
-(        \(hash-set-add! gray-set hash\)\)\)) show newline
-(    \(define \(shade-black! hash\)) show newline
-(      "Move object from gray to black \(fully scanned\)") show newline
-(      \(hash-set-remove! gray-set hash\)) show newline
-(      \(hash-set-add! black-set hash\)\)) show newline
-() show newline
-() show newline
-(Mark Phase \(Worklist Algorithm\)) show newline
-(-------------------------------) show newline
-() show newline
-() show newline
-(    \(define \(mark-reachable\)) show newline
-(      "Mark all objects reachable from roots using worklist") show newline
-(      \(tricolor-init\)) show newline
-(      ;; Shade roots gray) show newline
-(      \(for-each shade-gray! \(hash-set->list gc-roots\)\)) show newline
-(      \(for-each \(lambda \(hash\)) show newline
-(                  \(when \(implicit-root? hash\)) show newline
-(                    \(shade-gray! hash\)\)\)) show newline
-(                \(all-object-hashes\)\)) show newline
-(      ;; Process gray objects until none remain) show newline
-(      \(let loop \(\)) show newline
-(        \(unless \(hash-set-empty? gray-set\)) show newline
-(          \(let \(\(current \(hash-set-pop! gray-set\)\)\)) show newline
-(            ;; Shade all white references gray) show newline
-(            \(for-each shade-gray! \(object-references current\)\)) show newline
-(            ;; Current is now fully scanned) show newline
-(            \(shade-black! current\)) show newline
-(            \(loop\)\)\)\)) show newline
-(      black-set\)  ; Return reachable set) show newline
-() show newline
-() show newline
-(Incremental Tricolor Marking) show newline
-(----------------------------) show newline
-() show newline
-(For large soups, mark in batches to avoid long pauses:) show newline
-() show newline
-() show newline
-(    \(define mark-batch-size 1000\)  ; Objects per batch) show newline
-(    \(define \(mark-incremental\)) show newline
-(      "Mark in batches, yielding between batches") show newline
-(      \(let \(\(batch 0\)\)) show newline
-(        \(let loop \(\)) show newline
-(          \(unless \(or \(hash-set-empty? gray-set\)) show newline
-(                      \(>= batch mark-batch-size\)\)) show newline
-(            \(let \(\(current \(hash-set-pop! gray-set\)\)\)) show newline
-(              \(for-each shade-gray! \(object-references current\)\)) show newline
-(              \(shade-black! current\)) show newline
-(              \(set! batch \(+ batch 1\)\)) show newline
-(              \(loop\)\)\)\)) show newline
-(        ;; Return whether more work remains) show newline
-(        \(not \(hash-set-empty? gray-set\)\)\)\)) show newline
-(    ;; Usage: call repeatedly until returns #f) show newline
-(    \(define \(incremental-gc-step\)) show newline
-(      \(if \(mark-incremental\)) show newline
-(          'more-work) show newline
-(          \(begin) show newline
-(            \(sweep-white\)) show newline
-(            'complete\)\)\)) show newline
-() show newline
-() show newline
-(Concurrent Write Barrier) show newline
-(------------------------) show newline
-() show newline
-(For concurrent GC, mutations must maintain the tricolor invariant: a) show newline
-(black object cannot point to a white object.) show newline
-() show newline
-() show newline
-(    ;; Write barrier for concurrent GC) show newline
-(    \(define \(cas-put-concurrent data\)) show newline
-(      "Store with write barrier for concurrent GC") show newline
-(      \(let \(\(hash \(cas-put data\)\)\)) show newline
-(        ;; If GC is running and we create new references) show newline
-(        \(when gc-running?) show newline
-(          ;; Shade new object gray \(conservative\)) show newline
-(          \(shade-gray! hash\)) show newline
-(          ;; Re-shade any black object referencing new object) show newline
-(          \(for-each \(lambda \(referencer\)) show newline
-(                      \(when \(hash-set-member? black-set referencer\)) show newline
-(                        ;; Demote to gray - needs re-scanning) show newline
-(                        \(hash-set-remove! black-set referencer\)) show newline
-(                        \(hash-set-add! gray-set referencer\)\)\)) show newline
-(                    \(incoming-references hash\)\)\)) show newline
-(        hash\)\)) show newline
-(    ;; Snapshot-at-the-beginning \(SATB\) barrier) show newline
-(    \(define \(reference-update! from-hash old-ref new-ref\)) show newline
-(      "SATB write barrier: preserve old reference for marking") show newline
-(      \(when \(and gc-running? old-ref\)) show newline
-(        ;; Keep old reference alive through this GC cycle) show newline
-(        \(shade-gray! old-ref\)\)) show newline
-(      \(update-reference! from-hash new-ref\)\)) show newline
-() show newline
-() show newline
-(Original Mark \(Preserved for Reference\)) show newline
-(---------------------------------------) show newline
-() show newline
-() show newline
-(    ;; Simple recursive version \(for small object graphs only\)) show newline
-(    \(define \(mark-reachable/simple\)) show newline
-(      "Mark all objects reachable from roots \(recursive, can stack overflow\)") show newline
-(      \(let \(\(marked \(make-hash-set\)\)\)) show newline
-(        \(define \(mark hash\)) show newline
-(          \(unless \(hash-set-member? marked hash\)) show newline
-(            \(hash-set-add! marked hash\)) show newline
-(            \(for-each mark \(object-references hash\)\)\)\)) show newline
-(        ;; Mark from explicit roots) show newline
-(        \(for-each mark \(hash-set->list gc-roots\)\)) show newline
-(        ;; Mark from implicit roots) show newline
-(        \(for-each \(lambda \(hash\)) show newline
-(                    \(when \(implicit-root? hash\)) show newline
-(                      \(mark hash\)\)\)) show newline
-(                  \(all-object-hashes\)\)) show newline
-(        marked\)\)) show newline
-() show newline
-() show newline
-(Sweep Phase) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    \(define \(sweep marked\)) show newline
-(      "Collect unmarked objects") show newline
-(      \(let \(\(collected '\(\)\)\)) show newline
-(        \(for-each) show newline
-(          \(lambda \(hash\)) show newline
-(            \(unless \(hash-set-member? marked hash\)) show newline
-(              \(when \(can-collect? hash\)) show newline
-(                \(set! collected \(cons hash collected\)\)) show newline
-(                \(collect-object! hash\)\)\)\)) show newline
-(          \(all-object-hashes\)\)) show newline
-(        collected\)\)) show newline
-(    \(define \(collect-object! hash\)) show newline
-(      "Remove object from storage") show newline
-(      \(let \(\(obj \(cas-get hash\)\)\)) show newline
-(        \(audit-append) show newline
-(          action: 'gc-collect) show newline
-(          hash: hash) show newline
-(          size: \(object-size obj\)) show newline
-(          age: \(object-age obj\)\)) show newline
-(        \(cas-delete! hash\)\)\)) show newline
-() show newline
-() show newline
-(Full GC) show newline
-(-------) show newline
-() show newline
-() show newline
-(    \(define \(gc-full\)) show newline
-(      "Perform full garbage collection") show newline
-(      \(let \(\(start \(current-time\)\)\)) show newline
-(        \(audit-append action: 'gc-start type: 'full\)) show newline
-(        \(let* \(\(marked \(mark-reachable\)\)) show newline
-(               \(collected \(sweep marked\)\)\)) show newline
-(          \(audit-append) show newline
-(            action: 'gc-complete) show newline
-(            type: 'full) show newline
-(            duration: \(- \(current-time\) start\)) show newline
-(            marked: \(hash-set-size marked\)) show newline
-(            collected: \(length collected\)) show newline
-(            bytes-freed: \(sum \(map object-size collected\)\)\)) show newline
-(          collected\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(INCREMENTAL GC) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Archival Generational Collection) show newline
-(--------------------------------) show newline
-() show newline
-(Traditional generational GC collects young objects first \(they die) show newline
-(young\). Archival GC inverts this: old objects are precious.) show newline
-() show newline
-() show newline
-(    ;; Archival generations - age increases protection) show newline
-(    \(define generations) show newline
-(      '\(\(ephemeral . 3600\)     ; < 1 hour: temporary, collect freely) show newline
-(        \(young . 86400\)        ; < 1 day: probably transient) show newline
-(        \(maturing . 604800\)    ; < 1 week: gaining stability) show newline
-(        \(stable . 2592000\)     ; < 30 days: likely permanent) show newline
-(        \(archival . #f\)\)\)      ; >= 30 days: NEVER collect automatically) show newline
-(    \(define \(object-generation hash\)) show newline
-(      \(let \(\(age \(object-age hash\)\)\)) show newline
-(        \(cond) show newline
-(          \(\(< age 3600\) 'ephemeral\)) show newline
-(          \(\(< age 86400\) 'young\)) show newline
-(          \(\(< age 604800\) 'maturing\)) show newline
-(          \(\(< age 2592000\) 'stable\)) show newline
-(          \(else 'archival\)\)\)\)) show newline
-(    ;; Collection eligibility by generation) show newline
-(    \(define \(generation-collectible? gen\)) show newline
-(      \(case gen) show newline
-(        \(\(ephemeral\) #t\)       ; Freely collectible) show newline
-(        \(\(young\) #t\)           ; Collectible with grace period) show newline
-(        \(\(maturing\) 'warning\)  ; Requires explicit approval) show newline
-(        \(\(stable\) 'quorum\)     ; Requires federation quorum) show newline
-(        \(\(archival\) #f\)\)\)      ; NEVER collect automatically) show newline
-(    \(define \(gc-generation gen\)) show newline
-(      "Collect only specified generation \(archival only via evaporation\)") show newline
-(      \(when \(eq? gen 'archival\)) show newline
-(        \(error "Archival objects require evaporation certificate"\)\)) show newline
-(      \(let \(\(candidates \(filter \(lambda \(h\)) show newline
-(                                  \(eq? \(object-generation h\) gen\)\)) show newline
-(                                \(all-object-hashes\)\)\)\)) show newline
-(        \(gc-candidates candidates\)\)\)) show newline
-() show newline
-() show newline
-(Write Barrier) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    ;; Track modified objects for incremental GC) show newline
-(    \(define modified-set \(make-hash-set\)\)) show newline
-(    \(define \(cas-put-with-barrier data\)) show newline
-(      \(let \(\(hash \(cas-put data\)\)\)) show newline
-(        \(hash-set-add! modified-set hash\)) show newline
-(        hash\)\)) show newline
-(    \(define \(gc-incremental\)) show newline
-(      "Collect recently modified objects if orphaned") show newline
-(      \(let \(\(candidates \(hash-set->list modified-set\)\)\)) show newline
-(        \(hash-set-clear! modified-set\)) show newline
-(        \(gc-candidates candidates\)\)\)) show newline
-() show newline
-() show newline
-(Concurrent GC) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    ;; GC runs concurrently with mutations) show newline
-(    \(define gc-lock \(make-mutex\)\)) show newline
-(    \(define gc-running? #f\)) show newline
-(    \(define \(gc-concurrent\)) show newline
-(      "Run GC without stopping the world") show newline
-(      \(when \(mutex-try-lock! gc-lock\)) show newline
-(        \(set! gc-running? #t\)) show newline
-(        \(let \(\(snapshot \(snapshot-roots\)\)\)) show newline
-(          ;; Mark phase uses snapshot) show newline
-(          \(let \(\(marked \(mark-from-snapshot snapshot\)\)\)) show newline
-(            ;; Sweep only clearly dead objects) show newline
-(            \(sweep-conservative marked\)\)\)) show newline
-(        \(set! gc-running? #f\)) show newline
-(        \(mutex-unlock! gc-lock\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PINNING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Pin Management) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    \(define pins \(make-hash-table\)\)) show newline
-(    \(define \(pin! hash reason #!key duration\)) show newline
-(      "Protect object from GC") show newline
-(      \(hash-table-set! pins hash) show newline
-(        \(\(reason . ,reason\)) show newline
-(          \(pinned-at . ,\(current-time\)\)) show newline
-(          \(expires . ,\(and duration \(+ \(current-time\) duration\)\)\)) show newline
-(          \(pinned-by . ,\(current-principal\)\)\)\)) show newline
-(      \(audit-append action: \(pin ,hash ,reason\)\)\)) show newline
-(    \(define \(unpin! hash\)) show newline
-(      "Allow object to be collected") show newline
-(      \(hash-table-delete! pins hash\)) show newline
-(      \(audit-append action: `\(unpin ,hash\)\)\)) show newline
-(    \(define \(pinned? hash\)) show newline
-(      \(let \(\(pin \(hash-table-ref pins hash #f\)\)\)) show newline
-(        \(and pin) show newline
-(             \(or \(not \(assoc-ref pin 'expires\)\)) show newline
-(                 \(> \(assoc-ref pin 'expires\) \(current-time\)\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Transitive Pinning) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    \(define \(pin-tree! root-hash reason\)) show newline
-(      "Pin object and all objects it references") show newline
-(      \(let \(\(visited \(make-hash-set\)\)\)) show newline
-(        \(define \(pin-recursive hash\)) show newline
-(          \(unless \(hash-set-member? visited hash\)) show newline
-(            \(hash-set-add! visited hash\)) show newline
-(            \(pin! hash reason\)) show newline
-(            \(for-each pin-recursive \(object-references hash\)\)\)\)) show newline
-(        \(pin-recursive root-hash\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TOMBSTONES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Tombstone Handling) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    ;; Tombstones are never collected) show newline
-(    \(define \(tombstoned? hash\)) show newline
-(      \(let \(\(obj \(soup-get hash\)\)\)) show newline
-(        \(and obj \(eq? \(soup-object-type obj\) 'tombstone\)\)\)\)) show newline
-(    ;; Tombstones prevent resurrection) show newline
-(    \(define \(cas-put-checked data\)) show newline
-(      \(let \(\(hash \(content-hash data\)\)\)) show newline
-(        \(when \(tombstoned? hash\)) show newline
-(          \(error "Cannot resurrect tombstoned object" hash\)\)) show newline
-(        \(cas-put data\)\)\)) show newline
-() show newline
-() show newline
-(Tombstone Expiry) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    ;; Optional: tombstones can expire) show newline
-(    \(define \(tombstone-expired? hash\)) show newline
-(      \(let \(\(tomb \(soup-get hash\)\)\)) show newline
-(        \(and tomb) show newline
-(             \(assoc-ref \(soup-object-metadata tomb\) 'expires\)) show newline
-(             \(< \(assoc-ref \(soup-object-metadata tomb\) 'expires\)) show newline
-(                \(current-time\)\)\)\)\)) show newline
-(    \(define \(gc-expired-tombstones\)) show newline
-(      "Remove expired tombstones") show newline
-(      \(for-each) show newline
-(        \(lambda \(hash\)) show newline
-(          \(when \(and \(tombstoned? hash\) \(tombstone-expired? hash\)\)) show newline
-(            \(collect-object! hash\)\)\)) show newline
-(        \(all-object-hashes\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(GRACE PERIODS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Write Grace Period) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    ;; Recently written objects are protected) show newline
-(    \(define write-grace-period 86400\)  ; 24 hours) show newline
-(    \(define \(recent-write? hash\)) show newline
-(      \(let \(\(obj \(soup-get hash\)\)\)) show newline
-(        \(and obj) show newline
-(             \(< \(- \(current-time\) \(soup-object-created obj\)\)) show newline
-(                write-grace-period\)\)\)\)) show newline
-() show newline
-() show newline
-(Replication Grace Period) show newline
-(------------------------) show newline
-() show newline
-() show newline
-(    ;; Objects pending replication are protected) show newline
-(    \(define pending-replication \(make-hash-set\)\)) show newline
-(    \(define \(mark-pending-replication hash vaults\)) show newline
-(      \(hash-set-add! pending-replication hash\)) show newline
-(      \(audit-append action: `\(pending-replication ,hash ,vaults\)\)\)) show newline
-(    \(define \(clear-pending-replication hash\)) show newline
-(      \(hash-set-remove! pending-replication hash\)\)) show newline
-(    \(define \(pending-replication? hash\)) show newline
-(      \(hash-set-member? pending-replication hash\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(EVAPORATION \(ARCHIVAL COLLECTION\)) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Objects don't get "garbage collected" in an archive. They evaporate -) show newline
-(and only with explicit, signed, multi-party consent.) show newline
-() show newline
-() show newline
-(Evaporation Certificate) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(    ;; An evaporation certificate authorizes deletion) show newline
-(    \(define-record-type evaporation-certificate) show newline
-(      \(make-evaporation-cert hash reason signers timestamp\)) show newline
-(      evaporation-cert?) show newline
-(      \(hash evap-hash\)           ; Object to evaporate) show newline
-(      \(reason evap-reason\)       ; Why \(legal, storage, corruption, etc.\)) show newline
-(      \(signers evap-signers\)     ; List of \(principal . signature\)) show newline
-(      \(timestamp evap-timestamp\)\)) show newline
-(    ;; Reasons for evaporation \(enumerated, auditable\)) show newline
-(    \(define evaporation-reasons) show newline
-(      '\(legal-requirement        ; Court order, DMCA, etc.) show newline
-(        storage-emergency        ; Vault at capacity) show newline
-(        data-corruption          ; Object verified corrupt) show newline
-(        owner-request            ; Content owner requests removal) show newline
-(        federation-consensus\)\)   ; Quorum agrees to remove) show newline
-(    \(define \(create-evaporation-cert hash reason\)) show newline
-(      "Create unsigned evaporation certificate") show newline
-(      \(make-evaporation-cert) show newline
-(        hash) show newline
-(        reason) show newline
-(        '\(\)  ; No signatures yet) show newline
-(        \(current-time\)\)\)) show newline
-(    \(define \(sign-evaporation-cert cert private-key\)) show newline
-(      "Add signature to evaporation certificate") show newline
-(      \(let* \(\(principal \(key->principal private-key\)\)) show newline
-(             \(sig \(sign-data \(evap-hash cert\) private-key\)\)\)) show newline
-(        \(make-evaporation-cert) show newline
-(          \(evap-hash cert\)) show newline
-(          \(evap-reason cert\)) show newline
-(          \(cons \(cons principal sig\) \(evap-signers cert\)\)) show newline
-(          \(evap-timestamp cert\)\)\)\)) show newline
-() show newline
-() show newline
-(Quorum Requirement) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    ;; Evaporation requires M-of-N signatures from federation) show newline
-(    \(define evaporation-quorum) show newline
-(      '\(\(ephemeral . 1\)     ; Single vault can evaporate) show newline
-(        \(young . 1\)         ; Single vault can evaporate) show newline
-(        \(maturing . 2\)      ; Two vaults must agree) show newline
-(        \(stable . 3\)        ; Three vaults must agree) show newline
-(        \(archival . #f\)\)\)   ; Requires special process \(see below\)) show newline
-(    \(define \(evaporation-quorum-met? cert generation\)) show newline
-(      \(let \(\(required \(assoc-ref evaporation-quorum generation\)\)\)) show newline
-(        \(cond) show newline
-(          \(\(not required\) #f\)  ; Archival: never automatic) show newline
-(          \(else \(>= \(length \(evap-signers cert\)\) required\)\)\)\)\)) show newline
-(    \(define \(evaporate! hash cert\)) show newline
-(      "Evaporate object with valid certificate") show newline
-(      \(let \(\(gen \(object-generation hash\)\)\)) show newline
-(        \(unless \(evaporation-quorum-met? cert gen\)) show newline
-(          \(error "Evaporation quorum not met") show newline
-(                 `\(generation ,gen required ,\(assoc-ref evaporation-quorum gen\)\)\)\)) show newline
-(        ;; Archival objects require special handling) show newline
-(        \(when \(eq? gen 'archival\)) show newline
-(          \(unless \(archival-evaporation-authorized? cert\)) show newline
-(            \(error "Archival evaporation requires governance approval"\)\)\)) show newline
-(        ;; Log everything before deletion) show newline
-(        \(audit-append) show newline
-(          action: 'evaporate) show newline
-(          hash: hash) show newline
-(          generation: gen) show newline
-(          certificate: cert) show newline
-(          reason: \(evap-reason cert\)) show newline
-(          signers: \(map car \(evap-signers cert\)\)\)) show newline
-(        ;; Finally, delete) show newline
-(        \(cas-delete! hash\)\)\)) show newline
-() show newline
-() show newline
-(Archival Object Evaporation) show newline
-(---------------------------) show newline
-() show newline
-(Archival objects \(>30 days\) receive maximum protection. They can only) show newline
-(evaporate via:) show newline
-() show newline
-(  * Legal requirement - With proof of legal order) show newline
-(  * Data corruption - With cryptographic proof of corruption) show newline
-(  * Governance vote - Per Memo-036 quorum protocol) show newline
-() show newline
-(These narrow exceptions exist because even sacred objects sometimes must) show newline
-(go, but only with extraordinary justification.) show newline
-() show newline
-() show newline
-(    \(define \(archival-evaporation-authorized? cert\)) show newline
-(      "Check if archival evaporation is properly authorized") show newline
-(      \(case \(evap-reason cert\)) show newline
-(        \(\(legal-requirement\)) show newline
-(         ;; Must include legal order reference) show newline
-(         \(and \(evap-legal-order cert\)) show newline
-(              \(verify-legal-order \(evap-legal-order cert\)\)\)\)) show newline
-(        \(\(data-corruption\)) show newline
-(         ;; Must include corruption proof) show newline
-(         \(and \(evap-corruption-proof cert\)) show newline
-(              \(verify-corruption \(evap-hash cert\) \(evap-corruption-proof cert\)\)\)\)) show newline
-(        \(\(federation-consensus\)) show newline
-(         ;; Must have governance quorum \(Memo-036\)) show newline
-(         \(governance-quorum-met? cert\)\)) show newline
-(        \(else #f\)\)\)  ; No other reasons valid for archival) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DISTRIBUTED GC) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Coordinated Collection) show newline
-(----------------------) show newline
-() show newline
-() show newline
-(    ;; Multi-vault GC requires coordination) show newline
-(    \(define \(distributed-gc vaults\)) show newline
-(      "Coordinate GC across vault federation") show newline
-(      ;; Phase 1: Gather root sets) show newline
-(      \(let \(\(root-sets \(map vault-roots vaults\)\)\)) show newline
-(        ;; Phase 2: Compute global reachability) show newline
-(        \(let \(\(global-marked \(union-all root-sets\)\)\)) show newline
-(          ;; Phase 3: Propose evaporation \(no unilateral deletion\)) show newline
-(          \(for-each \(lambda \(vault\)) show newline
-(                      \(vault-propose-evaporation vault global-marked\)\)) show newline
-(                    vaults\)\)\)\)) show newline
-() show newline
-() show newline
-(Remote Reference Tracking) show newline
-(-------------------------) show newline
-() show newline
-() show newline
-(    ;; Track references from remote vaults) show newline
-(    \(define remote-refs \(make-hash-table\)\)) show newline
-(    \(define \(add-remote-reference vault-id hash\)) show newline
-(      \(let \(\(refs \(hash-table-ref remote-refs hash '\(\)\)\)\)) show newline
-(        \(hash-table-set! remote-refs hash \(cons vault-id refs\)\)\)\)) show newline
-(    \(define \(remove-remote-reference vault-id hash\)) show newline
-(      \(let \(\(refs \(hash-table-ref remote-refs hash '\(\)\)\)\)) show newline
-(        \(hash-table-set! remote-refs hash \(delete vault-id refs\)\)\)\)) show newline
-(    \(define \(has-remote-references? hash\)) show newline
-(      \(not \(null? \(hash-table-ref remote-refs hash '\(\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Lease-Based Collection) show newline
-(----------------------) show newline
-() show newline
-() show newline
-(    ;; Remote vaults lease objects) show newline
-(    \(define leases \(make-hash-table\)\)) show newline
-(    \(define \(grant-lease hash vault-id duration\)) show newline
-(      \(let \(\(expires \(+ \(current-time\) duration\)\)\)) show newline
-(        \(hash-table-set! leases hash) show newline
-(          \(cons \(cons vault-id expires\)) show newline
-(                \(hash-table-ref leases hash '\(\)\)\)\)\)\)) show newline
-(    \(define \(lease-active? hash\)) show newline
-(      \(let \(\(hash-leases \(hash-table-ref leases hash '\(\)\)\)\)) show newline
-(        \(any \(lambda \(lease\)) show newline
-(               \(> \(cdr lease\) \(current-time\)\)\)) show newline
-(             hash-leases\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(GC SCHEDULING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Archival Defaults) show newline
-(-----------------) show newline
-() show newline
-(The soup defaults to never collect. GC only runs when explicitly enabled) show newline
-(and only considers ephemeral/young generations automatically.) show newline
-() show newline
-() show newline
-(    ;; Archival GC mode) show newline
-(    \(define gc-mode 'archival\)  ; 'archival, 'conservative, or 'aggressive) show newline
-(    \(define \(gc-enabled?\)) show newline
-(      "Check if automatic GC is enabled") show newline
-(      \(not \(eq? gc-mode 'archival\)\)\)) show newline
-() show newline
-() show newline
-(Triggers) show newline
-(--------) show newline
-() show newline
-() show newline
-(    ;; GC triggered only under pressure, and only for young generations) show newline
-(    \(define \(should-gc?\)) show newline
-(      \(and \(gc-enabled?\)) show newline
-(           \(or \(> \(storage-usage-percent\) 95\)    ; Emergency only) show newline
-(               \(> \(ephemeral-orphan-count\) 1000\)\)\)\) ; Too many ephemeral orphans) show newline
-(    \(define \(gc-schedule\)) show newline
-(      "Run appropriate GC based on conditions and mode") show newline
-(      \(case gc-mode) show newline
-(        \(\(archival\)) show newline
-(         ;; Never automatic - only explicit evaporation) show newline
-(         \(audit-append action: 'gc-skipped reason: 'archival-mode\)\)) show newline
-(        \(\(conservative\)) show newline
-(         ;; Only ephemeral objects) show newline
-(         \(cond) show newline
-(           \(\(> \(storage-usage-percent\) 99\)) show newline
-(            \(gc-generation 'ephemeral\)) show newline
-(            \(gc-generation 'young\)\)  ; Emergency: young too) show newline
-(           \(\(> \(storage-usage-percent\) 95\)) show newline
-(            \(gc-generation 'ephemeral\)\)) show newline
-(           \(else) show newline
-(            \(audit-append action: 'gc-skipped reason: 'no-pressure\)\)\)\)) show newline
-(        \(\(aggressive\)) show newline
-(         ;; Traditional GC \(NOT RECOMMENDED for archives\)) show newline
-(         \(cond) show newline
-(           \(\(> \(storage-usage-percent\) 95\)) show newline
-(            \(gc-full\)\)) show newline
-(           \(\(> \(storage-usage-percent\) 80\)) show newline
-(            \(gc-generation 'young\)\)) show newline
-(           \(else) show newline
-(            \(gc-incremental\)\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Background GC) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    \(define gc-thread #f\)) show newline
-(    \(define \(start-gc-daemon interval\)) show newline
-(      "Start background GC daemon \(archival mode: monitoring only\)") show newline
-(      \(set! gc-thread) show newline
-(        \(thread-start!) show newline
-(          \(make-thread) show newline
-(            \(lambda \(\)) show newline
-(              \(let loop \(\)) show newline
-(                \(thread-sleep! interval\)) show newline
-(                ;; Always report status) show newline
-(                \(audit-append) show newline
-(                  action: 'gc-status) show newline
-(                  mode: gc-mode) show newline
-(                  storage-percent: \(storage-usage-percent\)) show newline
-(                  ephemeral-orphans: \(ephemeral-orphan-count\)) show newline
-(                  should-gc: \(should-gc?\)\)) show newline
-(                ;; Only act if enabled) show newline
-(                \(when \(should-gc?\)) show newline
-(                  \(gc-schedule\)\)) show newline
-(                \(loop\)\)\)\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SAFETY MECHANISMS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Dry Run) show newline
-(-------) show newline
-() show newline
-() show newline
-(    \(define \(gc-dry-run\)) show newline
-(      "Report what would be collected without collecting") show newline
-(      \(let* \(\(marked \(mark-reachable\)\)) show newline
-(             \(would-collect \(filter \(lambda \(h\)) show newline
-(                                      \(not \(hash-set-member? marked h\)\)\)) show newline
-(                                    \(all-object-hashes\)\)\)\)) show newline
-(        `\(\(would-collect . ,\(length would-collect\)\)) show newline
-(          \(bytes . ,\(sum \(map object-size would-collect\)\)\)) show newline
-(          \(samples . ,\(take would-collect 10\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Collection Log) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    ;; Every collection is logged with recovery info) show newline
-(    \(define \(collect-with-log! hash\)) show newline
-(      \(let \(\(obj \(cas-get hash\)\)\)) show newline
-(        ;; Log enough to reconstruct if needed) show newline
-(        \(audit-append) show newline
-(          action: 'gc-collect) show newline
-(          hash: hash) show newline
-(          size: \(object-size obj\)) show newline
-(          type: \(soup-object-type obj\)) show newline
-(          references: \(object-references hash\)) show newline
-(          metadata: \(soup-object-metadata obj\)\)) show newline
-(        \(cas-delete! hash\)\)\)) show newline
-() show newline
-() show newline
-(Recovery) show newline
-(--------) show newline
-() show newline
-() show newline
-(    ;; Recover recently collected object from audit log) show newline
-(    \(define \(gc-recover hash\)) show newline
-(      "Attempt to recover collected object") show newline
-(      \(let \(\(entry \(find \(lambda \(e\)) show newline
-(                           \(and \(eq? \(audit-action e\) 'gc-collect\)) show newline
-(                                \(equal? \(audit-hash e\) hash\)\)\)) show newline
-(                         \(recent-audit-entries\)\)\)\)) show newline
-(        \(if entry) show newline
-(            \(error "Object collected, metadata preserved in audit") show newline
-(                   \(audit-metadata entry\)\)) show newline
-(            \(error "Object not found in recent collections"\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(METRICS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(GC Statistics) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    \(define gc-stats) show newline
-(      \(\(collections . 0\)) show newline
-(        \(bytes-freed . 0\)) show newline
-(        \(objects-freed . 0\)) show newline
-(        \(total-time . 0\)) show newline
-(        \(last-gc . #f\)\)\)) show newline
-(    \(define \(update-gc-stats collected duration\)) show newline
-(      \(set! gc-stats) show newline
-(        \(\(collections . ,\(+ 1 \(assoc-ref gc-stats 'collections\)\)\)) show newline
-(          \(bytes-freed . ,\(+ \(sum \(map object-size collected\)\)) show newline
-(                             \(assoc-ref gc-stats 'bytes-freed\)\)\)) show newline
-(          \(objects-freed . ,\(+ \(length collected\)) show newline
-(                               \(assoc-ref gc-stats 'objects-freed\)\)\)) show newline
-(          \(total-time . ,\(+ duration \(assoc-ref gc-stats 'total-time\)\)\)) show newline
-(          \(last-gc . ,\(current-time\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Monitoring) show newline
-(----------) show newline
-() show newline
-() show newline
-(    ;; Expose GC metrics) show newline
-(    \(define \(gc-metrics\)) show newline
-(      `\(\(storage-used . ,\(storage-used\)\)) show newline
-(        \(storage-total . ,\(storage-total\)\)) show newline
-(        \(object-count . ,\(object-count\)\)) show newline
-(        \(orphan-estimate . ,\(orphan-estimate\)\)) show newline
-(        \(pinned-count . ,\(hash-table-size pins\)\)) show newline
-(        \(gc-stats . ,gc-stats\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(GC as Side Channel) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    ;; GC timing can leak information about object references) show newline
-(    ;; Use constant-time operations where possible) show newline
-(    \(define \(constant-time-mark hash\)) show newline
-(      \(let \(\(refs \(object-references hash\)\)\)) show newline
-(        ;; Always process same number of refs) show newline
-(        \(for-each mark \(pad-list refs max-refs\)\)\)\)) show newline
-() show newline
-() show newline
-(Denial of Service) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    ;; Prevent GC starvation attacks) show newline
-(    \(define max-pins-per-principal 10000\)) show newline
-(    \(define \(pin-with-limit! hash reason\)) show newline
-(      \(let \(\(count \(principal-pin-count \(current-principal\)\)\)\)) show newline
-(        \(when \(> count max-pins-per-principal\)) show newline
-(          \(error "Pin limit exceeded"\)\)) show newline
-(        \(pin! hash reason\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(INVARIANTS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    G1. Preservation default) show newline
-(        default-mode = archival → no-automatic-collection) show newline
-(    G2. Age increases protection) show newline
-(        age\(obj\) > age\(obj'\) → protection\(obj\) ≥ protection\(obj'\)) show newline
-(    G3. Evaporation requires consent) show newline
-(        evaporate\(hash\) requires signed-certificate\(hash\)) show newline
-(    G4. Quorum scales with age) show newline
-(        generation = archival → quorum = governance-level) show newline
-(    G5. Archival objects are sacred) show newline
-(        age > 30-days → no-automatic-evaporation) show newline
-(    G6. Audit trail preserved) show newline
-(        evaporate\(hash\) → audit-append\(hash, certificate, reason, signers\)) show newline
-(    G7. Mark-and-sweep authoritative) show newline
-(        truly-unreachable\(hash\) ↔ ¬member\(hash, mark-reachable\(\)\)) show newline
-(    G8. Cycles preserved) show newline
-(        cycle\(A, B, C\) ∧ archival-mode → preserve\(A, B, C\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * The Garbage Collection Handbook - Jones, Hosking, Moss) show newline
-(  * On-the-Fly Garbage Collection - Dijkstra et al.) show newline
-(  * Memo-020: Content-Addressed Storage) show newline
-(  * Memo-003: Cryptographic Audit Trail) show newline
-(  * Memo-036: Quorum Protocol with Homomorphic Voting) show newline
-(  * Memo-008: Threshold Signature Governance) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-09) show newline
-(  * Tricolor marking with worklist \(eliminates stack overflow\), incremental marking, SATB write barriers, concurrent GC support - 2026-01-09) show newline
-(  * Archival GC improvements: evaporation certificates, quorum requirements, reversed generational policy, cycle detection, preservation-first defaults - 2026-01-07) show newline
-(  * Initial draft) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0028:) show ( ) show (Garbage) show ( ) show (Collection) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (garbage) show ( ) show (collection) show ( ) show (for) show ( ) show (the) show ( ) show (Library) show ( ) show (of) show ( ) show (Cyberspace:) show  newline
+(how) show ( ) show (vaults) show ( ) show (identify) show ( ) show (and) show ( ) show (reclaim) show ( ) show (storage) show ( ) show (from) show ( ) show (unreferenced) show ( ) show (objects) show ( ) show (while) show  newline
+(preserving) show ( ) show (pinned) show ( ) show (content,) show ( ) show (respecting) show ( ) show (tombstones,) show ( ) show (and) show ( ) show (maintaining) show ( ) show (audit) show  newline
+(trails.) show ( ) show (Content-addressed) show ( ) show (storage) show ( ) show (requires) show ( ) show (careful) show ( ) show (GC) show ( ) show (to) show ( ) show (avoid) show ( ) show (data) show  newline
+(loss.) show  newline
+ newline
+(The) show ( ) show (Library) show ( ) show (of) show ( ) show (Cyberspace) show ( ) show (is) show ( ) show (an) show ( ) show (archival) show ( ) show (system.) show ( ) show (The) show ( ) show (default) show ( ) show (is) show  newline
+(preservation,) show ( ) show (not) show ( ) show (collection.) show ( ) show (Objects) show ( ) show (evaporate) show ( ) show (only) show ( ) show (with) show ( ) show (explicit) show  newline
+(consent.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PHILOSOPHY:) show ( ) show (THE) show ( ) show (SOUP) show ( ) show (PRESERVES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (soup) show ( ) show (is) show ( ) show (not) show ( ) show (a) show ( ) show (runtime) show ( ) show (heap.) show ( ) show (It) show ( ) show (is) show ( ) show (a) show ( ) show (library.) show  newline
+ newline
+(In) show ( ) show (runtime) show ( ) show (garbage) show ( ) show (collection,) show ( ) show (the) show ( ) show (goal) show ( ) show (is) show ( ) show (to) show ( ) show (reclaim) show ( ) show (memory) show ( ) show (quickly.) show  newline
+(Young) show ( ) show (objects) show ( ) show (die) show ( ) show (young.) show ( ) show (Old) show ( ) show (objects) show ( ) show (survive.) show ( ) show (Collect) show ( ) show (aggressively.) show  newline
+ newline
+(In) show ( ) show (archival) show ( ) show (garbage) show ( ) show (collection,) show ( ) show (the) show ( ) show (opposite) show ( ) show (holds:) show  newline
+ newline
+(*) show ( ) show (Old) show ( ) show (objects) show ( ) show (are) show ( ) show (precious) show  newline
+(*) show ( ) show (They) show ( ) show (have) show ( ) show (survived,) show ( ) show (been) show ( ) show (referenced,) show ( ) show (replicated) show  newline
+(*) show ( ) show (Young) show ( ) show (objects) show ( ) show (are) show ( ) show (suspect) show  newline
+(*) show ( ) show (They) show ( ) show (may) show ( ) show (be) show ( ) show (transient,) show ( ) show (failed,) show ( ) show (or) show ( ) show (temporary) show  newline
+(*) show ( ) show (Deletion) show ( ) show (is) show ( ) show (violence) show  newline
+(*) show ( ) show (Once) show ( ) show (collected,) show ( ) show (an) show ( ) show (object) show ( ) show (is) show ( ) show (gone) show ( ) show (from) show ( ) show (this) show ( ) show (vault) show ( ) show (forever) show  newline
+(*) show ( ) show (Preservation) show ( ) show (is) show ( ) show (the) show ( ) show (default) show  newline
+(*) show ( ) show (When) show ( ) show (in) show ( ) show (doubt,) show ( ) show (keep) show ( ) show (it) show  newline
+ newline
+(This) show ( ) show (inverts) show ( ) show (the) show ( ) show (runtime) show ( ) show (GC) show ( ) show (assumption) show ( ) show (that) show ( ) show (most) show ( ) show (objects) show ( ) show (die) show ( ) show (young;) show ( ) show (in) show  newline
+(an) show ( ) show (archive,) show ( ) show (age) show ( ) show (confers) show ( ) show (value.) show  newline
+ newline
+(The) show ( ) show (Library) show ( ) show (of) show ( ) show (Alexandria) show ( ) show (burned) show ( ) show (once.) show ( ) show (We) show ( ) show (will) show ( ) show (not) show ( ) show (let) show ( ) show (it) show ( ) show (burn) show ( ) show (again.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Content-addressed) show ( ) show (storage) show ( ) show (accumulates) show ( ) show (objects) show ( ) show (forever) show ( ) show (unless) show ( ) show (actively) show  newline
+(pruned:) show  newline
+ newline
+(*) show ( ) show (Orphaned) show ( ) show (objects) show  newline
+(*) show ( ) show (No) show ( ) show (longer) show ( ) show (referenced) show ( ) show (by) show ( ) show (any) show ( ) show (root) show  newline
+(*) show ( ) show (Superseded) show ( ) show (versions) show  newline
+(*) show ( ) show (Old) show ( ) show (versions) show ( ) show (after) show ( ) show (updates) show  newline
+(*) show ( ) show (Failed) show ( ) show (uploads) show  newline
+(*) show ( ) show (Partial) show ( ) show (or) show ( ) show (abandoned) show ( ) show (writes) show  newline
+(*) show ( ) show (Temporary) show ( ) show (objects) show  newline
+(*) show ( ) show (Intermediate) show ( ) show (computation) show ( ) show (results) show  newline
+ newline
+(Without) show ( ) show (collection,) show ( ) show (storage) show ( ) show (grows) show ( ) show (without) show ( ) show (bound;) show ( ) show (the) show ( ) show (question) show ( ) show (is) show ( ) show (not) show  newline
+(whether) show ( ) show (to) show ( ) show (collect) show ( ) show (but) show ( ) show (how) show ( ) show (conservatively.) show  newline
+ newline
+(But) show ( ) show (deletion) show ( ) show (is) show ( ) show (dangerous:) show  newline
+ newline
+(*) show ( ) show (Hash) show ( ) show (as) show ( ) show (capability) show  newline
+(*) show ( ) show (Someone) show ( ) show (may) show ( ) show (hold) show ( ) show (the) show ( ) show (hash) show  newline
+(*) show ( ) show (Lazy) show ( ) show (replication) show  newline
+(*) show ( ) show (Remote) show ( ) show (vaults) show ( ) show (may) show ( ) show (need) show ( ) show (it) show ( ) show (later) show  newline
+(*) show ( ) show (Audit) show ( ) show (requirements) show  newline
+(*) show ( ) show (May) show ( ) show (need) show ( ) show (historical) show ( ) show (data) show  newline
+(*) show ( ) show (Resurrection) show  newline
+(*) show ( ) show (Deleted) show ( ) show (objects) show ( ) show (may) show ( ) show (be) show ( ) show (re-added) show  newline
+ newline
+(Each) show ( ) show (risk) show ( ) show (represents) show ( ) show (a) show ( ) show (real) show ( ) show (failure) show ( ) show (mode;) show ( ) show (premature) show ( ) show (collection) show ( ) show (has) show  newline
+(caused) show ( ) show (data) show ( ) show (loss) show ( ) show (in) show ( ) show (every) show ( ) show (major) show ( ) show (distributed) show ( ) show (system.) show  newline
+ newline
+(GC) show ( ) show (must) show ( ) show (be) show ( ) show (conservative,) show ( ) show (consensual,) show ( ) show (and) show ( ) show (auditable.) show  newline
+ newline
+(The) show ( ) show (default) show ( ) show (is:) show ( ) show (never) show ( ) show (collect.) show ( ) show (Collection) show ( ) show (requires) show ( ) show (explicit) show ( ) show (action.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(OBJECT) show ( ) show (LIFECYCLE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(States) show  newline
+newpath margin ypos moveto margin 36 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+% box char 250c at col 24
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+newpath margin 147 add ypos moveto margin 147 add ypos 6 sub lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2510 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add ypos lineto stroke
+newpath margin 207 add ypos moveto margin 207 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+margin 84 add ypos moveto (write) show
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+% box char 2502 at col 34
+newpath margin 207 add ypos 6 sub moveto margin 207 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 25ba at col 21
+newpath margin 129 add 3 sub ypos 2 add moveto margin 129 add 3 add ypos lineto margin 129 add 3 sub ypos 2 sub lineto closepath fill
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+margin 162 add ypos moveto (LIVE) show
+% box char 2502 at col 34
+newpath margin 207 add ypos 6 sub moveto margin 207 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+% box char 2502 at col 34
+newpath margin 207 add ypos 6 sub moveto margin 207 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 24
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+newpath margin 147 add ypos 6 add moveto margin 147 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 252c at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+newpath margin 177 add ypos moveto margin 177 add ypos 6 sub lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2518 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add ypos lineto stroke
+newpath margin 207 add ypos 6 add moveto margin 207 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 29
+newpath margin 177 add ypos 6 sub moveto margin 177 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 250c at col 18
+newpath margin 111 add ypos moveto margin 111 add 3 add ypos lineto stroke
+newpath margin 111 add ypos moveto margin 111 add ypos 6 sub lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 253c at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+newpath margin 177 add ypos 6 sub moveto margin 177 add ypos 6 add lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2510 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add ypos lineto stroke
+newpath margin 243 add ypos moveto margin 243 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 18
+newpath margin 111 add ypos 6 sub moveto margin 111 add ypos 6 add lineto stroke
+% box char 2502 at col 29
+newpath margin 177 add ypos 6 sub moveto margin 177 add ypos 6 add lineto stroke
+% box char 2502 at col 40
+newpath margin 243 add ypos 6 sub moveto margin 243 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 25bc at col 18
+newpath margin 111 add 2 sub ypos 6 add moveto margin 111 add ypos 6 sub lineto margin 111 add 2 add ypos 6 add lineto closepath fill
+% box char 25bc at col 29
+newpath margin 177 add 2 sub ypos 6 add moveto margin 177 add ypos 6 sub lineto margin 177 add 2 add ypos 6 add lineto closepath fill
+% box char 25bc at col 40
+newpath margin 243 add 2 sub ypos 6 add moveto margin 243 add ypos 6 sub lineto margin 243 add 2 add ypos 6 add lineto closepath fill
+grestore
+newline
+gsave
+% box char 250c at col 13
+newpath margin 81 add ypos moveto margin 81 add 3 add ypos lineto stroke
+newpath margin 81 add ypos moveto margin 81 add ypos 6 sub lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2510 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add ypos lineto stroke
+newpath margin 135 add ypos moveto margin 135 add ypos 6 sub lineto stroke
+% box char 250c at col 24
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+newpath margin 147 add ypos moveto margin 147 add ypos 6 sub lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2510 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add ypos lineto stroke
+newpath margin 201 add ypos moveto margin 201 add ypos 6 sub lineto stroke
+% box char 250c at col 35
+newpath margin 213 add ypos moveto margin 213 add 3 add ypos lineto stroke
+newpath margin 213 add ypos moveto margin 213 add ypos 6 sub lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2510 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add ypos lineto stroke
+newpath margin 267 add ypos moveto margin 267 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 13
+newpath margin 81 add ypos 6 sub moveto margin 81 add ypos 6 add lineto stroke
+margin 84 add ypos moveto (PINNED) show
+% box char 2502 at col 22
+newpath margin 135 add ypos 6 sub moveto margin 135 add ypos 6 add lineto stroke
+% box char 2502 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+margin 150 add ypos moveto (TOMBSTONE) show
+% box char 2502 at col 34
+newpath margin 207 add ypos 6 sub moveto margin 207 add ypos 6 add lineto stroke
+% box char 2502 at col 36
+newpath margin 219 add ypos 6 sub moveto margin 219 add ypos 6 add lineto stroke
+margin 222 add ypos moveto (ORPHANED) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 13
+newpath margin 81 add ypos moveto margin 81 add 3 add ypos lineto stroke
+newpath margin 81 add ypos 6 add moveto margin 81 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2518 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add ypos lineto stroke
+newpath margin 135 add ypos 6 add moveto margin 135 add ypos lineto stroke
+% box char 2514 at col 24
+newpath margin 147 add ypos moveto margin 147 add 3 add ypos lineto stroke
+newpath margin 147 add ypos 6 add moveto margin 147 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2518 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add ypos lineto stroke
+newpath margin 201 add ypos 6 add moveto margin 201 add ypos lineto stroke
+% box char 2514 at col 35
+newpath margin 213 add ypos moveto margin 213 add 3 add ypos lineto stroke
+newpath margin 213 add ypos 6 add moveto margin 213 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 252c at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+newpath margin 237 add ypos moveto margin 237 add ypos 6 sub lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2518 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add ypos lineto stroke
+newpath margin 267 add ypos 6 add moveto margin 267 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 39
+newpath margin 237 add ypos 6 sub moveto margin 237 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 39
+newpath margin 237 add ypos 6 sub moveto margin 237 add ypos 6 add lineto stroke
+margin 246 add ypos moveto (GC) show
+grestore
+newline
+gsave
+% box char 25bc at col 39
+newpath margin 237 add 2 sub ypos 6 add moveto margin 237 add ypos 6 sub lineto margin 237 add 2 add ypos 6 add lineto closepath fill
+grestore
+newline
+gsave
+% box char 250c at col 34
+newpath margin 207 add ypos moveto margin 207 add 3 add ypos lineto stroke
+newpath margin 207 add ypos moveto margin 207 add ypos 6 sub lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2510 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add ypos lineto stroke
+newpath margin 261 add ypos moveto margin 261 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 34
+newpath margin 207 add ypos 6 sub moveto margin 207 add ypos 6 add lineto stroke
+margin 210 add ypos moveto (COLLECTED) show
+% box char 2502 at col 44
+newpath margin 267 add ypos 6 sub moveto margin 267 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 34
+newpath margin 207 add ypos moveto margin 207 add 3 add ypos lineto stroke
+newpath margin 207 add ypos 6 add moveto margin 207 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2518 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add ypos lineto stroke
+newpath margin 261 add ypos 6 add moveto margin 261 add ypos lineto stroke
+grestore
+newline
+ newline
+ newline
+(State) show ( ) show (Transitions) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(object-state) show ( ) show (hash\)) show  newline
+(\(cond) show  newline
+(\(\(pinned?) show ( ) show (hash\)) show ( ) show ('pinned\)) show  newline
+(\(\(tombstoned?) show ( ) show (hash\)) show ( ) show ('tombstone\)) show  newline
+(\(\(referenced?) show ( ) show (hash\)) show ( ) show ('live\)) show  newline
+(\(else) show ( ) show ('orphaned\)\)\)) show  newline
+(\(define) show ( ) show (\(can-collect?) show ( ) show (hash\)) show  newline
+(\(and) show ( ) show (\(eq?) show ( ) show (\(object-state) show ( ) show (hash\)) show ( ) show ('orphaned\)) show  newline
+(\(not) show ( ) show (\(in-grace-period?) show ( ) show (hash\)\)) show  newline
+(\(not) show ( ) show (\(pending-replication?) show ( ) show (hash\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCE) show ( ) show (COUNTING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Direct) show ( ) show (References) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Track) show ( ) show (incoming) show ( ) show (references) show  newline
+(\(define) show ( ) show (ref-counts) show ( ) show (\(make-hash-table\)\)) show  newline
+(\(define) show ( ) show (\(add-reference) show ( ) show (from-hash) show ( ) show (to-hash\)) show  newline
+(\(let) show ( ) show (\(\(count) show ( ) show (\(hash-table-ref) show ( ) show (ref-counts) show ( ) show (to-hash) show ( ) show (0\)\)\)) show  newline
+(\(hash-table-set!) show ( ) show (ref-counts) show ( ) show (to-hash) show ( ) show (\(+) show ( ) show (count) show ( ) show (1\)\)) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (\(add-ref) show ( ) show (,from-hash) show ( ) show (,to-hash\)\)\)\)) show  newline
+(\(define) show ( ) show (\(remove-reference) show ( ) show (from-hash) show ( ) show (to-hash\)) show  newline
+(\(let) show ( ) show (\(\(count) show ( ) show (\(hash-table-ref) show ( ) show (ref-counts) show ( ) show (to-hash) show ( ) show (0\)\)\)) show  newline
+(\(hash-table-set!) show ( ) show (ref-counts) show ( ) show (to-hash) show ( ) show (\(max) show ( ) show (0) show ( ) show (\(-) show ( ) show (count) show ( ) show (1\)\)\)) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (\(remove-ref) show ( ) show (,from-hash) show ( ) show (,to-hash\)\)\)\)) show  newline
+(\(define) show ( ) show (\(reference-count) show ( ) show (hash\)) show  newline
+(\(hash-table-ref) show ( ) show (ref-counts) show ( ) show (hash) show ( ) show (0\)\)) show  newline
+ newline
+ newline
+(Root) show ( ) show (References) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (GC) show ( ) show (roots) show ( ) show (-) show ( ) show (objects) show ( ) show (that) show ( ) show (are) show ( ) show (always) show ( ) show (reachable) show  newline
+(\(define) show ( ) show (gc-roots) show ( ) show (\(make-hash-set\)\)) show  newline
+(\(define) show ( ) show (\(add-gc-root) show ( ) show (hash) show ( ) show (reason\)) show  newline
+(\(hash-set-add!) show ( ) show (gc-roots) show ( ) show (hash\)) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (\(add-root) show ( ) show (,hash) show ( ) show (,reason\)\)\)) show  newline
+(\(define) show ( ) show (\(remove-gc-root) show ( ) show (hash\)) show  newline
+(\(hash-set-remove!) show ( ) show (gc-roots) show ( ) show (hash\)) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (\(remove-root) show ( ) show (,hash\)\)\)) show  newline
+(\(define) show ( ) show (\(gc-root?) show ( ) show (hash\)) show  newline
+(\(hash-set-member?) show ( ) show (gc-roots) show ( ) show (hash\)\)) show  newline
+ newline
+ newline
+(Implicit) show ( ) show (Roots) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Some) show ( ) show (objects) show ( ) show (are) show ( ) show (implicitly) show ( ) show (rooted) show  newline
+(\(define) show ( ) show (\(implicit-root?) show ( ) show (hash\)) show  newline
+(\(or) show ( ) show (\(pinned?) show ( ) show (hash\)) show  newline
+(\(soup-object-type?) show ( ) show (hash) show ( ) show ('certificate\)) show ( ) show (;) show ( ) show (Certs) show ( ) show (are) show ( ) show (roots) show  newline
+(\(soup-object-type?) show ( ) show (hash) show ( ) show ('audit-entry\)) show ( ) show (;) show ( ) show (Audit) show ( ) show (is) show ( ) show (sacred) show  newline
+(\(recent-write?) show ( ) show (hash\)\)\)) show ( ) show (;) show ( ) show (Grace) show ( ) show (period) show  newline
+ newline
+ newline
+(Cycle) show ( ) show (Detection) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 0 add ypos moveto (Reference) show
+margin 60 add ypos moveto (counting) show
+margin 114 add ypos moveto (alone) show
+margin 150 add ypos moveto (cannot) show
+margin 192 add ypos moveto (detect) show
+margin 234 add ypos moveto (cycles) show
+margin 276 add ypos moveto (\(A) show
+% box char 2192 at col 48
+newpath margin 291 add 3 sub ypos 2 add moveto margin 291 add 3 add ypos lineto margin 291 add 3 sub ypos 2 sub lineto closepath fill
+margin 294 add ypos moveto (B) show
+% box char 2192 at col 50
+newpath margin 303 add 3 sub ypos 2 add moveto margin 303 add 3 add ypos lineto margin 303 add 3 sub ypos 2 sub lineto closepath fill
+margin 306 add ypos moveto (C) show
+% box char 2192 at col 52
+newpath margin 315 add 3 sub ypos 2 add moveto margin 315 add 3 add ypos lineto margin 315 add 3 sub ypos 2 sub lineto closepath fill
+margin 318 add ypos moveto (A\).) show
+margin 342 add ypos moveto (The) show
+margin 366 add ypos moveto (soup) show
+grestore
+newline
+(uses) show ( ) show (mark-and-sweep) show ( ) show (as) show ( ) show (the) show ( ) show (authoritative) show ( ) show (reachability) show ( ) show (test,) show ( ) show (with) show  newline
+(reference) show ( ) show (counts) show ( ) show (as) show ( ) show (a) show ( ) show (fast) show ( ) show (path) show ( ) show (for) show ( ) show (common) show ( ) show (cases.) show  newline
+ newline
+ newline
+(;;) show ( ) show (Reference) show ( ) show (counting) show ( ) show (is) show ( ) show (advisory,) show ( ) show (not) show ( ) show (authoritative) show  newline
+(\(define) show ( ) show (\(fast-unreachable?) show ( ) show (hash\)) show  newline
+("Quick) show ( ) show (check) show ( ) show (-) show ( ) show (zero) show ( ) show (refs) show ( ) show (MIGHT) show ( ) show (mean) show ( ) show (unreachable") show  newline
+(\(and) show ( ) show (\(zero?) show ( ) show (\(reference-count) show ( ) show (hash\)\)) show  newline
+(\(not) show ( ) show (\(gc-root?) show ( ) show (hash\)\)) show  newline
+(\(not) show ( ) show (\(implicit-root?) show ( ) show (hash\)\)\)\)) show  newline
+(;;) show ( ) show (Mark-and-sweep) show ( ) show (is) show ( ) show (authoritative) show  newline
+(\(define) show ( ) show (\(truly-unreachable?) show ( ) show (hash) show ( ) show (marked-set\)) show  newline
+("Authoritative) show ( ) show (check) show ( ) show (-) show ( ) show (not) show ( ) show (in) show ( ) show (marked) show ( ) show (set) show ( ) show (means) show ( ) show (unreachable") show  newline
+(\(not) show ( ) show (\(hash-set-member?) show ( ) show (marked-set) show ( ) show (hash\)\)\)) show  newline
+(;;) show ( ) show (Cycle) show ( ) show (detection) show ( ) show (via) show ( ) show (mark-and-sweep) show  newline
+(\(define) show ( ) show (\(detect-cycles\)) show  newline
+("Find) show ( ) show (reference) show ( ) show (cycles) show ( ) show (\(objects) show ( ) show (that) show ( ) show (reference) show ( ) show (each) show ( ) show (other) show ( ) show (but) show ( ) show (are) show ( ) show (unreachable\)") show  newline
+(\(let*) show ( ) show (\(\(marked) show ( ) show (\(mark-reachable\)\)) show  newline
+(\(all-hashes) show ( ) show (\(all-object-hashes\)\)) show  newline
+(\(unmarked) show ( ) show (\(filter) show ( ) show (\(lambda) show ( ) show (\(h\)) show ( ) show (\(not) show ( ) show (\(hash-set-member?) show ( ) show (marked) show ( ) show (h\)\)\)) show ( ) show (all-hashes\)\)) show  newline
+(\(with-refs) show ( ) show (\(filter) show ( ) show (\(lambda) show ( ) show (\(h\)) show ( ) show (\(>) show ( ) show (\(reference-count) show ( ) show (h\)) show ( ) show (0\)\)) show ( ) show (unmarked\)\)\)) show  newline
+(;;) show ( ) show (These) show ( ) show (have) show ( ) show (refs) show ( ) show (but) show ( ) show (are) show ( ) show (unreachable) show ( ) show (-) show ( ) show (they're) show ( ) show (in) show ( ) show (cycles) show  newline
+(with-refs\)\)) show  newline
+ newline
+(In) show ( ) show (archival) show ( ) show (mode,) show ( ) show (cycles) show ( ) show (are) show ( ) show (preserved) show ( ) show (\(they) show ( ) show (may) show ( ) show (be) show ( ) show (intentional) show ( ) show (-) show ( ) show (e.g.,) show  newline
+(bidirectional) show ( ) show (links\).) show ( ) show (Only) show ( ) show (explicit) show ( ) show (evaporation) show ( ) show (removes) show ( ) show (them.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MARK) show ( ) show (AND) show ( ) show (SWEEP) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Tricolor) show ( ) show (Abstraction) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (naive) show ( ) show (recursive) show ( ) show (mark) show ( ) show (algorithm) show ( ) show (risks) show ( ) show (stack) show ( ) show (overflow) show ( ) show (on) show ( ) show (deep) show ( ) show (object) show  newline
+(graphs.) show ( ) show (The) show ( ) show (tricolor) show ( ) show (abstraction) show ( ) show (provides:) show  newline
+ newline
+(*) show ( ) show (White:) show ( ) show (Unvisited,) show ( ) show (potentially) show ( ) show (garbage) show  newline
+(*) show ( ) show (Gray:) show ( ) show (Visited) show ( ) show (but) show ( ) show (references) show ( ) show (not) show ( ) show (yet) show ( ) show (scanned) show  newline
+(*) show ( ) show (Black:) show ( ) show (Visited) show ( ) show (and) show ( ) show (all) show ( ) show (references) show ( ) show (scanned) show  newline
+ newline
+ newline
+(;;) show ( ) show (Tricolor) show ( ) show (sets) show ( ) show (-) show ( ) show (explicit) show ( ) show (worklist) show ( ) show (avoids) show ( ) show (stack) show ( ) show (overflow) show  newline
+(\(define) show ( ) show (white-set) show ( ) show (\(make-hash-set\)\)) show ( ) show (;) show ( ) show (Candidates) show ( ) show (for) show ( ) show (collection) show  newline
+(\(define) show ( ) show (gray-set) show ( ) show (\(make-hash-set\)\)) show ( ) show (;) show ( ) show (Work) show ( ) show (queue) show  newline
+(\(define) show ( ) show (black-set) show ( ) show (\(make-hash-set\)\)) show ( ) show (;) show ( ) show (Proven) show ( ) show (reachable) show  newline
+(\(define) show ( ) show (\(tricolor-init\)) show  newline
+("Initialize:) show ( ) show (all) show ( ) show (objects) show ( ) show (are) show ( ) show (white") show  newline
+(\(hash-set-clear!) show ( ) show (white-set\)) show  newline
+(\(hash-set-clear!) show ( ) show (gray-set\)) show  newline
+(\(hash-set-clear!) show ( ) show (black-set\)) show  newline
+(\(for-each) show ( ) show (\(lambda) show ( ) show (\(h\)) show ( ) show (\(hash-set-add!) show ( ) show (white-set) show ( ) show (h\)\)) show  newline
+(\(all-object-hashes\)\)\)) show  newline
+(\(define) show ( ) show (\(shade-gray!) show ( ) show (hash\)) show  newline
+("Move) show ( ) show (object) show ( ) show (from) show ( ) show (white) show ( ) show (to) show ( ) show (gray) show ( ) show (\(discovered\)") show  newline
+(\(when) show ( ) show (\(hash-set-member?) show ( ) show (white-set) show ( ) show (hash\)) show  newline
+(\(hash-set-remove!) show ( ) show (white-set) show ( ) show (hash\)) show  newline
+(\(hash-set-add!) show ( ) show (gray-set) show ( ) show (hash\)\)\)) show  newline
+(\(define) show ( ) show (\(shade-black!) show ( ) show (hash\)) show  newline
+("Move) show ( ) show (object) show ( ) show (from) show ( ) show (gray) show ( ) show (to) show ( ) show (black) show ( ) show (\(fully) show ( ) show (scanned\)") show  newline
+(\(hash-set-remove!) show ( ) show (gray-set) show ( ) show (hash\)) show  newline
+(\(hash-set-add!) show ( ) show (black-set) show ( ) show (hash\)\)) show  newline
+ newline
+ newline
+(Mark) show ( ) show (Phase) show ( ) show (\(Worklist) show ( ) show (Algorithm\)) show  newline
+newpath margin ypos moveto margin 186 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(mark-reachable\)) show  newline
+("Mark) show ( ) show (all) show ( ) show (objects) show ( ) show (reachable) show ( ) show (from) show ( ) show (roots) show ( ) show (using) show ( ) show (worklist") show  newline
+(\(tricolor-init\)) show  newline
+(;;) show ( ) show (Shade) show ( ) show (roots) show ( ) show (gray) show  newline
+(\(for-each) show ( ) show (shade-gray!) show ( ) show (\(hash-set->list) show ( ) show (gc-roots\)\)) show  newline
+(\(for-each) show ( ) show (\(lambda) show ( ) show (\(hash\)) show  newline
+(\(when) show ( ) show (\(implicit-root?) show ( ) show (hash\)) show  newline
+(\(shade-gray!) show ( ) show (hash\)\)\)) show  newline
+(\(all-object-hashes\)\)) show  newline
+(;;) show ( ) show (Process) show ( ) show (gray) show ( ) show (objects) show ( ) show (until) show ( ) show (none) show ( ) show (remain) show  newline
+(\(let) show ( ) show (loop) show ( ) show (\(\)) show  newline
+(\(unless) show ( ) show (\(hash-set-empty?) show ( ) show (gray-set\)) show  newline
+(\(let) show ( ) show (\(\(current) show ( ) show (\(hash-set-pop!) show ( ) show (gray-set\)\)\)) show  newline
+(;;) show ( ) show (Shade) show ( ) show (all) show ( ) show (white) show ( ) show (references) show ( ) show (gray) show  newline
+(\(for-each) show ( ) show (shade-gray!) show ( ) show (\(object-references) show ( ) show (current\)\)) show  newline
+(;;) show ( ) show (Current) show ( ) show (is) show ( ) show (now) show ( ) show (fully) show ( ) show (scanned) show  newline
+(\(shade-black!) show ( ) show (current\)) show  newline
+(\(loop\)\)\)\)) show  newline
+(black-set\)) show ( ) show (;) show ( ) show (Return) show ( ) show (reachable) show ( ) show (set) show  newline
+ newline
+ newline
+(Incremental) show ( ) show (Tricolor) show ( ) show (Marking) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (large) show ( ) show (soups,) show ( ) show (mark) show ( ) show (in) show ( ) show (batches) show ( ) show (to) show ( ) show (avoid) show ( ) show (long) show ( ) show (pauses:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (mark-batch-size) show ( ) show (1000\)) show ( ) show (;) show ( ) show (Objects) show ( ) show (per) show ( ) show (batch) show  newline
+(\(define) show ( ) show (\(mark-incremental\)) show  newline
+("Mark) show ( ) show (in) show ( ) show (batches,) show ( ) show (yielding) show ( ) show (between) show ( ) show (batches") show  newline
+(\(let) show ( ) show (\(\(batch) show ( ) show (0\)\)) show  newline
+(\(let) show ( ) show (loop) show ( ) show (\(\)) show  newline
+(\(unless) show ( ) show (\(or) show ( ) show (\(hash-set-empty?) show ( ) show (gray-set\)) show  newline
+(\(>=) show ( ) show (batch) show ( ) show (mark-batch-size\)\)) show  newline
+(\(let) show ( ) show (\(\(current) show ( ) show (\(hash-set-pop!) show ( ) show (gray-set\)\)\)) show  newline
+(\(for-each) show ( ) show (shade-gray!) show ( ) show (\(object-references) show ( ) show (current\)\)) show  newline
+(\(shade-black!) show ( ) show (current\)) show  newline
+(\(set!) show ( ) show (batch) show ( ) show (\(+) show ( ) show (batch) show ( ) show (1\)\)) show  newline
+(\(loop\)\)\)\)) show  newline
+(;;) show ( ) show (Return) show ( ) show (whether) show ( ) show (more) show ( ) show (work) show ( ) show (remains) show  newline
+(\(not) show ( ) show (\(hash-set-empty?) show ( ) show (gray-set\)\)\)\)) show  newline
+(;;) show ( ) show (Usage:) show ( ) show (call) show ( ) show (repeatedly) show ( ) show (until) show ( ) show (returns) show ( ) show (#f) show  newline
+(\(define) show ( ) show (\(incremental-gc-step\)) show  newline
+(\(if) show ( ) show (\(mark-incremental\)) show  newline
+('more-work) show  newline
+(\(begin) show  newline
+(\(sweep-white\)) show  newline
+('complete\)\)\)) show  newline
+ newline
+ newline
+(Concurrent) show ( ) show (Write) show ( ) show (Barrier) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (concurrent) show ( ) show (GC,) show ( ) show (mutations) show ( ) show (must) show ( ) show (maintain) show ( ) show (the) show ( ) show (tricolor) show ( ) show (invariant:) show ( ) show (a) show  newline
+(black) show ( ) show (object) show ( ) show (cannot) show ( ) show (point) show ( ) show (to) show ( ) show (a) show ( ) show (white) show ( ) show (object.) show  newline
+ newline
+ newline
+(;;) show ( ) show (Write) show ( ) show (barrier) show ( ) show (for) show ( ) show (concurrent) show ( ) show (GC) show  newline
+(\(define) show ( ) show (\(cas-put-concurrent) show ( ) show (data\)) show  newline
+("Store) show ( ) show (with) show ( ) show (write) show ( ) show (barrier) show ( ) show (for) show ( ) show (concurrent) show ( ) show (GC") show  newline
+(\(let) show ( ) show (\(\(hash) show ( ) show (\(cas-put) show ( ) show (data\)\)\)) show  newline
+(;;) show ( ) show (If) show ( ) show (GC) show ( ) show (is) show ( ) show (running) show ( ) show (and) show ( ) show (we) show ( ) show (create) show ( ) show (new) show ( ) show (references) show  newline
+(\(when) show ( ) show (gc-running?) show  newline
+(;;) show ( ) show (Shade) show ( ) show (new) show ( ) show (object) show ( ) show (gray) show ( ) show (\(conservative\)) show  newline
+(\(shade-gray!) show ( ) show (hash\)) show  newline
+(;;) show ( ) show (Re-shade) show ( ) show (any) show ( ) show (black) show ( ) show (object) show ( ) show (referencing) show ( ) show (new) show ( ) show (object) show  newline
+(\(for-each) show ( ) show (\(lambda) show ( ) show (\(referencer\)) show  newline
+(\(when) show ( ) show (\(hash-set-member?) show ( ) show (black-set) show ( ) show (referencer\)) show  newline
+(;;) show ( ) show (Demote) show ( ) show (to) show ( ) show (gray) show ( ) show (-) show ( ) show (needs) show ( ) show (re-scanning) show  newline
+(\(hash-set-remove!) show ( ) show (black-set) show ( ) show (referencer\)) show  newline
+(\(hash-set-add!) show ( ) show (gray-set) show ( ) show (referencer\)\)\)) show  newline
+(\(incoming-references) show ( ) show (hash\)\)\)) show  newline
+(hash\)\)) show  newline
+(;;) show ( ) show (Snapshot-at-the-beginning) show ( ) show (\(SATB\)) show ( ) show (barrier) show  newline
+(\(define) show ( ) show (\(reference-update!) show ( ) show (from-hash) show ( ) show (old-ref) show ( ) show (new-ref\)) show  newline
+("SATB) show ( ) show (write) show ( ) show (barrier:) show ( ) show (preserve) show ( ) show (old) show ( ) show (reference) show ( ) show (for) show ( ) show (marking") show  newline
+(\(when) show ( ) show (\(and) show ( ) show (gc-running?) show ( ) show (old-ref\)) show  newline
+(;;) show ( ) show (Keep) show ( ) show (old) show ( ) show (reference) show ( ) show (alive) show ( ) show (through) show ( ) show (this) show ( ) show (GC) show ( ) show (cycle) show  newline
+(\(shade-gray!) show ( ) show (old-ref\)\)) show  newline
+(\(update-reference!) show ( ) show (from-hash) show ( ) show (new-ref\)\)) show  newline
+ newline
+ newline
+(Original) show ( ) show (Mark) show ( ) show (\(Preserved) show ( ) show (for) show ( ) show (Reference\)) show  newline
+newpath margin ypos moveto margin 234 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Simple) show ( ) show (recursive) show ( ) show (version) show ( ) show (\(for) show ( ) show (small) show ( ) show (object) show ( ) show (graphs) show ( ) show (only\)) show  newline
+(\(define) show ( ) show (\(mark-reachable/simple\)) show  newline
+("Mark) show ( ) show (all) show ( ) show (objects) show ( ) show (reachable) show ( ) show (from) show ( ) show (roots) show ( ) show (\(recursive,) show ( ) show (can) show ( ) show (stack) show ( ) show (overflow\)") show  newline
+(\(let) show ( ) show (\(\(marked) show ( ) show (\(make-hash-set\)\)\)) show  newline
+(\(define) show ( ) show (\(mark) show ( ) show (hash\)) show  newline
+(\(unless) show ( ) show (\(hash-set-member?) show ( ) show (marked) show ( ) show (hash\)) show  newline
+(\(hash-set-add!) show ( ) show (marked) show ( ) show (hash\)) show  newline
+(\(for-each) show ( ) show (mark) show ( ) show (\(object-references) show ( ) show (hash\)\)\)\)) show  newline
+(;;) show ( ) show (Mark) show ( ) show (from) show ( ) show (explicit) show ( ) show (roots) show  newline
+(\(for-each) show ( ) show (mark) show ( ) show (\(hash-set->list) show ( ) show (gc-roots\)\)) show  newline
+(;;) show ( ) show (Mark) show ( ) show (from) show ( ) show (implicit) show ( ) show (roots) show  newline
+(\(for-each) show ( ) show (\(lambda) show ( ) show (\(hash\)) show  newline
+(\(when) show ( ) show (\(implicit-root?) show ( ) show (hash\)) show  newline
+(\(mark) show ( ) show (hash\)\)\)) show  newline
+(\(all-object-hashes\)\)) show  newline
+(marked\)\)) show  newline
+ newline
+ newline
+(Sweep) show ( ) show (Phase) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(sweep) show ( ) show (marked\)) show  newline
+("Collect) show ( ) show (unmarked) show ( ) show (objects") show  newline
+(\(let) show ( ) show (\(\(collected) show ( ) show ('\(\)\)\)) show  newline
+(\(for-each) show  newline
+(\(lambda) show ( ) show (\(hash\)) show  newline
+(\(unless) show ( ) show (\(hash-set-member?) show ( ) show (marked) show ( ) show (hash\)) show  newline
+(\(when) show ( ) show (\(can-collect?) show ( ) show (hash\)) show  newline
+(\(set!) show ( ) show (collected) show ( ) show (\(cons) show ( ) show (hash) show ( ) show (collected\)\)) show  newline
+(\(collect-object!) show ( ) show (hash\)\)\)\)) show  newline
+(\(all-object-hashes\)\)) show  newline
+(collected\)\)) show  newline
+(\(define) show ( ) show (\(collect-object!) show ( ) show (hash\)) show  newline
+("Remove) show ( ) show (object) show ( ) show (from) show ( ) show (storage") show  newline
+(\(let) show ( ) show (\(\(obj) show ( ) show (\(cas-get) show ( ) show (hash\)\)\)) show  newline
+(\(audit-append) show  newline
+(action:) show ( ) show ('gc-collect) show  newline
+(hash:) show ( ) show (hash) show  newline
+(size:) show ( ) show (\(object-size) show ( ) show (obj\)) show  newline
+(age:) show ( ) show (\(object-age) show ( ) show (obj\)\)) show  newline
+(\(cas-delete!) show ( ) show (hash\)\)\)) show  newline
+ newline
+ newline
+(Full) show ( ) show (GC) show  newline
+newpath margin ypos moveto margin 42 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(gc-full\)) show  newline
+("Perform) show ( ) show (full) show ( ) show (garbage) show ( ) show (collection") show  newline
+(\(let) show ( ) show (\(\(start) show ( ) show (\(current-time\)\)\)) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show ('gc-start) show ( ) show (type:) show ( ) show ('full\)) show  newline
+(\(let*) show ( ) show (\(\(marked) show ( ) show (\(mark-reachable\)\)) show  newline
+(\(collected) show ( ) show (\(sweep) show ( ) show (marked\)\)\)) show  newline
+(\(audit-append) show  newline
+(action:) show ( ) show ('gc-complete) show  newline
+(type:) show ( ) show ('full) show  newline
+(duration:) show ( ) show (\(-) show ( ) show (\(current-time\)) show ( ) show (start\)) show  newline
+(marked:) show ( ) show (\(hash-set-size) show ( ) show (marked\)) show  newline
+(collected:) show ( ) show (\(length) show ( ) show (collected\)) show  newline
+(bytes-freed:) show ( ) show (\(sum) show ( ) show (\(map) show ( ) show (object-size) show ( ) show (collected\)\)\)) show  newline
+(collected\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(INCREMENTAL) show ( ) show (GC) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Archival) show ( ) show (Generational) show ( ) show (Collection) show  newline
+newpath margin ypos moveto margin 192 add ypos lineto stroke
+newline
+ newline
+(Traditional) show ( ) show (generational) show ( ) show (GC) show ( ) show (collects) show ( ) show (young) show ( ) show (objects) show ( ) show (first) show ( ) show (\(they) show ( ) show (die) show  newline
+(young\).) show ( ) show (Archival) show ( ) show (GC) show ( ) show (inverts) show ( ) show (this:) show ( ) show (old) show ( ) show (objects) show ( ) show (are) show ( ) show (precious.) show  newline
+ newline
+ newline
+(;;) show ( ) show (Archival) show ( ) show (generations) show ( ) show (-) show ( ) show (age) show ( ) show (increases) show ( ) show (protection) show  newline
+(\(define) show ( ) show (generations) show  newline
+('\(\(ephemeral) show ( ) show (.) show ( ) show (3600\)) show ( ) show (;) show ( ) show (<) show ( ) show (1) show ( ) show (hour:) show ( ) show (temporary,) show ( ) show (collect) show ( ) show (freely) show  newline
+(\(young) show ( ) show (.) show ( ) show (86400\)) show ( ) show (;) show ( ) show (<) show ( ) show (1) show ( ) show (day:) show ( ) show (probably) show ( ) show (transient) show  newline
+(\(maturing) show ( ) show (.) show ( ) show (604800\)) show ( ) show (;) show ( ) show (<) show ( ) show (1) show ( ) show (week:) show ( ) show (gaining) show ( ) show (stability) show  newline
+(\(stable) show ( ) show (.) show ( ) show (2592000\)) show ( ) show (;) show ( ) show (<) show ( ) show (30) show ( ) show (days:) show ( ) show (likely) show ( ) show (permanent) show  newline
+(\(archival) show ( ) show (.) show ( ) show (#f\)\)\)) show ( ) show (;) show ( ) show (>=) show ( ) show (30) show ( ) show (days:) show ( ) show (NEVER) show ( ) show (collect) show ( ) show (automatically) show  newline
+(\(define) show ( ) show (\(object-generation) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(age) show ( ) show (\(object-age) show ( ) show (hash\)\)\)) show  newline
+(\(cond) show  newline
+(\(\(<) show ( ) show (age) show ( ) show (3600\)) show ( ) show ('ephemeral\)) show  newline
+(\(\(<) show ( ) show (age) show ( ) show (86400\)) show ( ) show ('young\)) show  newline
+(\(\(<) show ( ) show (age) show ( ) show (604800\)) show ( ) show ('maturing\)) show  newline
+(\(\(<) show ( ) show (age) show ( ) show (2592000\)) show ( ) show ('stable\)) show  newline
+(\(else) show ( ) show ('archival\)\)\)\)) show  newline
+(;;) show ( ) show (Collection) show ( ) show (eligibility) show ( ) show (by) show ( ) show (generation) show  newline
+(\(define) show ( ) show (\(generation-collectible?) show ( ) show (gen\)) show  newline
+(\(case) show ( ) show (gen) show  newline
+(\(\(ephemeral\)) show ( ) show (#t\)) show ( ) show (;) show ( ) show (Freely) show ( ) show (collectible) show  newline
+(\(\(young\)) show ( ) show (#t\)) show ( ) show (;) show ( ) show (Collectible) show ( ) show (with) show ( ) show (grace) show ( ) show (period) show  newline
+(\(\(maturing\)) show ( ) show ('warning\)) show ( ) show (;) show ( ) show (Requires) show ( ) show (explicit) show ( ) show (approval) show  newline
+(\(\(stable\)) show ( ) show ('quorum\)) show ( ) show (;) show ( ) show (Requires) show ( ) show (federation) show ( ) show (quorum) show  newline
+(\(\(archival\)) show ( ) show (#f\)\)\)) show ( ) show (;) show ( ) show (NEVER) show ( ) show (collect) show ( ) show (automatically) show  newline
+(\(define) show ( ) show (\(gc-generation) show ( ) show (gen\)) show  newline
+("Collect) show ( ) show (only) show ( ) show (specified) show ( ) show (generation) show ( ) show (\(archival) show ( ) show (only) show ( ) show (via) show ( ) show (evaporation\)") show  newline
+(\(when) show ( ) show (\(eq?) show ( ) show (gen) show ( ) show ('archival\)) show  newline
+(\(error) show ( ) show ("Archival) show ( ) show (objects) show ( ) show (require) show ( ) show (evaporation) show ( ) show (certificate"\)\)) show  newline
+(\(let) show ( ) show (\(\(candidates) show ( ) show (\(filter) show ( ) show (\(lambda) show ( ) show (\(h\)) show  newline
+(\(eq?) show ( ) show (\(object-generation) show ( ) show (h\)) show ( ) show (gen\)\)) show  newline
+(\(all-object-hashes\)\)\)\)) show  newline
+(\(gc-candidates) show ( ) show (candidates\)\)\)) show  newline
+ newline
+ newline
+(Write) show ( ) show (Barrier) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Track) show ( ) show (modified) show ( ) show (objects) show ( ) show (for) show ( ) show (incremental) show ( ) show (GC) show  newline
+(\(define) show ( ) show (modified-set) show ( ) show (\(make-hash-set\)\)) show  newline
+(\(define) show ( ) show (\(cas-put-with-barrier) show ( ) show (data\)) show  newline
+(\(let) show ( ) show (\(\(hash) show ( ) show (\(cas-put) show ( ) show (data\)\)\)) show  newline
+(\(hash-set-add!) show ( ) show (modified-set) show ( ) show (hash\)) show  newline
+(hash\)\)) show  newline
+(\(define) show ( ) show (\(gc-incremental\)) show  newline
+("Collect) show ( ) show (recently) show ( ) show (modified) show ( ) show (objects) show ( ) show (if) show ( ) show (orphaned") show  newline
+(\(let) show ( ) show (\(\(candidates) show ( ) show (\(hash-set->list) show ( ) show (modified-set\)\)\)) show  newline
+(\(hash-set-clear!) show ( ) show (modified-set\)) show  newline
+(\(gc-candidates) show ( ) show (candidates\)\)\)) show  newline
+ newline
+ newline
+(Concurrent) show ( ) show (GC) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (GC) show ( ) show (runs) show ( ) show (concurrently) show ( ) show (with) show ( ) show (mutations) show  newline
+(\(define) show ( ) show (gc-lock) show ( ) show (\(make-mutex\)\)) show  newline
+(\(define) show ( ) show (gc-running?) show ( ) show (#f\)) show  newline
+(\(define) show ( ) show (\(gc-concurrent\)) show  newline
+("Run) show ( ) show (GC) show ( ) show (without) show ( ) show (stopping) show ( ) show (the) show ( ) show (world") show  newline
+(\(when) show ( ) show (\(mutex-try-lock!) show ( ) show (gc-lock\)) show  newline
+(\(set!) show ( ) show (gc-running?) show ( ) show (#t\)) show  newline
+(\(let) show ( ) show (\(\(snapshot) show ( ) show (\(snapshot-roots\)\)\)) show  newline
+(;;) show ( ) show (Mark) show ( ) show (phase) show ( ) show (uses) show ( ) show (snapshot) show  newline
+(\(let) show ( ) show (\(\(marked) show ( ) show (\(mark-from-snapshot) show ( ) show (snapshot\)\)\)) show  newline
+(;;) show ( ) show (Sweep) show ( ) show (only) show ( ) show (clearly) show ( ) show (dead) show ( ) show (objects) show  newline
+(\(sweep-conservative) show ( ) show (marked\)\)\)) show  newline
+(\(set!) show ( ) show (gc-running?) show ( ) show (#f\)) show  newline
+(\(mutex-unlock!) show ( ) show (gc-lock\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PINNING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Pin) show ( ) show (Management) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (pins) show ( ) show (\(make-hash-table\)\)) show  newline
+(\(define) show ( ) show (\(pin!) show ( ) show (hash) show ( ) show (reason) show ( ) show (#!key) show ( ) show (duration\)) show  newline
+("Protect) show ( ) show (object) show ( ) show (from) show ( ) show (GC") show  newline
+(\(hash-table-set!) show ( ) show (pins) show ( ) show (hash) show  newline
+(\(\(reason) show ( ) show (.) show ( ) show (,reason\)) show  newline
+(\(pinned-at) show ( ) show (.) show ( ) show (,\(current-time\)\)) show  newline
+(\(expires) show ( ) show (.) show ( ) show (,\(and) show ( ) show (duration) show ( ) show (\(+) show ( ) show (\(current-time\)) show ( ) show (duration\)\)\)) show  newline
+(\(pinned-by) show ( ) show (.) show ( ) show (,\(current-principal\)\)\)\)) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (\(pin) show ( ) show (,hash) show ( ) show (,reason\)\)\)) show  newline
+(\(define) show ( ) show (\(unpin!) show ( ) show (hash\)) show  newline
+("Allow) show ( ) show (object) show ( ) show (to) show ( ) show (be) show ( ) show (collected") show  newline
+(\(hash-table-delete!) show ( ) show (pins) show ( ) show (hash\)) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (`\(unpin) show ( ) show (,hash\)\)\)) show  newline
+(\(define) show ( ) show (\(pinned?) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(pin) show ( ) show (\(hash-table-ref) show ( ) show (pins) show ( ) show (hash) show ( ) show (#f\)\)\)) show  newline
+(\(and) show ( ) show (pin) show  newline
+(\(or) show ( ) show (\(not) show ( ) show (\(assoc-ref) show ( ) show (pin) show ( ) show ('expires\)\)) show  newline
+(\(>) show ( ) show (\(assoc-ref) show ( ) show (pin) show ( ) show ('expires\)) show ( ) show (\(current-time\)\)\)\)\)\)) show  newline
+ newline
+ newline
+(Transitive) show ( ) show (Pinning) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(pin-tree!) show ( ) show (root-hash) show ( ) show (reason\)) show  newline
+("Pin) show ( ) show (object) show ( ) show (and) show ( ) show (all) show ( ) show (objects) show ( ) show (it) show ( ) show (references") show  newline
+(\(let) show ( ) show (\(\(visited) show ( ) show (\(make-hash-set\)\)\)) show  newline
+(\(define) show ( ) show (\(pin-recursive) show ( ) show (hash\)) show  newline
+(\(unless) show ( ) show (\(hash-set-member?) show ( ) show (visited) show ( ) show (hash\)) show  newline
+(\(hash-set-add!) show ( ) show (visited) show ( ) show (hash\)) show  newline
+(\(pin!) show ( ) show (hash) show ( ) show (reason\)) show  newline
+(\(for-each) show ( ) show (pin-recursive) show ( ) show (\(object-references) show ( ) show (hash\)\)\)\)) show  newline
+(\(pin-recursive) show ( ) show (root-hash\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TOMBSTONES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Tombstone) show ( ) show (Handling) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Tombstones) show ( ) show (are) show ( ) show (never) show ( ) show (collected) show  newline
+(\(define) show ( ) show (\(tombstoned?) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(obj) show ( ) show (\(soup-get) show ( ) show (hash\)\)\)) show  newline
+(\(and) show ( ) show (obj) show ( ) show (\(eq?) show ( ) show (\(soup-object-type) show ( ) show (obj\)) show ( ) show ('tombstone\)\)\)\)) show  newline
+(;;) show ( ) show (Tombstones) show ( ) show (prevent) show ( ) show (resurrection) show  newline
+(\(define) show ( ) show (\(cas-put-checked) show ( ) show (data\)) show  newline
+(\(let) show ( ) show (\(\(hash) show ( ) show (\(content-hash) show ( ) show (data\)\)\)) show  newline
+(\(when) show ( ) show (\(tombstoned?) show ( ) show (hash\)) show  newline
+(\(error) show ( ) show ("Cannot) show ( ) show (resurrect) show ( ) show (tombstoned) show ( ) show (object") show ( ) show (hash\)\)) show  newline
+(\(cas-put) show ( ) show (data\)\)\)) show  newline
+ newline
+ newline
+(Tombstone) show ( ) show (Expiry) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Optional:) show ( ) show (tombstones) show ( ) show (can) show ( ) show (expire) show  newline
+(\(define) show ( ) show (\(tombstone-expired?) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(tomb) show ( ) show (\(soup-get) show ( ) show (hash\)\)\)) show  newline
+(\(and) show ( ) show (tomb) show  newline
+(\(assoc-ref) show ( ) show (\(soup-object-metadata) show ( ) show (tomb\)) show ( ) show ('expires\)) show  newline
+(\(<) show ( ) show (\(assoc-ref) show ( ) show (\(soup-object-metadata) show ( ) show (tomb\)) show ( ) show ('expires\)) show  newline
+(\(current-time\)\)\)\)\)) show  newline
+(\(define) show ( ) show (\(gc-expired-tombstones\)) show  newline
+("Remove) show ( ) show (expired) show ( ) show (tombstones") show  newline
+(\(for-each) show  newline
+(\(lambda) show ( ) show (\(hash\)) show  newline
+(\(when) show ( ) show (\(and) show ( ) show (\(tombstoned?) show ( ) show (hash\)) show ( ) show (\(tombstone-expired?) show ( ) show (hash\)\)) show  newline
+(\(collect-object!) show ( ) show (hash\)\)\)) show  newline
+(\(all-object-hashes\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(GRACE) show ( ) show (PERIODS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Write) show ( ) show (Grace) show ( ) show (Period) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Recently) show ( ) show (written) show ( ) show (objects) show ( ) show (are) show ( ) show (protected) show  newline
+(\(define) show ( ) show (write-grace-period) show ( ) show (86400\)) show ( ) show (;) show ( ) show (24) show ( ) show (hours) show  newline
+(\(define) show ( ) show (\(recent-write?) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(obj) show ( ) show (\(soup-get) show ( ) show (hash\)\)\)) show  newline
+(\(and) show ( ) show (obj) show  newline
+(\(<) show ( ) show (\(-) show ( ) show (\(current-time\)) show ( ) show (\(soup-object-created) show ( ) show (obj\)\)) show  newline
+(write-grace-period\)\)\)\)) show  newline
+ newline
+ newline
+(Replication) show ( ) show (Grace) show ( ) show (Period) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Objects) show ( ) show (pending) show ( ) show (replication) show ( ) show (are) show ( ) show (protected) show  newline
+(\(define) show ( ) show (pending-replication) show ( ) show (\(make-hash-set\)\)) show  newline
+(\(define) show ( ) show (\(mark-pending-replication) show ( ) show (hash) show ( ) show (vaults\)) show  newline
+(\(hash-set-add!) show ( ) show (pending-replication) show ( ) show (hash\)) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show (`\(pending-replication) show ( ) show (,hash) show ( ) show (,vaults\)\)\)) show  newline
+(\(define) show ( ) show (\(clear-pending-replication) show ( ) show (hash\)) show  newline
+(\(hash-set-remove!) show ( ) show (pending-replication) show ( ) show (hash\)\)) show  newline
+(\(define) show ( ) show (\(pending-replication?) show ( ) show (hash\)) show  newline
+(\(hash-set-member?) show ( ) show (pending-replication) show ( ) show (hash\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(EVAPORATION) show ( ) show (\(ARCHIVAL) show ( ) show (COLLECTION\)) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Objects) show ( ) show (don't) show ( ) show (get) show ( ) show ("garbage) show ( ) show (collected") show ( ) show (in) show ( ) show (an) show ( ) show (archive.) show ( ) show (They) show ( ) show (evaporate) show ( ) show (-) show  newline
+(and) show ( ) show (only) show ( ) show (with) show ( ) show (explicit,) show ( ) show (signed,) show ( ) show (multi-party) show ( ) show (consent.) show  newline
+ newline
+ newline
+(Evaporation) show ( ) show (Certificate) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (An) show ( ) show (evaporation) show ( ) show (certificate) show ( ) show (authorizes) show ( ) show (deletion) show  newline
+(\(define-record-type) show ( ) show (evaporation-certificate) show  newline
+(\(make-evaporation-cert) show ( ) show (hash) show ( ) show (reason) show ( ) show (signers) show ( ) show (timestamp\)) show  newline
+(evaporation-cert?) show  newline
+(\(hash) show ( ) show (evap-hash\)) show ( ) show (;) show ( ) show (Object) show ( ) show (to) show ( ) show (evaporate) show  newline
+(\(reason) show ( ) show (evap-reason\)) show ( ) show (;) show ( ) show (Why) show ( ) show (\(legal,) show ( ) show (storage,) show ( ) show (corruption,) show ( ) show (etc.\)) show  newline
+(\(signers) show ( ) show (evap-signers\)) show ( ) show (;) show ( ) show (List) show ( ) show (of) show ( ) show (\(principal) show ( ) show (.) show ( ) show (signature\)) show  newline
+(\(timestamp) show ( ) show (evap-timestamp\)\)) show  newline
+(;;) show ( ) show (Reasons) show ( ) show (for) show ( ) show (evaporation) show ( ) show (\(enumerated,) show ( ) show (auditable\)) show  newline
+(\(define) show ( ) show (evaporation-reasons) show  newline
+('\(legal-requirement) show ( ) show (;) show ( ) show (Court) show ( ) show (order,) show ( ) show (DMCA,) show ( ) show (etc.) show  newline
+(storage-emergency) show ( ) show (;) show ( ) show (Vault) show ( ) show (at) show ( ) show (capacity) show  newline
+(data-corruption) show ( ) show (;) show ( ) show (Object) show ( ) show (verified) show ( ) show (corrupt) show  newline
+(owner-request) show ( ) show (;) show ( ) show (Content) show ( ) show (owner) show ( ) show (requests) show ( ) show (removal) show  newline
+(federation-consensus\)\)) show ( ) show (;) show ( ) show (Quorum) show ( ) show (agrees) show ( ) show (to) show ( ) show (remove) show  newline
+(\(define) show ( ) show (\(create-evaporation-cert) show ( ) show (hash) show ( ) show (reason\)) show  newline
+("Create) show ( ) show (unsigned) show ( ) show (evaporation) show ( ) show (certificate") show  newline
+(\(make-evaporation-cert) show  newline
+(hash) show  newline
+(reason) show  newline
+('\(\)) show ( ) show (;) show ( ) show (No) show ( ) show (signatures) show ( ) show (yet) show  newline
+(\(current-time\)\)\)) show  newline
+(\(define) show ( ) show (\(sign-evaporation-cert) show ( ) show (cert) show ( ) show (private-key\)) show  newline
+("Add) show ( ) show (signature) show ( ) show (to) show ( ) show (evaporation) show ( ) show (certificate") show  newline
+(\(let*) show ( ) show (\(\(principal) show ( ) show (\(key->principal) show ( ) show (private-key\)\)) show  newline
+(\(sig) show ( ) show (\(sign-data) show ( ) show (\(evap-hash) show ( ) show (cert\)) show ( ) show (private-key\)\)\)) show  newline
+(\(make-evaporation-cert) show  newline
+(\(evap-hash) show ( ) show (cert\)) show  newline
+(\(evap-reason) show ( ) show (cert\)) show  newline
+(\(cons) show ( ) show (\(cons) show ( ) show (principal) show ( ) show (sig\)) show ( ) show (\(evap-signers) show ( ) show (cert\)\)) show  newline
+(\(evap-timestamp) show ( ) show (cert\)\)\)\)) show  newline
+ newline
+ newline
+(Quorum) show ( ) show (Requirement) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Evaporation) show ( ) show (requires) show ( ) show (M-of-N) show ( ) show (signatures) show ( ) show (from) show ( ) show (federation) show  newline
+(\(define) show ( ) show (evaporation-quorum) show  newline
+('\(\(ephemeral) show ( ) show (.) show ( ) show (1\)) show ( ) show (;) show ( ) show (Single) show ( ) show (vault) show ( ) show (can) show ( ) show (evaporate) show  newline
+(\(young) show ( ) show (.) show ( ) show (1\)) show ( ) show (;) show ( ) show (Single) show ( ) show (vault) show ( ) show (can) show ( ) show (evaporate) show  newline
+(\(maturing) show ( ) show (.) show ( ) show (2\)) show ( ) show (;) show ( ) show (Two) show ( ) show (vaults) show ( ) show (must) show ( ) show (agree) show  newline
+(\(stable) show ( ) show (.) show ( ) show (3\)) show ( ) show (;) show ( ) show (Three) show ( ) show (vaults) show ( ) show (must) show ( ) show (agree) show  newline
+(\(archival) show ( ) show (.) show ( ) show (#f\)\)\)) show ( ) show (;) show ( ) show (Requires) show ( ) show (special) show ( ) show (process) show ( ) show (\(see) show ( ) show (below\)) show  newline
+(\(define) show ( ) show (\(evaporation-quorum-met?) show ( ) show (cert) show ( ) show (generation\)) show  newline
+(\(let) show ( ) show (\(\(required) show ( ) show (\(assoc-ref) show ( ) show (evaporation-quorum) show ( ) show (generation\)\)\)) show  newline
+(\(cond) show  newline
+(\(\(not) show ( ) show (required\)) show ( ) show (#f\)) show ( ) show (;) show ( ) show (Archival:) show ( ) show (never) show ( ) show (automatic) show  newline
+(\(else) show ( ) show (\(>=) show ( ) show (\(length) show ( ) show (\(evap-signers) show ( ) show (cert\)\)) show ( ) show (required\)\)\)\)\)) show  newline
+(\(define) show ( ) show (\(evaporate!) show ( ) show (hash) show ( ) show (cert\)) show  newline
+("Evaporate) show ( ) show (object) show ( ) show (with) show ( ) show (valid) show ( ) show (certificate") show  newline
+(\(let) show ( ) show (\(\(gen) show ( ) show (\(object-generation) show ( ) show (hash\)\)\)) show  newline
+(\(unless) show ( ) show (\(evaporation-quorum-met?) show ( ) show (cert) show ( ) show (gen\)) show  newline
+(\(error) show ( ) show ("Evaporation) show ( ) show (quorum) show ( ) show (not) show ( ) show (met") show  newline
+(`\(generation) show ( ) show (,gen) show ( ) show (required) show ( ) show (,\(assoc-ref) show ( ) show (evaporation-quorum) show ( ) show (gen\)\)\)\)) show  newline
+(;;) show ( ) show (Archival) show ( ) show (objects) show ( ) show (require) show ( ) show (special) show ( ) show (handling) show  newline
+(\(when) show ( ) show (\(eq?) show ( ) show (gen) show ( ) show ('archival\)) show  newline
+(\(unless) show ( ) show (\(archival-evaporation-authorized?) show ( ) show (cert\)) show  newline
+(\(error) show ( ) show ("Archival) show ( ) show (evaporation) show ( ) show (requires) show ( ) show (governance) show ( ) show (approval"\)\)\)) show  newline
+(;;) show ( ) show (Log) show ( ) show (everything) show ( ) show (before) show ( ) show (deletion) show  newline
+(\(audit-append) show  newline
+(action:) show ( ) show ('evaporate) show  newline
+(hash:) show ( ) show (hash) show  newline
+(generation:) show ( ) show (gen) show  newline
+(certificate:) show ( ) show (cert) show  newline
+(reason:) show ( ) show (\(evap-reason) show ( ) show (cert\)) show  newline
+(signers:) show ( ) show (\(map) show ( ) show (car) show ( ) show (\(evap-signers) show ( ) show (cert\)\)\)) show  newline
+(;;) show ( ) show (Finally,) show ( ) show (delete) show  newline
+(\(cas-delete!) show ( ) show (hash\)\)\)) show  newline
+ newline
+ newline
+(Archival) show ( ) show (Object) show ( ) show (Evaporation) show  newline
+newpath margin ypos moveto margin 162 add ypos lineto stroke
+newline
+ newline
+(Archival) show ( ) show (objects) show ( ) show (\(>30) show ( ) show (days\)) show ( ) show (receive) show ( ) show (maximum) show ( ) show (protection.) show ( ) show (They) show ( ) show (can) show ( ) show (only) show  newline
+(evaporate) show ( ) show (via:) show  newline
+ newline
+(*) show ( ) show (Legal) show ( ) show (requirement) show ( ) show (-) show ( ) show (With) show ( ) show (proof) show ( ) show (of) show ( ) show (legal) show ( ) show (order) show  newline
+(*) show ( ) show (Data) show ( ) show (corruption) show ( ) show (-) show ( ) show (With) show ( ) show (cryptographic) show ( ) show (proof) show ( ) show (of) show ( ) show (corruption) show  newline
+(*) show ( ) show (Governance) show ( ) show (vote) show ( ) show (-) show ( ) show (Per) show ( ) show (Memo-036) show ( ) show (quorum) show ( ) show (protocol) show  newline
+ newline
+(These) show ( ) show (narrow) show ( ) show (exceptions) show ( ) show (exist) show ( ) show (because) show ( ) show (even) show ( ) show (sacred) show ( ) show (objects) show ( ) show (sometimes) show ( ) show (must) show  newline
+(go,) show ( ) show (but) show ( ) show (only) show ( ) show (with) show ( ) show (extraordinary) show ( ) show (justification.) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(archival-evaporation-authorized?) show ( ) show (cert\)) show  newline
+("Check) show ( ) show (if) show ( ) show (archival) show ( ) show (evaporation) show ( ) show (is) show ( ) show (properly) show ( ) show (authorized") show  newline
+(\(case) show ( ) show (\(evap-reason) show ( ) show (cert\)) show  newline
+(\(\(legal-requirement\)) show  newline
+(;;) show ( ) show (Must) show ( ) show (include) show ( ) show (legal) show ( ) show (order) show ( ) show (reference) show  newline
+(\(and) show ( ) show (\(evap-legal-order) show ( ) show (cert\)) show  newline
+(\(verify-legal-order) show ( ) show (\(evap-legal-order) show ( ) show (cert\)\)\)\)) show  newline
+(\(\(data-corruption\)) show  newline
+(;;) show ( ) show (Must) show ( ) show (include) show ( ) show (corruption) show ( ) show (proof) show  newline
+(\(and) show ( ) show (\(evap-corruption-proof) show ( ) show (cert\)) show  newline
+(\(verify-corruption) show ( ) show (\(evap-hash) show ( ) show (cert\)) show ( ) show (\(evap-corruption-proof) show ( ) show (cert\)\)\)\)) show  newline
+(\(\(federation-consensus\)) show  newline
+(;;) show ( ) show (Must) show ( ) show (have) show ( ) show (governance) show ( ) show (quorum) show ( ) show (\(Memo-036\)) show  newline
+(\(governance-quorum-met?) show ( ) show (cert\)\)) show  newline
+(\(else) show ( ) show (#f\)\)\)) show ( ) show (;) show ( ) show (No) show ( ) show (other) show ( ) show (reasons) show ( ) show (valid) show ( ) show (for) show ( ) show (archival) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DISTRIBUTED) show ( ) show (GC) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Coordinated) show ( ) show (Collection) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Multi-vault) show ( ) show (GC) show ( ) show (requires) show ( ) show (coordination) show  newline
+(\(define) show ( ) show (\(distributed-gc) show ( ) show (vaults\)) show  newline
+("Coordinate) show ( ) show (GC) show ( ) show (across) show ( ) show (vault) show ( ) show (federation") show  newline
+(;;) show ( ) show (Phase) show ( ) show (1:) show ( ) show (Gather) show ( ) show (root) show ( ) show (sets) show  newline
+(\(let) show ( ) show (\(\(root-sets) show ( ) show (\(map) show ( ) show (vault-roots) show ( ) show (vaults\)\)\)) show  newline
+(;;) show ( ) show (Phase) show ( ) show (2:) show ( ) show (Compute) show ( ) show (global) show ( ) show (reachability) show  newline
+(\(let) show ( ) show (\(\(global-marked) show ( ) show (\(union-all) show ( ) show (root-sets\)\)\)) show  newline
+(;;) show ( ) show (Phase) show ( ) show (3:) show ( ) show (Propose) show ( ) show (evaporation) show ( ) show (\(no) show ( ) show (unilateral) show ( ) show (deletion\)) show  newline
+(\(for-each) show ( ) show (\(lambda) show ( ) show (\(vault\)) show  newline
+(\(vault-propose-evaporation) show ( ) show (vault) show ( ) show (global-marked\)\)) show  newline
+(vaults\)\)\)\)) show  newline
+ newline
+ newline
+(Remote) show ( ) show (Reference) show ( ) show (Tracking) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Track) show ( ) show (references) show ( ) show (from) show ( ) show (remote) show ( ) show (vaults) show  newline
+(\(define) show ( ) show (remote-refs) show ( ) show (\(make-hash-table\)\)) show  newline
+(\(define) show ( ) show (\(add-remote-reference) show ( ) show (vault-id) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(refs) show ( ) show (\(hash-table-ref) show ( ) show (remote-refs) show ( ) show (hash) show ( ) show ('\(\)\)\)\)) show  newline
+(\(hash-table-set!) show ( ) show (remote-refs) show ( ) show (hash) show ( ) show (\(cons) show ( ) show (vault-id) show ( ) show (refs\)\)\)\)) show  newline
+(\(define) show ( ) show (\(remove-remote-reference) show ( ) show (vault-id) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(refs) show ( ) show (\(hash-table-ref) show ( ) show (remote-refs) show ( ) show (hash) show ( ) show ('\(\)\)\)\)) show  newline
+(\(hash-table-set!) show ( ) show (remote-refs) show ( ) show (hash) show ( ) show (\(delete) show ( ) show (vault-id) show ( ) show (refs\)\)\)\)) show  newline
+(\(define) show ( ) show (\(has-remote-references?) show ( ) show (hash\)) show  newline
+(\(not) show ( ) show (\(null?) show ( ) show (\(hash-table-ref) show ( ) show (remote-refs) show ( ) show (hash) show ( ) show ('\(\)\)\)\)\)) show  newline
+ newline
+ newline
+(Lease-Based) show ( ) show (Collection) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Remote) show ( ) show (vaults) show ( ) show (lease) show ( ) show (objects) show  newline
+(\(define) show ( ) show (leases) show ( ) show (\(make-hash-table\)\)) show  newline
+(\(define) show ( ) show (\(grant-lease) show ( ) show (hash) show ( ) show (vault-id) show ( ) show (duration\)) show  newline
+(\(let) show ( ) show (\(\(expires) show ( ) show (\(+) show ( ) show (\(current-time\)) show ( ) show (duration\)\)\)) show  newline
+(\(hash-table-set!) show ( ) show (leases) show ( ) show (hash) show  newline
+(\(cons) show ( ) show (\(cons) show ( ) show (vault-id) show ( ) show (expires\)) show  newline
+(\(hash-table-ref) show ( ) show (leases) show ( ) show (hash) show ( ) show ('\(\)\)\)\)\)\)) show  newline
+(\(define) show ( ) show (\(lease-active?) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(hash-leases) show ( ) show (\(hash-table-ref) show ( ) show (leases) show ( ) show (hash) show ( ) show ('\(\)\)\)\)) show  newline
+(\(any) show ( ) show (\(lambda) show ( ) show (\(lease\)) show  newline
+(\(>) show ( ) show (\(cdr) show ( ) show (lease\)) show ( ) show (\(current-time\)\)\)) show  newline
+(hash-leases\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(GC) show ( ) show (SCHEDULING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Archival) show ( ) show (Defaults) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (soup) show ( ) show (defaults) show ( ) show (to) show ( ) show (never) show ( ) show (collect.) show ( ) show (GC) show ( ) show (only) show ( ) show (runs) show ( ) show (when) show ( ) show (explicitly) show ( ) show (enabled) show  newline
+(and) show ( ) show (only) show ( ) show (considers) show ( ) show (ephemeral/young) show ( ) show (generations) show ( ) show (automatically.) show  newline
+ newline
+ newline
+(;;) show ( ) show (Archival) show ( ) show (GC) show ( ) show (mode) show  newline
+(\(define) show ( ) show (gc-mode) show ( ) show ('archival\)) show ( ) show (;) show ( ) show ('archival,) show ( ) show ('conservative,) show ( ) show (or) show ( ) show ('aggressive) show  newline
+(\(define) show ( ) show (\(gc-enabled?\)) show  newline
+("Check) show ( ) show (if) show ( ) show (automatic) show ( ) show (GC) show ( ) show (is) show ( ) show (enabled") show  newline
+(\(not) show ( ) show (\(eq?) show ( ) show (gc-mode) show ( ) show ('archival\)\)\)) show  newline
+ newline
+ newline
+(Triggers) show  newline
+newpath margin ypos moveto margin 48 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (GC) show ( ) show (triggered) show ( ) show (only) show ( ) show (under) show ( ) show (pressure,) show ( ) show (and) show ( ) show (only) show ( ) show (for) show ( ) show (young) show ( ) show (generations) show  newline
+(\(define) show ( ) show (\(should-gc?\)) show  newline
+(\(and) show ( ) show (\(gc-enabled?\)) show  newline
+(\(or) show ( ) show (\(>) show ( ) show (\(storage-usage-percent\)) show ( ) show (95\)) show ( ) show (;) show ( ) show (Emergency) show ( ) show (only) show  newline
+(\(>) show ( ) show (\(ephemeral-orphan-count\)) show ( ) show (1000\)\)\)\)) show ( ) show (;) show ( ) show (Too) show ( ) show (many) show ( ) show (ephemeral) show ( ) show (orphans) show  newline
+(\(define) show ( ) show (\(gc-schedule\)) show  newline
+("Run) show ( ) show (appropriate) show ( ) show (GC) show ( ) show (based) show ( ) show (on) show ( ) show (conditions) show ( ) show (and) show ( ) show (mode") show  newline
+(\(case) show ( ) show (gc-mode) show  newline
+(\(\(archival\)) show  newline
+(;;) show ( ) show (Never) show ( ) show (automatic) show ( ) show (-) show ( ) show (only) show ( ) show (explicit) show ( ) show (evaporation) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show ('gc-skipped) show ( ) show (reason:) show ( ) show ('archival-mode\)\)) show  newline
+(\(\(conservative\)) show  newline
+(;;) show ( ) show (Only) show ( ) show (ephemeral) show ( ) show (objects) show  newline
+(\(cond) show  newline
+(\(\(>) show ( ) show (\(storage-usage-percent\)) show ( ) show (99\)) show  newline
+(\(gc-generation) show ( ) show ('ephemeral\)) show  newline
+(\(gc-generation) show ( ) show ('young\)\)) show ( ) show (;) show ( ) show (Emergency:) show ( ) show (young) show ( ) show (too) show  newline
+(\(\(>) show ( ) show (\(storage-usage-percent\)) show ( ) show (95\)) show  newline
+(\(gc-generation) show ( ) show ('ephemeral\)\)) show  newline
+(\(else) show  newline
+(\(audit-append) show ( ) show (action:) show ( ) show ('gc-skipped) show ( ) show (reason:) show ( ) show ('no-pressure\)\)\)\)) show  newline
+(\(\(aggressive\)) show  newline
+(;;) show ( ) show (Traditional) show ( ) show (GC) show ( ) show (\(NOT) show ( ) show (RECOMMENDED) show ( ) show (for) show ( ) show (archives\)) show  newline
+(\(cond) show  newline
+(\(\(>) show ( ) show (\(storage-usage-percent\)) show ( ) show (95\)) show  newline
+(\(gc-full\)\)) show  newline
+(\(\(>) show ( ) show (\(storage-usage-percent\)) show ( ) show (80\)) show  newline
+(\(gc-generation) show ( ) show ('young\)\)) show  newline
+(\(else) show  newline
+(\(gc-incremental\)\)\)\)\)\)) show  newline
+ newline
+ newline
+(Background) show ( ) show (GC) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (gc-thread) show ( ) show (#f\)) show  newline
+(\(define) show ( ) show (\(start-gc-daemon) show ( ) show (interval\)) show  newline
+("Start) show ( ) show (background) show ( ) show (GC) show ( ) show (daemon) show ( ) show (\(archival) show ( ) show (mode:) show ( ) show (monitoring) show ( ) show (only\)") show  newline
+(\(set!) show ( ) show (gc-thread) show  newline
+(\(thread-start!) show  newline
+(\(make-thread) show  newline
+(\(lambda) show ( ) show (\(\)) show  newline
+(\(let) show ( ) show (loop) show ( ) show (\(\)) show  newline
+(\(thread-sleep!) show ( ) show (interval\)) show  newline
+(;;) show ( ) show (Always) show ( ) show (report) show ( ) show (status) show  newline
+(\(audit-append) show  newline
+(action:) show ( ) show ('gc-status) show  newline
+(mode:) show ( ) show (gc-mode) show  newline
+(storage-percent:) show ( ) show (\(storage-usage-percent\)) show  newline
+(ephemeral-orphans:) show ( ) show (\(ephemeral-orphan-count\)) show  newline
+(should-gc:) show ( ) show (\(should-gc?\)\)) show  newline
+(;;) show ( ) show (Only) show ( ) show (act) show ( ) show (if) show ( ) show (enabled) show  newline
+(\(when) show ( ) show (\(should-gc?\)) show  newline
+(\(gc-schedule\)\)) show  newline
+(\(loop\)\)\)\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SAFETY) show ( ) show (MECHANISMS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Dry) show ( ) show (Run) show  newline
+newpath margin ypos moveto margin 42 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(gc-dry-run\)) show  newline
+("Report) show ( ) show (what) show ( ) show (would) show ( ) show (be) show ( ) show (collected) show ( ) show (without) show ( ) show (collecting") show  newline
+(\(let*) show ( ) show (\(\(marked) show ( ) show (\(mark-reachable\)\)) show  newline
+(\(would-collect) show ( ) show (\(filter) show ( ) show (\(lambda) show ( ) show (\(h\)) show  newline
+(\(not) show ( ) show (\(hash-set-member?) show ( ) show (marked) show ( ) show (h\)\)\)) show  newline
+(\(all-object-hashes\)\)\)\)) show  newline
+(`\(\(would-collect) show ( ) show (.) show ( ) show (,\(length) show ( ) show (would-collect\)\)) show  newline
+(\(bytes) show ( ) show (.) show ( ) show (,\(sum) show ( ) show (\(map) show ( ) show (object-size) show ( ) show (would-collect\)\)\)) show  newline
+(\(samples) show ( ) show (.) show ( ) show (,\(take) show ( ) show (would-collect) show ( ) show (10\)\)\)\)\)) show  newline
+ newline
+ newline
+(Collection) show ( ) show (Log) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Every) show ( ) show (collection) show ( ) show (is) show ( ) show (logged) show ( ) show (with) show ( ) show (recovery) show ( ) show (info) show  newline
+(\(define) show ( ) show (\(collect-with-log!) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(obj) show ( ) show (\(cas-get) show ( ) show (hash\)\)\)) show  newline
+(;;) show ( ) show (Log) show ( ) show (enough) show ( ) show (to) show ( ) show (reconstruct) show ( ) show (if) show ( ) show (needed) show  newline
+(\(audit-append) show  newline
+(action:) show ( ) show ('gc-collect) show  newline
+(hash:) show ( ) show (hash) show  newline
+(size:) show ( ) show (\(object-size) show ( ) show (obj\)) show  newline
+(type:) show ( ) show (\(soup-object-type) show ( ) show (obj\)) show  newline
+(references:) show ( ) show (\(object-references) show ( ) show (hash\)) show  newline
+(metadata:) show ( ) show (\(soup-object-metadata) show ( ) show (obj\)\)) show  newline
+(\(cas-delete!) show ( ) show (hash\)\)\)) show  newline
+ newline
+ newline
+(Recovery) show  newline
+newpath margin ypos moveto margin 48 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Recover) show ( ) show (recently) show ( ) show (collected) show ( ) show (object) show ( ) show (from) show ( ) show (audit) show ( ) show (log) show  newline
+(\(define) show ( ) show (\(gc-recover) show ( ) show (hash\)) show  newline
+("Attempt) show ( ) show (to) show ( ) show (recover) show ( ) show (collected) show ( ) show (object") show  newline
+(\(let) show ( ) show (\(\(entry) show ( ) show (\(find) show ( ) show (\(lambda) show ( ) show (\(e\)) show  newline
+(\(and) show ( ) show (\(eq?) show ( ) show (\(audit-action) show ( ) show (e\)) show ( ) show ('gc-collect\)) show  newline
+(\(equal?) show ( ) show (\(audit-hash) show ( ) show (e\)) show ( ) show (hash\)\)\)) show  newline
+(\(recent-audit-entries\)\)\)\)) show  newline
+(\(if) show ( ) show (entry) show  newline
+(\(error) show ( ) show ("Object) show ( ) show (collected,) show ( ) show (metadata) show ( ) show (preserved) show ( ) show (in) show ( ) show (audit") show  newline
+(\(audit-metadata) show ( ) show (entry\)\)) show  newline
+(\(error) show ( ) show ("Object) show ( ) show (not) show ( ) show (found) show ( ) show (in) show ( ) show (recent) show ( ) show (collections"\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(METRICS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(GC) show ( ) show (Statistics) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (gc-stats) show  newline
+(\(\(collections) show ( ) show (.) show ( ) show (0\)) show  newline
+(\(bytes-freed) show ( ) show (.) show ( ) show (0\)) show  newline
+(\(objects-freed) show ( ) show (.) show ( ) show (0\)) show  newline
+(\(total-time) show ( ) show (.) show ( ) show (0\)) show  newline
+(\(last-gc) show ( ) show (.) show ( ) show (#f\)\)\)) show  newline
+(\(define) show ( ) show (\(update-gc-stats) show ( ) show (collected) show ( ) show (duration\)) show  newline
+(\(set!) show ( ) show (gc-stats) show  newline
+(\(\(collections) show ( ) show (.) show ( ) show (,\(+) show ( ) show (1) show ( ) show (\(assoc-ref) show ( ) show (gc-stats) show ( ) show ('collections\)\)\)) show  newline
+(\(bytes-freed) show ( ) show (.) show ( ) show (,\(+) show ( ) show (\(sum) show ( ) show (\(map) show ( ) show (object-size) show ( ) show (collected\)\)) show  newline
+(\(assoc-ref) show ( ) show (gc-stats) show ( ) show ('bytes-freed\)\)\)) show  newline
+(\(objects-freed) show ( ) show (.) show ( ) show (,\(+) show ( ) show (\(length) show ( ) show (collected\)) show  newline
+(\(assoc-ref) show ( ) show (gc-stats) show ( ) show ('objects-freed\)\)\)) show  newline
+(\(total-time) show ( ) show (.) show ( ) show (,\(+) show ( ) show (duration) show ( ) show (\(assoc-ref) show ( ) show (gc-stats) show ( ) show ('total-time\)\)\)) show  newline
+(\(last-gc) show ( ) show (.) show ( ) show (,\(current-time\)\)\)\)\)) show  newline
+ newline
+ newline
+(Monitoring) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Expose) show ( ) show (GC) show ( ) show (metrics) show  newline
+(\(define) show ( ) show (\(gc-metrics\)) show  newline
+(`\(\(storage-used) show ( ) show (.) show ( ) show (,\(storage-used\)\)) show  newline
+(\(storage-total) show ( ) show (.) show ( ) show (,\(storage-total\)\)) show  newline
+(\(object-count) show ( ) show (.) show ( ) show (,\(object-count\)\)) show  newline
+(\(orphan-estimate) show ( ) show (.) show ( ) show (,\(orphan-estimate\)\)) show  newline
+(\(pinned-count) show ( ) show (.) show ( ) show (,\(hash-table-size) show ( ) show (pins\)\)) show  newline
+(\(gc-stats) show ( ) show (.) show ( ) show (,gc-stats\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(GC) show ( ) show (as) show ( ) show (Side) show ( ) show (Channel) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (GC) show ( ) show (timing) show ( ) show (can) show ( ) show (leak) show ( ) show (information) show ( ) show (about) show ( ) show (object) show ( ) show (references) show  newline
+(;;) show ( ) show (Use) show ( ) show (constant-time) show ( ) show (operations) show ( ) show (where) show ( ) show (possible) show  newline
+(\(define) show ( ) show (\(constant-time-mark) show ( ) show (hash\)) show  newline
+(\(let) show ( ) show (\(\(refs) show ( ) show (\(object-references) show ( ) show (hash\)\)\)) show  newline
+(;;) show ( ) show (Always) show ( ) show (process) show ( ) show (same) show ( ) show (number) show ( ) show (of) show ( ) show (refs) show  newline
+(\(for-each) show ( ) show (mark) show ( ) show (\(pad-list) show ( ) show (refs) show ( ) show (max-refs\)\)\)\)) show  newline
+ newline
+ newline
+(Denial) show ( ) show (of) show ( ) show (Service) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Prevent) show ( ) show (GC) show ( ) show (starvation) show ( ) show (attacks) show  newline
+(\(define) show ( ) show (max-pins-per-principal) show ( ) show (10000\)) show  newline
+(\(define) show ( ) show (\(pin-with-limit!) show ( ) show (hash) show ( ) show (reason\)) show  newline
+(\(let) show ( ) show (\(\(count) show ( ) show (\(principal-pin-count) show ( ) show (\(current-principal\)\)\)\)) show  newline
+(\(when) show ( ) show (\(>) show ( ) show (count) show ( ) show (max-pins-per-principal\)) show  newline
+(\(error) show ( ) show ("Pin) show ( ) show (limit) show ( ) show (exceeded"\)\)) show  newline
+(\(pin!) show ( ) show (hash) show ( ) show (reason\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(INVARIANTS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(G1.) show ( ) show (Preservation) show ( ) show (default) show  newline
+gsave
+margin 48 add ypos moveto (default-mode) show
+margin 126 add ypos moveto (=) show
+margin 138 add ypos moveto (archival) show
+% box char 2192 at col 32
+newpath margin 195 add 3 sub ypos 2 add moveto margin 195 add 3 add ypos lineto margin 195 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (no-automatic-collection) show
+grestore
+newline
+(G2.) show ( ) show (Age) show ( ) show (increases) show ( ) show (protection) show  newline
+gsave
+margin 48 add ypos moveto (age\(obj\)) show
+margin 102 add ypos moveto (>) show
+margin 114 add ypos moveto (age\(obj'\)) show
+% box char 2192 at col 29
+newpath margin 177 add 3 sub ypos 2 add moveto margin 177 add 3 add ypos lineto margin 177 add 3 sub ypos 2 sub lineto closepath fill
+margin 186 add ypos moveto (protection\(obj\)) show
+margin 282 add ypos moveto () show
+margin 294 add ypos moveto (protection\(obj'\)) show
+grestore
+newline
+(G3.) show ( ) show (Evaporation) show ( ) show (requires) show ( ) show (consent) show  newline
+(evaporate\(hash\)) show ( ) show (requires) show ( ) show (signed-certificate\(hash\)) show  newline
+(G4.) show ( ) show (Quorum) show ( ) show (scales) show ( ) show (with) show ( ) show (age) show  newline
+gsave
+margin 48 add ypos moveto (generation) show
+margin 114 add ypos moveto (=) show
+margin 126 add ypos moveto (archival) show
+% box char 2192 at col 30
+newpath margin 183 add 3 sub ypos 2 add moveto margin 183 add 3 add ypos lineto margin 183 add 3 sub ypos 2 sub lineto closepath fill
+margin 192 add ypos moveto (quorum) show
+margin 234 add ypos moveto (=) show
+margin 246 add ypos moveto (governance-level) show
+grestore
+newline
+(G5.) show ( ) show (Archival) show ( ) show (objects) show ( ) show (are) show ( ) show (sacred) show  newline
+gsave
+margin 48 add ypos moveto (age) show
+margin 72 add ypos moveto (>) show
+margin 84 add ypos moveto (30-days) show
+% box char 2192 at col 22
+newpath margin 135 add 3 sub ypos 2 add moveto margin 135 add 3 add ypos lineto margin 135 add 3 sub ypos 2 sub lineto closepath fill
+margin 144 add ypos moveto (no-automatic-evaporation) show
+grestore
+newline
+(G6.) show ( ) show (Audit) show ( ) show (trail) show ( ) show (preserved) show  newline
+gsave
+margin 48 add ypos moveto (evaporate\(hash\)) show
+% box char 2192 at col 24
+newpath margin 147 add 3 sub ypos 2 add moveto margin 147 add 3 add ypos lineto margin 147 add 3 sub ypos 2 sub lineto closepath fill
+margin 156 add ypos moveto (audit-append\(hash,) show
+margin 270 add ypos moveto (certificate,) show
+margin 348 add ypos moveto (reason,) show
+margin 396 add ypos moveto (signers\)) show
+grestore
+newline
+(G7.) show ( ) show (Mark-and-sweep) show ( ) show (authoritative) show  newline
+gsave
+margin 48 add ypos moveto (truly-unreachable\(hash\)) show
+margin 192 add ypos moveto () show
+margin 204 add ypos moveto (\254member\(hash,) show
+margin 288 add ypos moveto (mark-reachable\(\)\)) show
+grestore
+newline
+(G8.) show ( ) show (Cycles) show ( ) show (preserved) show  newline
+gsave
+margin 48 add ypos moveto (cycle\(A,) show
+margin 102 add ypos moveto (B,) show
+margin 120 add ypos moveto (C\)) show
+margin 138 add ypos moveto () show
+margin 150 add ypos moveto (archival-mode) show
+% box char 2192 at col 39
+newpath margin 237 add 3 sub ypos 2 add moveto margin 237 add 3 add ypos lineto margin 237 add 3 sub ypos 2 sub lineto closepath fill
+margin 246 add ypos moveto (preserve\(A,) show
+margin 318 add ypos moveto (B,) show
+margin 336 add ypos moveto (C\)) show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (The) show ( ) show (Garbage) show ( ) show (Collection) show ( ) show (Handbook) show ( ) show (-) show ( ) show (Jones,) show ( ) show (Hosking,) show ( ) show (Moss) show  newline
+(*) show ( ) show (On-the-Fly) show ( ) show (Garbage) show ( ) show (Collection) show ( ) show (-) show ( ) show (Dijkstra) show ( ) show (et) show ( ) show (al.) show  newline
+(*) show ( ) show (Memo-020:) show ( ) show (Content-Addressed) show ( ) show (Storage) show  newline
+(*) show ( ) show (Memo-003:) show ( ) show (Cryptographic) show ( ) show (Audit) show ( ) show (Trail) show  newline
+(*) show ( ) show (Memo-036:) show ( ) show (Quorum) show ( ) show (Protocol) show ( ) show (with) show ( ) show (Homomorphic) show ( ) show (Voting) show  newline
+(*) show ( ) show (Memo-008:) show ( ) show (Threshold) show ( ) show (Signature) show ( ) show (Governance) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-09) show  newline
+(*) show ( ) show (Tricolor) show ( ) show (marking) show ( ) show (with) show ( ) show (worklist) show ( ) show (\(eliminates) show ( ) show (stack) show ( ) show (overflow\),) show ( ) show (incremental) show ( ) show (marking,) show ( ) show (SATB) show ( ) show (write) show ( ) show (barriers,) show ( ) show (concurrent) show ( ) show (GC) show ( ) show (support) show ( ) show (-) show ( ) show (2026-01-09) show  newline
+(*) show ( ) show (Archival) show ( ) show (GC) show ( ) show (improvements:) show ( ) show (evaporation) show ( ) show (certificates,) show ( ) show (quorum) show ( ) show (requirements,) show ( ) show (reversed) show ( ) show (generational) show ( ) show (policy,) show ( ) show (cycle) show ( ) show (detection,) show ( ) show (preservation-first) show ( ) show (defaults) show ( ) show (-) show ( ) show (2026-01-07) show  newline
+(*) show ( ) show (Initial) show ( ) show (draft) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

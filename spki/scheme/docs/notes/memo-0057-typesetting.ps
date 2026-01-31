@@ -15,217 +15,565 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0057: Typesetting) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(HTML was born without typographic discipline. Browsers render monospace) show newline
-(text with variable-width box-drawing characters, destroying the careful) show newline
-(geometry of ASCII diagrams. This memo specifies how Cyberspace solves) show newline
-(the problem: convert character-cell art to SVG at generation time,) show newline
-(preserving the author's intent in a form browsers cannot corrupt.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(THE ORIGINAL SIN) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(In the beginning, there was the teletype. Characters occupied fixed) show newline
-(cells. Box-drawing characters \(│ ─ ┌ ┐ └ ┘\) aligned) show newline
-(perfectly because geometry was enforced by hardware.) show newline
-() show newline
-(Then came HTML, and the browser vendors said: 'Let there be font) show newline
-(substitution.' And there was chaos.) show newline
-() show newline
-(The problem:) show newline
-() show newline
-(  * Browsers substitute fonts freely, even within 'monospace') show newline
-(  * Box-drawing glyphs often come from different fonts than text) show newline
-(  * Different fonts have different metrics) show newline
-(  * A '│' from one font may be wider than '─' from another) show newline
-(  * Vertical lines no longer align across rows) show newline
-() show newline
-(The result: carefully composed ASCII diagrams render as visual garbage.) show newline
-(Decades of terminal art, protocol diagrams, and architectural) show newline
-(sketches—broken by 'progress.') show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(THE SOLUTION: COMPILE TO GEOMETRY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(We solve this at the source. During memo generation, text containing) show newline
-(box-drawing characters is converted to SVG—a format where geometry is) show newline
-(explicit and browsers cannot reinterpret.) show newline
-() show newline
-() show newline
-(Character Cell Model) show newline
-(--------------------) show newline
-() show newline
-(Every character occupies a fixed cell:) show newline
-() show newline
-() show newline
-(    \(define cell-width 10\)    ; pixels) show newline
-(    \(define cell-height 20\)   ; pixels) show newline
-() show newline
-(Text characters are positioned at cell centers. Box-drawing characters) show newline
-(become geometric primitives—lines and rectangles with exact) show newline
-(coordinates.) show newline
-() show newline
-() show newline
-(Box-Drawing Primitives) show newline
-(----------------------) show newline
-() show newline
-(Each box-drawing codepoint maps to SVG elements:) show newline
-() show newline
-() show newline
-(  Glyph   Codepoint   SVG Primitives                         ) show newline
-(  ─     U+2500      Horizontal line through cell center    ) show newline
-(  │     U+2502      Vertical line through cell center      ) show newline
-(  ┌     U+250C      Lines: center→right, center→down   ) show newline
-(  ┐     U+2510      Lines: center→left, center→down    ) show newline
-(  └     U+2514      Lines: center→right, center→up     ) show newline
-(  ┘     U+2518      Lines: center→left, center→up      ) show newline
-(  ├     U+251C      Lines: up↔down, center→right       ) show newline
-(  ┤     U+2524      Lines: up↔down, center→left        ) show newline
-(  ┬     U+252C      Lines: left↔right, center→down     ) show newline
-(  ┴     U+2534      Lines: left↔right, center→up       ) show newline
-(  ┼     U+253C      Lines: full cross                      ) show newline
-() show newline
-(Double-line variants \(═ ║ ╔ ╗ ╚ ╝\) use the same geometry) show newline
-(with doubled strokes.) show newline
-() show newline
-() show newline
-(Text Grouping) show newline
-(-------------) show newline
-() show newline
-(Consecutive text characters are grouped into single SVG text elements:) show newline
-() show newline
-() show newline
-(    Before: <text x="5">c</text><text x="15">h</text><text x="25">a</text>...) show newline
-(    After:  <text x="0">chaotic</text>) show newline
-() show newline
-(This reduces SVG size and ensures proper kerning within text runs.) show newline
-(Spaces and box-drawing characters break the grouping.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(AUTO-ALIGNMENT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Authors make mistakes. Lines in a box diagram may differ by one) show newline
-(character—an extra space, a missing padding. The renderer detects and) show newline
-(corrects this automatically.) show newline
-() show newline
-() show newline
-(The Algorithm) show newline
-(-------------) show newline
-() show newline
-(  * Identify lines ending with box right-edges \(│ ┐ ┘ ┤ ║ ╗ ╝\)) show newline
-(  * Find the most common width among these lines) show newline
-(  * Adjust each box-edge line to match the target width) show newline
-(  * Add spaces before the edge if too short) show newline
-(  * Remove trailing spaces before the edge if too long) show newline
-() show newline
-(This preserves author intent while correcting typographic errors. A) show newline
-(64-character line among 63-character siblings gets trimmed. A) show newline
-(62-character line gets padded.) show newline
-() show newline
-() show newline
-(Why Most Common, Not Maximum) show newline
-(----------------------------) show newline
-() show newline
-(If 14 lines are 63 characters and 1 line is 64 characters, the outlier) show newline
-(is the error. Taking the maximum would pad 14 correct lines to match 1) show newline
-(broken one. Taking the mode identifies the intended width.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The typesetting pipeline lives in memo-format.scm:) show newline
-() show newline
-() show newline
-(    ;; Core functions) show newline
-(    \(utf8-chars str\)           ; Extract Unicode codepoints) show newline
-(    \(box-drawing-codepoint? cp\) ; Identify box characters  ) show newline
-(    \(codepoint->svg cp cx cy\)   ; Map to SVG primitives) show newline
-(    \(fix-box-line-widths lines\) ; Auto-align right edges) show newline
-(    \(text->svg-diagram text\)    ; Full conversion) show newline
-() show newline
-(The pipeline:) show newline
-() show newline
-(  * Split text into lines) show newline
-(  * Auto-fix line widths for consistent box edges) show newline
-(  * Process each character: box-drawing → geometry, text → grouped spans) show newline
-(  * Emit SVG with embedded styles for theme compatibility) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DESIGN PRINCIPLES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Compile, don't interpret: Fix problems at generation time, not render time) show newline
-(  * Preserve intent: The author's diagram should appear as conceived) show newline
-(  * Fail gracefully: Unknown characters pass through as text) show newline
-(  * Theme-aware: Use currentColor so diagrams respect dark/light mode) show newline
-(  * Self-contained: Each SVG includes its own styles) show newline
-() show newline
-(These principles ensure diagrams render correctly across browsers,) show newline
-(operating systems, and color schemes—now and in the future.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(HERITAGE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This work stands on foundations:) show newline
-() show newline
-(  * Knuth's TeX \(1978\): The discipline of precise typographic control) show newline
-(  * Ossanna's troff \(1973\): Document formatting as compilation) show newline
-(  * Adobe PostScript \(1984\): Page description as a programming language) show newline
-(  * Unicode box-drawing block \(1991\): Standardized character geometry) show newline
-(  * SVG 1.0 \(2001\): Vector graphics for the web) show newline
-() show newline
-(We honor these by taking typography seriously in an age that has largely) show newline
-(forgotten it.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Knuth, D. E. \(1984\). The TeXbook) show newline
-(  * Unicode Standard, Chapter 22: Symbols - Box Drawing) show newline
-(  * SVG 1.1 Specification, W3C Recommendation) show newline
-(  * Kernighan, B. W. \(1978\). A TROFF Tutorial) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-20) show newline
-(  * Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0057:) show ( ) show (Typesetting) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(HTML) show ( ) show (was) show ( ) show (born) show ( ) show (without) show ( ) show (typographic) show ( ) show (discipline.) show ( ) show (Browsers) show ( ) show (render) show ( ) show (monospace) show  newline
+(text) show ( ) show (with) show ( ) show (variable-width) show ( ) show (box-drawing) show ( ) show (characters,) show ( ) show (destroying) show ( ) show (the) show ( ) show (careful) show  newline
+(geometry) show ( ) show (of) show ( ) show (ASCII) show ( ) show (diagrams.) show ( ) show (This) show ( ) show (memo) show ( ) show (specifies) show ( ) show (how) show ( ) show (Cyberspace) show ( ) show (solves) show  newline
+(the) show ( ) show (problem:) show ( ) show (convert) show ( ) show (character-cell) show ( ) show (art) show ( ) show (to) show ( ) show (SVG) show ( ) show (at) show ( ) show (generation) show ( ) show (time,) show  newline
+(preserving) show ( ) show (the) show ( ) show (author's) show ( ) show (intent) show ( ) show (in) show ( ) show (a) show ( ) show (form) show ( ) show (browsers) show ( ) show (cannot) show ( ) show (corrupt.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(THE) show ( ) show (ORIGINAL) show ( ) show (SIN) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(In) show ( ) show (the) show ( ) show (beginning,) show ( ) show (there) show ( ) show (was) show ( ) show (the) show ( ) show (teletype.) show ( ) show (Characters) show ( ) show (occupied) show ( ) show (fixed) show  newline
+gsave
+margin 0 add ypos moveto (cells.) show
+margin 42 add ypos moveto (Box-drawing) show
+margin 114 add ypos moveto (characters) show
+margin 180 add ypos moveto (\() show
+% box char 2502 at col 31
+newpath margin 189 add ypos 6 sub moveto margin 189 add ypos 6 add lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 250c at col 35
+newpath margin 213 add ypos moveto margin 213 add 3 add ypos lineto stroke
+newpath margin 213 add ypos moveto margin 213 add ypos 6 sub lineto stroke
+% box char 2510 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add ypos lineto stroke
+newpath margin 225 add ypos moveto margin 225 add ypos 6 sub lineto stroke
+% box char 2514 at col 39
+newpath margin 237 add ypos moveto margin 237 add 3 add ypos lineto stroke
+newpath margin 237 add ypos 6 add moveto margin 237 add ypos lineto stroke
+% box char 2518 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add ypos lineto stroke
+newpath margin 249 add ypos 6 add moveto margin 249 add ypos lineto stroke
+margin 252 add ypos moveto (\)) show
+margin 264 add ypos moveto (aligned) show
+grestore
+newline
+(perfectly) show ( ) show (because) show ( ) show (geometry) show ( ) show (was) show ( ) show (enforced) show ( ) show (by) show ( ) show (hardware.) show  newline
+ newline
+(Then) show ( ) show (came) show ( ) show (HTML,) show ( ) show (and) show ( ) show (the) show ( ) show (browser) show ( ) show (vendors) show ( ) show (said:) show ( ) show ('Let) show ( ) show (there) show ( ) show (be) show ( ) show (font) show  newline
+(substitution.') show ( ) show (And) show ( ) show (there) show ( ) show (was) show ( ) show (chaos.) show  newline
+ newline
+(The) show ( ) show (problem:) show  newline
+ newline
+(*) show ( ) show (Browsers) show ( ) show (substitute) show ( ) show (fonts) show ( ) show (freely,) show ( ) show (even) show ( ) show (within) show ( ) show ('monospace') show  newline
+(*) show ( ) show (Box-drawing) show ( ) show (glyphs) show ( ) show (often) show ( ) show (come) show ( ) show (from) show ( ) show (different) show ( ) show (fonts) show ( ) show (than) show ( ) show (text) show  newline
+(*) show ( ) show (Different) show ( ) show (fonts) show ( ) show (have) show ( ) show (different) show ( ) show (metrics) show  newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (A) show
+margin 36 add ypos moveto (') show
+% box char 2502 at col 7
+newpath margin 45 add ypos 6 sub moveto margin 45 add ypos 6 add lineto stroke
+margin 48 add ypos moveto (') show
+margin 60 add ypos moveto (from) show
+margin 90 add ypos moveto (one) show
+margin 114 add ypos moveto (font) show
+margin 144 add ypos moveto (may) show
+margin 168 add ypos moveto (be) show
+margin 186 add ypos moveto (wider) show
+margin 222 add ypos moveto (than) show
+margin 252 add ypos moveto (') show
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+margin 264 add ypos moveto (') show
+margin 276 add ypos moveto (from) show
+margin 306 add ypos moveto (another) show
+grestore
+newline
+(*) show ( ) show (Vertical) show ( ) show (lines) show ( ) show (no) show ( ) show (longer) show ( ) show (align) show ( ) show (across) show ( ) show (rows) show  newline
+ newline
+(The) show ( ) show (result:) show ( ) show (carefully) show ( ) show (composed) show ( ) show (ASCII) show ( ) show (diagrams) show ( ) show (render) show ( ) show (as) show ( ) show (visual) show ( ) show (garbage.) show  newline
+(Decades) show ( ) show (of) show ( ) show (terminal) show ( ) show (art,) show ( ) show (protocol) show ( ) show (diagrams,) show ( ) show (and) show ( ) show (architectural) show  newline
+gsave
+margin 0 add ypos moveto (sketches--broken) show
+margin 96 add ypos moveto (by) show
+margin 114 add ypos moveto ('progress.') show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(THE) show ( ) show (SOLUTION:) show ( ) show (COMPILE) show ( ) show (TO) show ( ) show (GEOMETRY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(We) show ( ) show (solve) show ( ) show (this) show ( ) show (at) show ( ) show (the) show ( ) show (source.) show ( ) show (During) show ( ) show (memo) show ( ) show (generation,) show ( ) show (text) show ( ) show (containing) show  newline
+gsave
+margin 0 add ypos moveto (box-drawing) show
+margin 72 add ypos moveto (characters) show
+margin 138 add ypos moveto (is) show
+margin 156 add ypos moveto (converted) show
+margin 216 add ypos moveto (to) show
+margin 234 add ypos moveto (SVG--a) show
+margin 270 add ypos moveto (format) show
+margin 312 add ypos moveto (where) show
+margin 348 add ypos moveto (geometry) show
+margin 402 add ypos moveto (is) show
+grestore
+newline
+(explicit) show ( ) show (and) show ( ) show (browsers) show ( ) show (cannot) show ( ) show (reinterpret.) show  newline
+ newline
+ newline
+(Character) show ( ) show (Cell) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(Every) show ( ) show (character) show ( ) show (occupies) show ( ) show (a) show ( ) show (fixed) show ( ) show (cell:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (cell-width) show ( ) show (10\)) show ( ) show (;) show ( ) show (pixels) show  newline
+(\(define) show ( ) show (cell-height) show ( ) show (20\)) show ( ) show (;) show ( ) show (pixels) show  newline
+ newline
+(Text) show ( ) show (characters) show ( ) show (are) show ( ) show (positioned) show ( ) show (at) show ( ) show (cell) show ( ) show (centers.) show ( ) show (Box-drawing) show ( ) show (characters) show  newline
+gsave
+margin 0 add ypos moveto (become) show
+margin 42 add ypos moveto (geometric) show
+margin 102 add ypos moveto (primitives--lines) show
+margin 204 add ypos moveto (and) show
+margin 228 add ypos moveto (rectangles) show
+margin 294 add ypos moveto (with) show
+margin 324 add ypos moveto (exact) show
+grestore
+newline
+(coordinates.) show  newline
+ newline
+ newline
+(Box-Drawing) show ( ) show (Primitives) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(Each) show ( ) show (box-drawing) show ( ) show (codepoint) show ( ) show (maps) show ( ) show (to) show ( ) show (SVG) show ( ) show (elements:) show  newline
+ newline
+ newline
+(Glyph) show ( ) show (Codepoint) show ( ) show (SVG) show ( ) show (Primitives) show  newline
+gsave
+% box char 2500 at col 2
+newpath margin 15 add 3 sub ypos moveto margin 15 add 3 add ypos lineto stroke
+margin 48 add ypos moveto (U+2500) show
+margin 120 add ypos moveto (Horizontal) show
+margin 186 add ypos moveto (line) show
+margin 216 add ypos moveto (through) show
+margin 264 add ypos moveto (cell) show
+margin 294 add ypos moveto (center) show
+grestore
+newline
+gsave
+% box char 2502 at col 2
+newpath margin 15 add ypos 6 sub moveto margin 15 add ypos 6 add lineto stroke
+margin 48 add ypos moveto (U+2502) show
+margin 120 add ypos moveto (Vertical) show
+margin 174 add ypos moveto (line) show
+margin 204 add ypos moveto (through) show
+margin 252 add ypos moveto (cell) show
+margin 282 add ypos moveto (center) show
+grestore
+newline
+gsave
+% box char 250c at col 2
+newpath margin 15 add ypos moveto margin 15 add 3 add ypos lineto stroke
+newpath margin 15 add ypos moveto margin 15 add ypos 6 sub lineto stroke
+margin 48 add ypos moveto (U+250C) show
+margin 120 add ypos moveto (Lines:) show
+margin 162 add ypos moveto (center) show
+% box char 2192 at col 33
+newpath margin 201 add 3 sub ypos 2 add moveto margin 201 add 3 add ypos lineto margin 201 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (right,) show
+margin 246 add ypos moveto (center) show
+% box char 2192 at col 47
+newpath margin 285 add 3 sub ypos 2 add moveto margin 285 add 3 add ypos lineto margin 285 add 3 sub ypos 2 sub lineto closepath fill
+margin 288 add ypos moveto (down) show
+grestore
+newline
+gsave
+% box char 2510 at col 2
+newpath margin 15 add 3 sub ypos moveto margin 15 add ypos lineto stroke
+newpath margin 15 add ypos moveto margin 15 add ypos 6 sub lineto stroke
+margin 48 add ypos moveto (U+2510) show
+margin 120 add ypos moveto (Lines:) show
+margin 162 add ypos moveto (center) show
+% box char 2192 at col 33
+newpath margin 201 add 3 sub ypos 2 add moveto margin 201 add 3 add ypos lineto margin 201 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (left,) show
+margin 240 add ypos moveto (center) show
+% box char 2192 at col 46
+newpath margin 279 add 3 sub ypos 2 add moveto margin 279 add 3 add ypos lineto margin 279 add 3 sub ypos 2 sub lineto closepath fill
+margin 282 add ypos moveto (down) show
+grestore
+newline
+gsave
+% box char 2514 at col 2
+newpath margin 15 add ypos moveto margin 15 add 3 add ypos lineto stroke
+newpath margin 15 add ypos 6 add moveto margin 15 add ypos lineto stroke
+margin 48 add ypos moveto (U+2514) show
+margin 120 add ypos moveto (Lines:) show
+margin 162 add ypos moveto (center) show
+% box char 2192 at col 33
+newpath margin 201 add 3 sub ypos 2 add moveto margin 201 add 3 add ypos lineto margin 201 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (right,) show
+margin 246 add ypos moveto (center) show
+% box char 2192 at col 47
+newpath margin 285 add 3 sub ypos 2 add moveto margin 285 add 3 add ypos lineto margin 285 add 3 sub ypos 2 sub lineto closepath fill
+margin 288 add ypos moveto (up) show
+grestore
+newline
+gsave
+% box char 2518 at col 2
+newpath margin 15 add 3 sub ypos moveto margin 15 add ypos lineto stroke
+newpath margin 15 add ypos 6 add moveto margin 15 add ypos lineto stroke
+margin 48 add ypos moveto (U+2518) show
+margin 120 add ypos moveto (Lines:) show
+margin 162 add ypos moveto (center) show
+% box char 2192 at col 33
+newpath margin 201 add 3 sub ypos 2 add moveto margin 201 add 3 add ypos lineto margin 201 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (left,) show
+margin 240 add ypos moveto (center) show
+% box char 2192 at col 46
+newpath margin 279 add 3 sub ypos 2 add moveto margin 279 add 3 add ypos lineto margin 279 add 3 sub ypos 2 sub lineto closepath fill
+margin 282 add ypos moveto (up) show
+grestore
+newline
+gsave
+% box char 251c at col 2
+newpath margin 15 add ypos 6 sub moveto margin 15 add ypos 6 add lineto stroke
+newpath margin 15 add ypos moveto margin 15 add 3 add ypos lineto stroke
+margin 48 add ypos moveto (U+251C) show
+margin 120 add ypos moveto (Lines:) show
+margin 162 add ypos moveto (updown,) show
+margin 216 add ypos moveto (center) show
+% box char 2192 at col 42
+newpath margin 255 add 3 sub ypos 2 add moveto margin 255 add 3 add ypos lineto margin 255 add 3 sub ypos 2 sub lineto closepath fill
+margin 258 add ypos moveto (right) show
+grestore
+newline
+gsave
+% box char 2524 at col 2
+newpath margin 15 add ypos 6 sub moveto margin 15 add ypos 6 add lineto stroke
+newpath margin 15 add 3 sub ypos moveto margin 15 add ypos lineto stroke
+margin 48 add ypos moveto (U+2524) show
+margin 120 add ypos moveto (Lines:) show
+margin 162 add ypos moveto (updown,) show
+margin 216 add ypos moveto (center) show
+% box char 2192 at col 42
+newpath margin 255 add 3 sub ypos 2 add moveto margin 255 add 3 add ypos lineto margin 255 add 3 sub ypos 2 sub lineto closepath fill
+margin 258 add ypos moveto (left) show
+grestore
+newline
+gsave
+% box char 252c at col 2
+newpath margin 15 add 3 sub ypos moveto margin 15 add 3 add ypos lineto stroke
+newpath margin 15 add ypos moveto margin 15 add ypos 6 sub lineto stroke
+margin 48 add ypos moveto (U+252C) show
+margin 120 add ypos moveto (Lines:) show
+margin 162 add ypos moveto (leftright,) show
+margin 234 add ypos moveto (center) show
+% box char 2192 at col 45
+newpath margin 273 add 3 sub ypos 2 add moveto margin 273 add 3 add ypos lineto margin 273 add 3 sub ypos 2 sub lineto closepath fill
+margin 276 add ypos moveto (down) show
+grestore
+newline
+gsave
+% box char 2534 at col 2
+newpath margin 15 add 3 sub ypos moveto margin 15 add 3 add ypos lineto stroke
+newpath margin 15 add ypos 6 add moveto margin 15 add ypos lineto stroke
+margin 48 add ypos moveto (U+2534) show
+margin 120 add ypos moveto (Lines:) show
+margin 162 add ypos moveto (leftright,) show
+margin 234 add ypos moveto (center) show
+% box char 2192 at col 45
+newpath margin 273 add 3 sub ypos 2 add moveto margin 273 add 3 add ypos lineto margin 273 add 3 sub ypos 2 sub lineto closepath fill
+margin 276 add ypos moveto (up) show
+grestore
+newline
+gsave
+% box char 253c at col 2
+newpath margin 15 add 3 sub ypos moveto margin 15 add 3 add ypos lineto stroke
+newpath margin 15 add ypos 6 sub moveto margin 15 add ypos 6 add lineto stroke
+margin 48 add ypos moveto (U+253C) show
+margin 120 add ypos moveto (Lines:) show
+margin 162 add ypos moveto (full) show
+margin 192 add ypos moveto (cross) show
+grestore
+newline
+ newline
+gsave
+margin 0 add ypos moveto (Double-line) show
+margin 72 add ypos moveto (variants) show
+margin 126 add ypos moveto (\() show
+% box char 2550 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2551 at col 24
+newpath margin 147 add ypos 6 sub moveto margin 147 add ypos 6 add lineto stroke
+% box char 2554 at col 26
+newpath margin 159 add ypos moveto margin 159 add 3 add ypos lineto stroke
+newpath margin 159 add ypos moveto margin 159 add ypos 6 sub lineto stroke
+% box char 2557 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add ypos lineto stroke
+newpath margin 171 add ypos moveto margin 171 add ypos 6 sub lineto stroke
+% box char 255a at col 30
+newpath margin 183 add ypos moveto margin 183 add 3 add ypos lineto stroke
+newpath margin 183 add ypos 6 add moveto margin 183 add ypos lineto stroke
+% box char 255d at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add ypos lineto stroke
+newpath margin 195 add ypos 6 add moveto margin 195 add ypos lineto stroke
+margin 198 add ypos moveto (\)) show
+margin 210 add ypos moveto (use) show
+margin 234 add ypos moveto (the) show
+margin 258 add ypos moveto (same) show
+margin 288 add ypos moveto (geometry) show
+grestore
+newline
+(with) show ( ) show (doubled) show ( ) show (strokes.) show  newline
+ newline
+ newline
+(Text) show ( ) show (Grouping) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+(Consecutive) show ( ) show (text) show ( ) show (characters) show ( ) show (are) show ( ) show (grouped) show ( ) show (into) show ( ) show (single) show ( ) show (SVG) show ( ) show (text) show ( ) show (elements:) show  newline
+ newline
+ newline
+(Before:) show ( ) show (<text) show ( ) show (x="5">c</text><text) show ( ) show (x="15">h</text><text) show ( ) show (x="25">a</text>...) show  newline
+(After:) show ( ) show (<text) show ( ) show (x="0">chaotic</text>) show  newline
+ newline
+(This) show ( ) show (reduces) show ( ) show (SVG) show ( ) show (size) show ( ) show (and) show ( ) show (ensures) show ( ) show (proper) show ( ) show (kerning) show ( ) show (within) show ( ) show (text) show ( ) show (runs.) show  newline
+(Spaces) show ( ) show (and) show ( ) show (box-drawing) show ( ) show (characters) show ( ) show (break) show ( ) show (the) show ( ) show (grouping.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(AUTO-ALIGNMENT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Authors) show ( ) show (make) show ( ) show (mistakes.) show ( ) show (Lines) show ( ) show (in) show ( ) show (a) show ( ) show (box) show ( ) show (diagram) show ( ) show (may) show ( ) show (differ) show ( ) show (by) show ( ) show (one) show  newline
+gsave
+margin 0 add ypos moveto (character--an) show
+margin 78 add ypos moveto (extra) show
+margin 114 add ypos moveto (space,) show
+margin 156 add ypos moveto (a) show
+margin 168 add ypos moveto (missing) show
+margin 216 add ypos moveto (padding.) show
+margin 270 add ypos moveto (The) show
+margin 294 add ypos moveto (renderer) show
+margin 348 add ypos moveto (detects) show
+margin 396 add ypos moveto (and) show
+grestore
+newline
+(corrects) show ( ) show (this) show ( ) show (automatically.) show  newline
+ newline
+ newline
+(The) show ( ) show (Algorithm) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Identify) show
+margin 78 add ypos moveto (lines) show
+margin 114 add ypos moveto (ending) show
+margin 156 add ypos moveto (with) show
+margin 186 add ypos moveto (box) show
+margin 210 add ypos moveto (right-edges) show
+margin 282 add ypos moveto (\() show
+% box char 2502 at col 48
+newpath margin 291 add ypos 6 sub moveto margin 291 add ypos 6 add lineto stroke
+% box char 2510 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add ypos lineto stroke
+newpath margin 303 add ypos moveto margin 303 add ypos 6 sub lineto stroke
+% box char 2518 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add ypos lineto stroke
+newpath margin 315 add ypos 6 add moveto margin 315 add ypos lineto stroke
+% box char 2524 at col 54
+newpath margin 327 add ypos 6 sub moveto margin 327 add ypos 6 add lineto stroke
+newpath margin 327 add 3 sub ypos moveto margin 327 add ypos lineto stroke
+% box char 2551 at col 56
+newpath margin 339 add ypos 6 sub moveto margin 339 add ypos 6 add lineto stroke
+% box char 2557 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add ypos lineto stroke
+newpath margin 351 add ypos moveto margin 351 add ypos 6 sub lineto stroke
+% box char 255d at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add ypos lineto stroke
+newpath margin 363 add ypos 6 add moveto margin 363 add ypos lineto stroke
+margin 366 add ypos moveto (\)) show
+grestore
+newline
+(*) show ( ) show (Find) show ( ) show (the) show ( ) show (most) show ( ) show (common) show ( ) show (width) show ( ) show (among) show ( ) show (these) show ( ) show (lines) show  newline
+(*) show ( ) show (Adjust) show ( ) show (each) show ( ) show (box-edge) show ( ) show (line) show ( ) show (to) show ( ) show (match) show ( ) show (the) show ( ) show (target) show ( ) show (width) show  newline
+(*) show ( ) show (Add) show ( ) show (spaces) show ( ) show (before) show ( ) show (the) show ( ) show (edge) show ( ) show (if) show ( ) show (too) show ( ) show (short) show  newline
+(*) show ( ) show (Remove) show ( ) show (trailing) show ( ) show (spaces) show ( ) show (before) show ( ) show (the) show ( ) show (edge) show ( ) show (if) show ( ) show (too) show ( ) show (long) show  newline
+ newline
+(This) show ( ) show (preserves) show ( ) show (author) show ( ) show (intent) show ( ) show (while) show ( ) show (correcting) show ( ) show (typographic) show ( ) show (errors.) show ( ) show (A) show  newline
+(64-character) show ( ) show (line) show ( ) show (among) show ( ) show (63-character) show ( ) show (siblings) show ( ) show (gets) show ( ) show (trimmed.) show ( ) show (A) show  newline
+(62-character) show ( ) show (line) show ( ) show (gets) show ( ) show (padded.) show  newline
+ newline
+ newline
+(Why) show ( ) show (Most) show ( ) show (Common,) show ( ) show (Not) show ( ) show (Maximum) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+(If) show ( ) show (14) show ( ) show (lines) show ( ) show (are) show ( ) show (63) show ( ) show (characters) show ( ) show (and) show ( ) show (1) show ( ) show (line) show ( ) show (is) show ( ) show (64) show ( ) show (characters,) show ( ) show (the) show ( ) show (outlier) show  newline
+(is) show ( ) show (the) show ( ) show (error.) show ( ) show (Taking) show ( ) show (the) show ( ) show (maximum) show ( ) show (would) show ( ) show (pad) show ( ) show (14) show ( ) show (correct) show ( ) show (lines) show ( ) show (to) show ( ) show (match) show ( ) show (1) show  newline
+(broken) show ( ) show (one.) show ( ) show (Taking) show ( ) show (the) show ( ) show (mode) show ( ) show (identifies) show ( ) show (the) show ( ) show (intended) show ( ) show (width.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (typesetting) show ( ) show (pipeline) show ( ) show (lives) show ( ) show (in) show ( ) show (memo-format.scm:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Core) show ( ) show (functions) show  newline
+(\(utf8-chars) show ( ) show (str\)) show ( ) show (;) show ( ) show (Extract) show ( ) show (Unicode) show ( ) show (codepoints) show  newline
+(\(box-drawing-codepoint?) show ( ) show (cp\)) show ( ) show (;) show ( ) show (Identify) show ( ) show (box) show ( ) show (characters) show  newline
+(\(codepoint->svg) show ( ) show (cp) show ( ) show (cx) show ( ) show (cy\)) show ( ) show (;) show ( ) show (Map) show ( ) show (to) show ( ) show (SVG) show ( ) show (primitives) show  newline
+(\(fix-box-line-widths) show ( ) show (lines\)) show ( ) show (;) show ( ) show (Auto-align) show ( ) show (right) show ( ) show (edges) show  newline
+(\(text->svg-diagram) show ( ) show (text\)) show ( ) show (;) show ( ) show (Full) show ( ) show (conversion) show  newline
+ newline
+(The) show ( ) show (pipeline:) show  newline
+ newline
+(*) show ( ) show (Split) show ( ) show (text) show ( ) show (into) show ( ) show (lines) show  newline
+(*) show ( ) show (Auto-fix) show ( ) show (line) show ( ) show (widths) show ( ) show (for) show ( ) show (consistent) show ( ) show (box) show ( ) show (edges) show  newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Process) show
+margin 72 add ypos moveto (each) show
+margin 102 add ypos moveto (character:) show
+margin 168 add ypos moveto (box-drawing) show
+% box char 2192 at col 40
+newpath margin 243 add 3 sub ypos 2 add moveto margin 243 add 3 add ypos lineto margin 243 add 3 sub ypos 2 sub lineto closepath fill
+margin 252 add ypos moveto (geometry,) show
+margin 312 add ypos moveto (text) show
+% box char 2192 at col 57
+newpath margin 345 add 3 sub ypos 2 add moveto margin 345 add 3 add ypos lineto margin 345 add 3 sub ypos 2 sub lineto closepath fill
+margin 354 add ypos moveto (grouped) show
+margin 402 add ypos moveto (spans) show
+grestore
+newline
+(*) show ( ) show (Emit) show ( ) show (SVG) show ( ) show (with) show ( ) show (embedded) show ( ) show (styles) show ( ) show (for) show ( ) show (theme) show ( ) show (compatibility) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DESIGN) show ( ) show (PRINCIPLES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Compile,) show ( ) show (don't) show ( ) show (interpret:) show ( ) show (Fix) show ( ) show (problems) show ( ) show (at) show ( ) show (generation) show ( ) show (time,) show ( ) show (not) show ( ) show (render) show ( ) show (time) show  newline
+(*) show ( ) show (Preserve) show ( ) show (intent:) show ( ) show (The) show ( ) show (author's) show ( ) show (diagram) show ( ) show (should) show ( ) show (appear) show ( ) show (as) show ( ) show (conceived) show  newline
+(*) show ( ) show (Fail) show ( ) show (gracefully:) show ( ) show (Unknown) show ( ) show (characters) show ( ) show (pass) show ( ) show (through) show ( ) show (as) show ( ) show (text) show  newline
+(*) show ( ) show (Theme-aware:) show ( ) show (Use) show ( ) show (currentColor) show ( ) show (so) show ( ) show (diagrams) show ( ) show (respect) show ( ) show (dark/light) show ( ) show (mode) show  newline
+(*) show ( ) show (Self-contained:) show ( ) show (Each) show ( ) show (SVG) show ( ) show (includes) show ( ) show (its) show ( ) show (own) show ( ) show (styles) show  newline
+ newline
+(These) show ( ) show (principles) show ( ) show (ensure) show ( ) show (diagrams) show ( ) show (render) show ( ) show (correctly) show ( ) show (across) show ( ) show (browsers,) show  newline
+gsave
+margin 0 add ypos moveto (operating) show
+margin 60 add ypos moveto (systems,) show
+margin 114 add ypos moveto (and) show
+margin 138 add ypos moveto (color) show
+margin 174 add ypos moveto (schemes--now) show
+margin 246 add ypos moveto (and) show
+margin 270 add ypos moveto (in) show
+margin 288 add ypos moveto (the) show
+margin 312 add ypos moveto (future.) show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(HERITAGE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (work) show ( ) show (stands) show ( ) show (on) show ( ) show (foundations:) show  newline
+ newline
+(*) show ( ) show (Knuth's) show ( ) show (TeX) show ( ) show (\(1978\):) show ( ) show (The) show ( ) show (discipline) show ( ) show (of) show ( ) show (precise) show ( ) show (typographic) show ( ) show (control) show  newline
+(*) show ( ) show (Ossanna's) show ( ) show (troff) show ( ) show (\(1973\):) show ( ) show (Document) show ( ) show (formatting) show ( ) show (as) show ( ) show (compilation) show  newline
+(*) show ( ) show (Adobe) show ( ) show (PostScript) show ( ) show (\(1984\):) show ( ) show (Page) show ( ) show (description) show ( ) show (as) show ( ) show (a) show ( ) show (programming) show ( ) show (language) show  newline
+(*) show ( ) show (Unicode) show ( ) show (box-drawing) show ( ) show (block) show ( ) show (\(1991\):) show ( ) show (Standardized) show ( ) show (character) show ( ) show (geometry) show  newline
+(*) show ( ) show (SVG) show ( ) show (1.0) show ( ) show (\(2001\):) show ( ) show (Vector) show ( ) show (graphics) show ( ) show (for) show ( ) show (the) show ( ) show (web) show  newline
+ newline
+(We) show ( ) show (honor) show ( ) show (these) show ( ) show (by) show ( ) show (taking) show ( ) show (typography) show ( ) show (seriously) show ( ) show (in) show ( ) show (an) show ( ) show (age) show ( ) show (that) show ( ) show (has) show ( ) show (largely) show  newline
+(forgotten) show ( ) show (it.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Knuth,) show ( ) show (D.) show ( ) show (E.) show ( ) show (\(1984\).) show ( ) show (The) show ( ) show (TeXbook) show  newline
+(*) show ( ) show (Unicode) show ( ) show (Standard,) show ( ) show (Chapter) show ( ) show (22:) show ( ) show (Symbols) show ( ) show (-) show ( ) show (Box) show ( ) show (Drawing) show  newline
+(*) show ( ) show (SVG) show ( ) show (1.1) show ( ) show (Specification,) show ( ) show (W3C) show ( ) show (Recommendation) show  newline
+(*) show ( ) show (Kernighan,) show ( ) show (B.) show ( ) show (W.) show ( ) show (\(1978\).) show ( ) show (A) show ( ) show (TROFF) show ( ) show (Tutorial) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-20) show  newline
+(*) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

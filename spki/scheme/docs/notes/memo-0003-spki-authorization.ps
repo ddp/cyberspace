@@ -15,519 +15,657 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0003: Public Key Authorization) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies the Simple Distributed Security) show newline
-(Infrastructure/Simple Public Key Infrastructure \(SDSI/SPKI\) certificate) show newline
-(system for Cyberspace, providing authorization without identity.) show newline
-(Principals are identified by cryptographic keys, not names.) show newline
-(Authorization flows through verifiable delegation chains.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(E PLURIBUS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    "The question is not 'Who is this?' but 'What can this key do?' — Carl Ellison, SPKI co-author") show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Heritage: SDSI at IETF 29) show newline
-(-------------------------) show newline
-() show newline
-(Ron Rivest presented SDSI at Internet Engineering Task Force \(IETF\) 29) show newline
-(in Seattle \(March 28 - April 1, 1994\). The idea was elegant:) show newline
-(self-certifying keys and local names. No global namespace. No) show newline
-(certificate authorities. Just cryptographic principals naming what they) show newline
-(choose to name.) show newline
-() show newline
-(SDSI later merged with SPKI to form SDSI/SPKI, standardized in RFC 2692) show newline
-(and RFC 2693 \(1999\).) show newline
-() show newline
-(Some in the PKI industry understood SPKI was technically superior. But) show newline
-(they saw a monopoly to be mined—certificate authorities as toll booths) show newline
-(on the internet. SPKI threatened that model. It was too decentralized to) show newline
-(profit from.) show newline
-() show newline
-(HP quietly adopted SPKI for their E-speak middleware and printer) show newline
-(authorization. Printers. The technology worked. The politics didn't) show newline
-(favor it.) show newline
-() show newline
-(Cyberspace picks up where SPKI left off.) show newline
-() show newline
-() show newline
-(The X.509 Problem) show newline
-(-----------------) show newline
-() show newline
-(X.509 certificates bind names to keys. This requires:) show newline
-() show newline
-(  * Certificate authorities \(trust hierarchies\)) show newline
-(  * Global name registries \(DNS\)) show newline
-(  * Identity verification \(bureaucracy\)) show newline
-() show newline
-(SPKI inverts this model:) show newline
-() show newline
-() show newline
-(    "Keys are principals. Authorization is local. Delegation is explicit.") show newline
-() show newline
-(Benefits:) show newline
-() show newline
-(  * No CA required: Trust flows from keys you choose) show newline
-(  * No global names: Local namespaces, local meanings) show newline
-(  * No identity: Grant permissions to keys, not people) show newline
-(  * Auditable: S-expression format is human-readable) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SPECIFICATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Principals) show newline
-(----------) show newline
-() show newline
-(A principal is an authorization endpoint—the entity that can do) show newline
-(things. In SPKI, principals are keys, not names. Two types:) show newline
-() show newline
-() show newline
-(Key Principal) show newline
-(-------------) show newline
-() show newline
-(Direct identification by public key. The simplest case: you are your) show newline
-(key.) show newline
-() show newline
-() show newline
-(    \(define-record-type <key-principal>) show newline
-(      \(make-key-principal public-key\)) show newline
-(      key-principal?) show newline
-(      \(public-key principal-public-key\)\)) show newline
-() show newline
-(S-expression representation: bare bytes) show newline
-() show newline
-() show newline
-(    #${32-byte-ed25519-public-key}) show newline
-() show newline
-() show newline
-(Key Hash Principal) show newline
-(------------------) show newline
-() show newline
-(Identification by hash of public key. Useful when the full key isn't) show newline
-(known yet or when size matters.) show newline
-() show newline
-() show newline
-(    \(define-record-type <keyhash-principal>) show newline
-(      \(make-keyhash-principal hash-alg hash\)) show newline
-(      keyhash-principal?) show newline
-(      \(hash-alg principal-hash-alg\)) show newline
-(      \(hash principal-hash\)\)) show newline
-() show newline
-(S-expression representation:) show newline
-() show newline
-() show newline
-(    \(hash sha512 #${64-byte-hash}\)) show newline
-() show newline
-() show newline
-(Authorization Tags) show newline
-(------------------) show newline
-() show newline
-(Tags define what permissions are granted:) show newline
-() show newline
-() show newline
-(    \(define-record-type <tag>) show newline
-(      \(make-tag sexp\)) show newline
-(      tag?) show newline
-(      \(sexp tag-sexp\)\)) show newline
-() show newline
-(Example tags:) show newline
-() show newline
-() show newline
-(    ;; Read access to library) show newline
-(    \(read \(path /library/lamport-papers\)\)) show newline
-(    ;; Agent spawning limit) show newline
-(    \(spawn-agent \(max-count 5\)\)) show newline
-(    ;; HTTP API access) show newline
-(    \(http-api \(method POST\) \(path /deploy/\)\)) show newline
-(    ;; All permissions \(wildcard\)) show newline
-(    \(\)) show newline
-() show newline
-() show newline
-(Validity Period) show newline
-(---------------) show newline
-() show newline
-(Optional time constraints:) show newline
-() show newline
-() show newline
-(    \(define-record-type <validity>) show newline
-(      \(make-validity not-before not-after\)) show newline
-(      validity?) show newline
-(      \(not-before validity-not-before\)   ; ISO 8601 string) show newline
-(      \(not-after validity-not-after\)\)    ; ISO 8601 string) show newline
-() show newline
-() show newline
-(Certificate Structure) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(    \(define-record-type <cert>) show newline
-(      \(make-cert issuer subject tag validity propagate\)) show newline
-(      cert?) show newline
-(      \(issuer cert-issuer\)         ; Principal granting permission) show newline
-(      \(subject cert-subject\)       ; Principal receiving permission) show newline
-(      \(tag cert-tag\)               ; What is being granted) show newline
-(      \(validity cert-validity\)     ; When valid \(optional\)) show newline
-(      \(propagate cert-propagate\)\)  ; Can subject re-delegate?) show newline
-() show newline
-(S-expression format:) show newline
-() show newline
-() show newline
-(    \(cert) show newline
-(      \(issuer #${alice-public-key}\)) show newline
-(      \(subject #${bob-public-key}\)) show newline
-(      \(tag \(read \(path /library/*\)\)\)) show newline
-(      \(valid) show newline
-(        \(not-before "2026-01-01"\)) show newline
-(        \(not-after "2026-12-31"\)\)) show newline
-(      \(propagate\)\)) show newline
-() show newline
-() show newline
-(Signed Certificate) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    \(define-record-type <signed-cert>) show newline
-(      \(make-signed-cert cert signature\)) show newline
-(      signed-cert?) show newline
-(      \(cert signed-cert-cert\)) show newline
-(      \(signature signed-cert-signature\)\)) show newline
-(    \(define-record-type <signature>) show newline
-(      \(make-signature hash-alg cert-hash sig-bytes\)) show newline
-(      signature?) show newline
-(      \(hash-alg signature-hash-alg\)) show newline
-(      \(cert-hash signature-cert-hash\)) show newline
-(      \(sig-bytes signature-sig-bytes\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(OPERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Creating Certificates) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(    \(define cert) show newline
-(      \(create-cert) show newline
-(        \(make-key-principal alice-public\)) show newline
-(        \(make-key-principal bob-public\)) show newline
-(        \(make-tag '\(read \(path /library/*\)\)\)) show newline
-(        validity: \(make-validity "2026-01-01" "2026-12-31"\)) show newline
-(        propagate: #t\)\)) show newline
-() show newline
-() show newline
-(Signing Certificates) show newline
-(--------------------) show newline
-() show newline
-() show newline
-(    \(define signed-cert) show newline
-(      \(sign-cert cert alice-private\)\)) show newline
-() show newline
-(Process:) show newline
-() show newline
-(  * Convert certificate to canonical S-expression) show newline
-(  * Hash with SHA-512) show newline
-(  * Sign hash with Ed25519) show newline
-(  * Create signature record) show newline
-(  * Combine into signed certificate) show newline
-() show newline
-() show newline
-(Verifying Certificates) show newline
-(----------------------) show newline
-() show newline
-() show newline
-(    \(verify-signed-cert signed-cert alice-public\)) show newline
-() show newline
-(Verification:) show newline
-() show newline
-(  * Recompute canonical S-expression) show newline
-(  * Hash with SHA-512) show newline
-(  * Compare with stored hash) show newline
-(  * Verify Ed25519 signature) show newline
-() show newline
-() show newline
-(Verifying Delegation Chains) show newline
-(---------------------------) show newline
-() show newline
-() show newline
-(    \(verify-chain root-key cert-list target-tag\)) show newline
-() show newline
-(Chain verification ensures:) show newline
-() show newline
-(  * Each certificate is validly signed) show newline
-(  * Issuer of cert[n+1] matches subject of cert[n]) show newline
-(  * Tags are properly delegated \(each implies the next\)) show newline
-(  * Propagation is allowed \(except final cert\)) show newline
-(  * Final tag implies target tag) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CLI TOOLS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(spki-keygen) show newline
-(-----------) show newline
-() show newline
-(Generate Ed25519 keypair:) show newline
-() show newline
-() show newline
-(    $ ./spki-keygen alice) show newline
-(    Generated keypair:) show newline
-(      Public:  alice.public) show newline
-(      Private: alice.private) show newline
-() show newline
-() show newline
-(spki-cert) show newline
-(---------) show newline
-() show newline
-(Create and sign certificate:) show newline
-() show newline
-() show newline
-(    $ ./spki-cert \\) show newline
-(        --issuer alice.private \\) show newline
-(        --subject bob.public \\) show newline
-(        --tag '\(read \(path /library/*\)\)' \\) show newline
-(        --propagate \\) show newline
-(        --not-after "2026-12-31" \\) show newline
-(        --output alice-to-bob.cert) show newline
-() show newline
-() show newline
-(spki-verify) show newline
-(-----------) show newline
-() show newline
-(Verify certificate signature:) show newline
-() show newline
-() show newline
-(    $ ./spki-verify alice.public alice-to-bob.cert) show newline
-(    ✓ Certificate signature valid) show newline
-() show newline
-() show newline
-(spki-show) show newline
-(---------) show newline
-() show newline
-(Display certificate in human-readable form:) show newline
-() show newline
-() show newline
-(    $ ./spki-show alice-to-bob.cert) show newline
-(    Certificate:) show newline
-(      Issuer:  ed25519:cbc9b260da65f6a7...) show newline
-(      Subject: ed25519:a5f8c9e3d2b1f0e4...) show newline
-(      Tag:     \(read \(path /library/*\)\)) show newline
-(      Valid:   until 2026-12-31) show newline
-(      Propagate: yes) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TAG SEMANTICS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Tag Implication) show newline
-(---------------) show newline
-() show newline
-(Tag A implies Tag B if A grants at least all permissions of B.) show newline
-() show newline
-() show newline
-(    \(define \(tag-implies tag1 tag2\)) show newline
-(      \(cond) show newline
-(        \(\(all-perms? tag1\) #t\)    ; \(\) implies everything) show newline
-(        \(\(all-perms? tag2\) #f\)    ; Only \(\) implies \(*\)) show newline
-(        \(else \(equal? tag1 tag2\)\)\)\) ; Simple equality \(extensible\)) show newline
-() show newline
-() show newline
-(Standard Tag Vocabulary) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(  Tag                              Meaning                         ) show newline
-(  \(*\)                              All permissions                 ) show newline
-(  \(read \(path P\)\)                  Read access to path P           ) show newline
-(  \(write \(path P\)\)                 Write access to path P          ) show newline
-(  \(spawn-agent \(max-count N\)\)      Spawn up to N agents            ) show newline
-(  \(http-api \(method M\) \(path P\)\)   HTTP API access                 ) show newline
-(  \(seal-release\)                   Permission to create releases   ) show newline
-(  \(seal-publish \(remote R\)\)        Permission to publish to R      ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DELEGATION CHAINS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Example: Three-Level Delegation) show newline
-(-------------------------------) show newline
-() show newline
-() show newline
-(    Alice \(root\) → Bob \(admin\) → Carol \(operator\)) show newline
-() show newline
-(Certificates:) show newline
-() show newline
-() show newline
-(    ;; Alice grants admin to Bob) show newline
-(    \(cert) show newline
-(      \(issuer #${alice-key}\)) show newline
-(      \(subject #${bob-key}\)) show newline
-(      \(tag \(*\)\)) show newline
-(      \(propagate\)\)) show newline
-(    ;; Bob grants operator to Carol) show newline
-(    \(cert) show newline
-(      \(issuer #${bob-key}\)) show newline
-(      \(subject #${carol-key}\)) show newline
-(      \(tag \(seal-publish \(remote origin\)\)\)\)) show newline
-() show newline
-(Verification:) show newline
-() show newline
-() show newline
-(    \(verify-chain alice-public) show newline
-(                  \(list alice-to-bob bob-to-carol\)) show newline
-(                  \(make-tag '\(seal-publish \(remote origin\)\)\)\)) show newline
-(    ;; => #t if Carol can publish) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Threat Model) show newline
-(------------) show newline
-() show newline
-(Trusted:) show newline
-() show newline
-(  * Local key storage) show newline
-(  * Ed25519/SHA-512 \(libsodium\)) show newline
-(  * Certificate chain construction) show newline
-() show newline
-(Untrusted:) show newline
-() show newline
-(  * Certificate sources \(anyone can create certs\)) show newline
-(  * Network transport \(assume hostile\)) show newline
-(  * Certificate claims \(until chain verified\)) show newline
-() show newline
-() show newline
-(Attack Mitigations) show newline
-(------------------) show newline
-() show newline
-() show newline
-(  Attack                    Mitigation                 ) show newline
-(  Certificate forgery       Ed25519 signatures         ) show newline
-(  Unauthorized delegation   Propagate flag             ) show newline
-(  Expired permissions       Validity period checks     ) show newline
-(  Over-delegation           Tag implication checking   ) show newline
-() show newline
-() show newline
-(Key Management) show newline
-(--------------) show newline
-() show newline
-(  * Generation: Use secure random \(libsodium\)) show newline
-(  * Storage: Private keys in protected files) show newline
-(  * Backup: Shamir secret sharing \(see Memo-004\)) show newline
-(  * Rotation: Issue new certs, revoke old) show newline
-() show newline
-(Key management is the operational foundation of SPKI security;) show newline
-(cryptographic strength means nothing if keys are generated predictably,) show newline
-(stored carelessly, or lost irretrievably.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(INTEGRATION POINTS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Vault Authorization) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    \(vault-init signing-key: alice-private\)) show newline
-(    \(seal-release "1.0.0"\)  ; Requires seal-release tag) show newline
-() show newline
-() show newline
-(Audit Trail Attribution) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(    \(audit-append) show newline
-(      actor: bob-public) show newline
-(      action: '\(seal-commit "abc123"\)) show newline
-(      authorization-chain: \(list alice-to-bob-cert\)\)) show newline
-() show newline
-() show newline
-(Replication Access Control) show newline
-(--------------------------) show newline
-() show newline
-() show newline
-(    \(seal-publish "1.0.0") show newline
-(      remote: "origin") show newline
-(      authorization: bob-to-carol-cert\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SPKI VS X.509) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(  Aspect        X.509            SPKI                   ) show newline
-(  Identity      Names \(DN\)       Keys                   ) show newline
-(  Trust         CA hierarchy     Local choice           ) show newline
-(  Namespaces    Global \(DNS\)     Local                  ) show newline
-(  Revocation    CRL/OCSP         Validity periods       ) show newline
-(  Format        ASN.1/DER        S-expressions          ) show newline
-(  Readability   Requires tools   Human-readable         ) show newline
-(  Delegation    Implicit \(CA\)    Explicit \(propagate\)   ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Ellison, C., et al. \(1999\). SPKI Certificate Theory. RFC 2693.) show newline
-(  * Ellison, C., et al. \(1999\). SPKI Requirements. RFC 2692.) show newline
-(  * Rivest, R., & Lampson, B. \(1996\). SDSI - A Simple Distributed Security Infrastructure.) show newline
-(  * Lampson, B. \(1971\). Protection.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(2026-01-19 - Added Ellison quote, expanded narrative, fixed formatting) show newline
-() show newline
-(2026-01-06 - Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0003:) show ( ) show (Public) show ( ) show (Key) show ( ) show (Authorization) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (the) show ( ) show (Simple) show ( ) show (Distributed) show ( ) show (Security) show  newline
+(Infrastructure/Simple) show ( ) show (Public) show ( ) show (Key) show ( ) show (Infrastructure) show ( ) show (\(SDSI/SPKI\)) show ( ) show (certificate) show  newline
+(system) show ( ) show (for) show ( ) show (Cyberspace,) show ( ) show (providing) show ( ) show (authorization) show ( ) show (without) show ( ) show (identity.) show  newline
+(Principals) show ( ) show (are) show ( ) show (identified) show ( ) show (by) show ( ) show (cryptographic) show ( ) show (keys,) show ( ) show (not) show ( ) show (names.) show  newline
+(Authorization) show ( ) show (flows) show ( ) show (through) show ( ) show (verifiable) show ( ) show (delegation) show ( ) show (chains.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(E) show ( ) show (PLURIBUS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto ("The) show
+margin 54 add ypos moveto (question) show
+margin 108 add ypos moveto (is) show
+margin 126 add ypos moveto (not) show
+margin 150 add ypos moveto ('Who) show
+margin 180 add ypos moveto (is) show
+margin 198 add ypos moveto (this?') show
+margin 240 add ypos moveto (but) show
+margin 264 add ypos moveto ('What) show
+margin 300 add ypos moveto (can) show
+margin 324 add ypos moveto (this) show
+margin 354 add ypos moveto (key) show
+margin 378 add ypos moveto (do?') show
+margin 408 add ypos moveto (--) show
+margin 420 add ypos moveto (Carl) show
+margin 450 add ypos moveto (Ellison,) show
+margin 504 add ypos moveto (SPKI) show
+margin 534 add ypos moveto (co-author") show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Heritage:) show ( ) show (SDSI) show ( ) show (at) show ( ) show (IETF) show ( ) show (29) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+(Ron) show ( ) show (Rivest) show ( ) show (presented) show ( ) show (SDSI) show ( ) show (at) show ( ) show (Internet) show ( ) show (Engineering) show ( ) show (Task) show ( ) show (Force) show ( ) show (\(IETF\)) show ( ) show (29) show  newline
+(in) show ( ) show (Seattle) show ( ) show (\(March) show ( ) show (28) show ( ) show (-) show ( ) show (April) show ( ) show (1,) show ( ) show (1994\).) show ( ) show (The) show ( ) show (idea) show ( ) show (was) show ( ) show (elegant:) show  newline
+(self-certifying) show ( ) show (keys) show ( ) show (and) show ( ) show (local) show ( ) show (names.) show ( ) show (No) show ( ) show (global) show ( ) show (namespace.) show ( ) show (No) show  newline
+(certificate) show ( ) show (authorities.) show ( ) show (Just) show ( ) show (cryptographic) show ( ) show (principals) show ( ) show (naming) show ( ) show (what) show ( ) show (they) show  newline
+(choose) show ( ) show (to) show ( ) show (name.) show  newline
+ newline
+(SDSI) show ( ) show (later) show ( ) show (merged) show ( ) show (with) show ( ) show (SPKI) show ( ) show (to) show ( ) show (form) show ( ) show (SDSI/SPKI,) show ( ) show (standardized) show ( ) show (in) show ( ) show (RFC) show ( ) show (2692) show  newline
+(and) show ( ) show (RFC) show ( ) show (2693) show ( ) show (\(1999\).) show  newline
+ newline
+(Some) show ( ) show (in) show ( ) show (the) show ( ) show (PKI) show ( ) show (industry) show ( ) show (understood) show ( ) show (SPKI) show ( ) show (was) show ( ) show (technically) show ( ) show (superior.) show ( ) show (But) show  newline
+gsave
+margin 0 add ypos moveto (they) show
+margin 30 add ypos moveto (saw) show
+margin 54 add ypos moveto (a) show
+margin 66 add ypos moveto (monopoly) show
+margin 120 add ypos moveto (to) show
+margin 138 add ypos moveto (be) show
+margin 156 add ypos moveto (mined--certificate) show
+margin 264 add ypos moveto (authorities) show
+margin 336 add ypos moveto (as) show
+margin 354 add ypos moveto (toll) show
+margin 384 add ypos moveto (booths) show
+grestore
+newline
+(on) show ( ) show (the) show ( ) show (internet.) show ( ) show (SPKI) show ( ) show (threatened) show ( ) show (that) show ( ) show (model.) show ( ) show (It) show ( ) show (was) show ( ) show (too) show ( ) show (decentralized) show ( ) show (to) show  newline
+(profit) show ( ) show (from.) show  newline
+ newline
+(HP) show ( ) show (quietly) show ( ) show (adopted) show ( ) show (SPKI) show ( ) show (for) show ( ) show (their) show ( ) show (E-speak) show ( ) show (middleware) show ( ) show (and) show ( ) show (printer) show  newline
+(authorization.) show ( ) show (Printers.) show ( ) show (The) show ( ) show (technology) show ( ) show (worked.) show ( ) show (The) show ( ) show (politics) show ( ) show (didn't) show  newline
+(favor) show ( ) show (it.) show  newline
+ newline
+(Cyberspace) show ( ) show (picks) show ( ) show (up) show ( ) show (where) show ( ) show (SPKI) show ( ) show (left) show ( ) show (off.) show  newline
+ newline
+ newline
+(The) show ( ) show (X.509) show ( ) show (Problem) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(X.509) show ( ) show (certificates) show ( ) show (bind) show ( ) show (names) show ( ) show (to) show ( ) show (keys.) show ( ) show (This) show ( ) show (requires:) show  newline
+ newline
+(*) show ( ) show (Certificate) show ( ) show (authorities) show ( ) show (\(trust) show ( ) show (hierarchies\)) show  newline
+(*) show ( ) show (Global) show ( ) show (name) show ( ) show (registries) show ( ) show (\(DNS\)) show  newline
+(*) show ( ) show (Identity) show ( ) show (verification) show ( ) show (\(bureaucracy\)) show  newline
+ newline
+(SPKI) show ( ) show (inverts) show ( ) show (this) show ( ) show (model:) show  newline
+ newline
+ newline
+("Keys) show ( ) show (are) show ( ) show (principals.) show ( ) show (Authorization) show ( ) show (is) show ( ) show (local.) show ( ) show (Delegation) show ( ) show (is) show ( ) show (explicit.") show  newline
+ newline
+(Benefits:) show  newline
+ newline
+(*) show ( ) show (No) show ( ) show (CA) show ( ) show (required:) show ( ) show (Trust) show ( ) show (flows) show ( ) show (from) show ( ) show (keys) show ( ) show (you) show ( ) show (choose) show  newline
+(*) show ( ) show (No) show ( ) show (global) show ( ) show (names:) show ( ) show (Local) show ( ) show (namespaces,) show ( ) show (local) show ( ) show (meanings) show  newline
+(*) show ( ) show (No) show ( ) show (identity:) show ( ) show (Grant) show ( ) show (permissions) show ( ) show (to) show ( ) show (keys,) show ( ) show (not) show ( ) show (people) show  newline
+(*) show ( ) show (Auditable:) show ( ) show (S-expression) show ( ) show (format) show ( ) show (is) show ( ) show (human-readable) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SPECIFICATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Principals) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 0 add ypos moveto (A) show
+margin 12 add ypos moveto (principal) show
+margin 72 add ypos moveto (is) show
+margin 90 add ypos moveto (an) show
+margin 108 add ypos moveto (authorization) show
+margin 192 add ypos moveto (endpoint--the) show
+margin 270 add ypos moveto (entity) show
+margin 312 add ypos moveto (that) show
+margin 342 add ypos moveto (can) show
+margin 366 add ypos moveto (do) show
+grestore
+newline
+(things.) show ( ) show (In) show ( ) show (SPKI,) show ( ) show (principals) show ( ) show (are) show ( ) show (keys,) show ( ) show (not) show ( ) show (names.) show ( ) show (Two) show ( ) show (types:) show  newline
+ newline
+ newline
+(Key) show ( ) show (Principal) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+(Direct) show ( ) show (identification) show ( ) show (by) show ( ) show (public) show ( ) show (key.) show ( ) show (The) show ( ) show (simplest) show ( ) show (case:) show ( ) show (you) show ( ) show (are) show ( ) show (your) show  newline
+(key.) show  newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<key-principal>) show  newline
+(\(make-key-principal) show ( ) show (public-key\)) show  newline
+(key-principal?) show  newline
+(\(public-key) show ( ) show (principal-public-key\)\)) show  newline
+ newline
+(S-expression) show ( ) show (representation:) show ( ) show (bare) show ( ) show (bytes) show  newline
+ newline
+ newline
+(#${32-byte-ed25519-public-key}) show  newline
+ newline
+ newline
+(Key) show ( ) show (Hash) show ( ) show (Principal) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(Identification) show ( ) show (by) show ( ) show (hash) show ( ) show (of) show ( ) show (public) show ( ) show (key.) show ( ) show (Useful) show ( ) show (when) show ( ) show (the) show ( ) show (full) show ( ) show (key) show ( ) show (isn't) show  newline
+(known) show ( ) show (yet) show ( ) show (or) show ( ) show (when) show ( ) show (size) show ( ) show (matters.) show  newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<keyhash-principal>) show  newline
+(\(make-keyhash-principal) show ( ) show (hash-alg) show ( ) show (hash\)) show  newline
+(keyhash-principal?) show  newline
+(\(hash-alg) show ( ) show (principal-hash-alg\)) show  newline
+(\(hash) show ( ) show (principal-hash\)\)) show  newline
+ newline
+(S-expression) show ( ) show (representation:) show  newline
+ newline
+ newline
+(\(hash) show ( ) show (sha512) show ( ) show (#${64-byte-hash}\)) show  newline
+ newline
+ newline
+(Authorization) show ( ) show (Tags) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(Tags) show ( ) show (define) show ( ) show (what) show ( ) show (permissions) show ( ) show (are) show ( ) show (granted:) show  newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<tag>) show  newline
+(\(make-tag) show ( ) show (sexp\)) show  newline
+(tag?) show  newline
+(\(sexp) show ( ) show (tag-sexp\)\)) show  newline
+ newline
+(Example) show ( ) show (tags:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Read) show ( ) show (access) show ( ) show (to) show ( ) show (library) show  newline
+(\(read) show ( ) show (\(path) show ( ) show (/library/lamport-papers\)\)) show  newline
+(;;) show ( ) show (Agent) show ( ) show (spawning) show ( ) show (limit) show  newline
+(\(spawn-agent) show ( ) show (\(max-count) show ( ) show (5\)\)) show  newline
+(;;) show ( ) show (HTTP) show ( ) show (API) show ( ) show (access) show  newline
+(\(http-api) show ( ) show (\(method) show ( ) show (POST\)) show ( ) show (\(path) show ( ) show (/deploy/\)\)) show  newline
+(;;) show ( ) show (All) show ( ) show (permissions) show ( ) show (\(wildcard\)) show  newline
+(\(\)) show  newline
+ newline
+ newline
+(Validity) show ( ) show (Period) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(Optional) show ( ) show (time) show ( ) show (constraints:) show  newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<validity>) show  newline
+(\(make-validity) show ( ) show (not-before) show ( ) show (not-after\)) show  newline
+(validity?) show  newline
+(\(not-before) show ( ) show (validity-not-before\)) show ( ) show (;) show ( ) show (ISO) show ( ) show (8601) show ( ) show (string) show  newline
+(\(not-after) show ( ) show (validity-not-after\)\)) show ( ) show (;) show ( ) show (ISO) show ( ) show (8601) show ( ) show (string) show  newline
+ newline
+ newline
+(Certificate) show ( ) show (Structure) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<cert>) show  newline
+(\(make-cert) show ( ) show (issuer) show ( ) show (subject) show ( ) show (tag) show ( ) show (validity) show ( ) show (propagate\)) show  newline
+(cert?) show  newline
+(\(issuer) show ( ) show (cert-issuer\)) show ( ) show (;) show ( ) show (Principal) show ( ) show (granting) show ( ) show (permission) show  newline
+(\(subject) show ( ) show (cert-subject\)) show ( ) show (;) show ( ) show (Principal) show ( ) show (receiving) show ( ) show (permission) show  newline
+(\(tag) show ( ) show (cert-tag\)) show ( ) show (;) show ( ) show (What) show ( ) show (is) show ( ) show (being) show ( ) show (granted) show  newline
+(\(validity) show ( ) show (cert-validity\)) show ( ) show (;) show ( ) show (When) show ( ) show (valid) show ( ) show (\(optional\)) show  newline
+(\(propagate) show ( ) show (cert-propagate\)\)) show ( ) show (;) show ( ) show (Can) show ( ) show (subject) show ( ) show (re-delegate?) show  newline
+ newline
+(S-expression) show ( ) show (format:) show  newline
+ newline
+ newline
+(\(cert) show  newline
+(\(issuer) show ( ) show (#${alice-public-key}\)) show  newline
+(\(subject) show ( ) show (#${bob-public-key}\)) show  newline
+(\(tag) show ( ) show (\(read) show ( ) show (\(path) show ( ) show (/library/*\)\)\)) show  newline
+(\(valid) show  newline
+(\(not-before) show ( ) show ("2026-01-01"\)) show  newline
+(\(not-after) show ( ) show ("2026-12-31"\)\)) show  newline
+(\(propagate\)\)) show  newline
+ newline
+ newline
+(Signed) show ( ) show (Certificate) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<signed-cert>) show  newline
+(\(make-signed-cert) show ( ) show (cert) show ( ) show (signature\)) show  newline
+(signed-cert?) show  newline
+(\(cert) show ( ) show (signed-cert-cert\)) show  newline
+(\(signature) show ( ) show (signed-cert-signature\)\)) show  newline
+(\(define-record-type) show ( ) show (<signature>) show  newline
+(\(make-signature) show ( ) show (hash-alg) show ( ) show (cert-hash) show ( ) show (sig-bytes\)) show  newline
+(signature?) show  newline
+(\(hash-alg) show ( ) show (signature-hash-alg\)) show  newline
+(\(cert-hash) show ( ) show (signature-cert-hash\)) show  newline
+(\(sig-bytes) show ( ) show (signature-sig-bytes\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(OPERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Creating) show ( ) show (Certificates) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (cert) show  newline
+(\(create-cert) show  newline
+(\(make-key-principal) show ( ) show (alice-public\)) show  newline
+(\(make-key-principal) show ( ) show (bob-public\)) show  newline
+(\(make-tag) show ( ) show ('\(read) show ( ) show (\(path) show ( ) show (/library/*\)\)\)) show  newline
+(validity:) show ( ) show (\(make-validity) show ( ) show ("2026-01-01") show ( ) show ("2026-12-31"\)) show  newline
+(propagate:) show ( ) show (#t\)\)) show  newline
+ newline
+ newline
+(Signing) show ( ) show (Certificates) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (signed-cert) show  newline
+(\(sign-cert) show ( ) show (cert) show ( ) show (alice-private\)\)) show  newline
+ newline
+(Process:) show  newline
+ newline
+(*) show ( ) show (Convert) show ( ) show (certificate) show ( ) show (to) show ( ) show (canonical) show ( ) show (S-expression) show  newline
+(*) show ( ) show (Hash) show ( ) show (with) show ( ) show (SHA-512) show  newline
+(*) show ( ) show (Sign) show ( ) show (hash) show ( ) show (with) show ( ) show (Ed25519) show  newline
+(*) show ( ) show (Create) show ( ) show (signature) show ( ) show (record) show  newline
+(*) show ( ) show (Combine) show ( ) show (into) show ( ) show (signed) show ( ) show (certificate) show  newline
+ newline
+ newline
+(Verifying) show ( ) show (Certificates) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(verify-signed-cert) show ( ) show (signed-cert) show ( ) show (alice-public\)) show  newline
+ newline
+(Verification:) show  newline
+ newline
+(*) show ( ) show (Recompute) show ( ) show (canonical) show ( ) show (S-expression) show  newline
+(*) show ( ) show (Hash) show ( ) show (with) show ( ) show (SHA-512) show  newline
+(*) show ( ) show (Compare) show ( ) show (with) show ( ) show (stored) show ( ) show (hash) show  newline
+(*) show ( ) show (Verify) show ( ) show (Ed25519) show ( ) show (signature) show  newline
+ newline
+ newline
+(Verifying) show ( ) show (Delegation) show ( ) show (Chains) show  newline
+newpath margin ypos moveto margin 162 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(verify-chain) show ( ) show (root-key) show ( ) show (cert-list) show ( ) show (target-tag\)) show  newline
+ newline
+(Chain) show ( ) show (verification) show ( ) show (ensures:) show  newline
+ newline
+(*) show ( ) show (Each) show ( ) show (certificate) show ( ) show (is) show ( ) show (validly) show ( ) show (signed) show  newline
+(*) show ( ) show (Issuer) show ( ) show (of) show ( ) show (cert[n+1]) show ( ) show (matches) show ( ) show (subject) show ( ) show (of) show ( ) show (cert[n]) show  newline
+(*) show ( ) show (Tags) show ( ) show (are) show ( ) show (properly) show ( ) show (delegated) show ( ) show (\(each) show ( ) show (implies) show ( ) show (the) show ( ) show (next\)) show  newline
+(*) show ( ) show (Propagation) show ( ) show (is) show ( ) show (allowed) show ( ) show (\(except) show ( ) show (final) show ( ) show (cert\)) show  newline
+(*) show ( ) show (Final) show ( ) show (tag) show ( ) show (implies) show ( ) show (target) show ( ) show (tag) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CLI) show ( ) show (TOOLS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(spki-keygen) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(Generate) show ( ) show (Ed25519) show ( ) show (keypair:) show  newline
+ newline
+ newline
+($) show ( ) show (./spki-keygen) show ( ) show (alice) show  newline
+(Generated) show ( ) show (keypair:) show  newline
+(Public:) show ( ) show (alice.public) show  newline
+(Private:) show ( ) show (alice.private) show  newline
+ newline
+ newline
+(spki-cert) show  newline
+newpath margin ypos moveto margin 54 add ypos lineto stroke
+newline
+ newline
+(Create) show ( ) show (and) show ( ) show (sign) show ( ) show (certificate:) show  newline
+ newline
+ newline
+($) show ( ) show (./spki-cert) show ( ) show (\\) show  newline
+(--issuer) show ( ) show (alice.private) show ( ) show (\\) show  newline
+(--subject) show ( ) show (bob.public) show ( ) show (\\) show  newline
+(--tag) show ( ) show ('\(read) show ( ) show (\(path) show ( ) show (/library/*\)\)') show ( ) show (\\) show  newline
+(--propagate) show ( ) show (\\) show  newline
+(--not-after) show ( ) show ("2026-12-31") show ( ) show (\\) show  newline
+(--output) show ( ) show (alice-to-bob.cert) show  newline
+ newline
+ newline
+(spki-verify) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(Verify) show ( ) show (certificate) show ( ) show (signature:) show  newline
+ newline
+ newline
+($) show ( ) show (./spki-verify) show ( ) show (alice.public) show ( ) show (alice-to-bob.cert) show  newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Certificate) show
+margin 108 add ypos moveto (signature) show
+margin 168 add ypos moveto (valid) show
+grestore
+newline
+ newline
+ newline
+(spki-show) show  newline
+newpath margin ypos moveto margin 54 add ypos lineto stroke
+newline
+ newline
+(Display) show ( ) show (certificate) show ( ) show (in) show ( ) show (human-readable) show ( ) show (form:) show  newline
+ newline
+ newline
+($) show ( ) show (./spki-show) show ( ) show (alice-to-bob.cert) show  newline
+(Certificate:) show  newline
+(Issuer:) show ( ) show (ed25519:cbc9b260da65f6a7...) show  newline
+(Subject:) show ( ) show (ed25519:a5f8c9e3d2b1f0e4...) show  newline
+(Tag:) show ( ) show (\(read) show ( ) show (\(path) show ( ) show (/library/*\)\)) show  newline
+(Valid:) show ( ) show (until) show ( ) show (2026-12-31) show  newline
+(Propagate:) show ( ) show (yes) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TAG) show ( ) show (SEMANTICS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Tag) show ( ) show (Implication) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(Tag) show ( ) show (A) show ( ) show (implies) show ( ) show (Tag) show ( ) show (B) show ( ) show (if) show ( ) show (A) show ( ) show (grants) show ( ) show (at) show ( ) show (least) show ( ) show (all) show ( ) show (permissions) show ( ) show (of) show ( ) show (B.) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(tag-implies) show ( ) show (tag1) show ( ) show (tag2\)) show  newline
+(\(cond) show  newline
+(\(\(all-perms?) show ( ) show (tag1\)) show ( ) show (#t\)) show ( ) show (;) show ( ) show (\(\)) show ( ) show (implies) show ( ) show (everything) show  newline
+(\(\(all-perms?) show ( ) show (tag2\)) show ( ) show (#f\)) show ( ) show (;) show ( ) show (Only) show ( ) show (\(\)) show ( ) show (implies) show ( ) show (\(*\)) show  newline
+(\(else) show ( ) show (\(equal?) show ( ) show (tag1) show ( ) show (tag2\)\)\)\)) show ( ) show (;) show ( ) show (Simple) show ( ) show (equality) show ( ) show (\(extensible\)) show  newline
+ newline
+ newline
+(Standard) show ( ) show (Tag) show ( ) show (Vocabulary) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(Tag) show ( ) show (Meaning) show  newline
+(\(*\)) show ( ) show (All) show ( ) show (permissions) show  newline
+(\(read) show ( ) show (\(path) show ( ) show (P\)\)) show ( ) show (Read) show ( ) show (access) show ( ) show (to) show ( ) show (path) show ( ) show (P) show  newline
+(\(write) show ( ) show (\(path) show ( ) show (P\)\)) show ( ) show (Write) show ( ) show (access) show ( ) show (to) show ( ) show (path) show ( ) show (P) show  newline
+(\(spawn-agent) show ( ) show (\(max-count) show ( ) show (N\)\)) show ( ) show (Spawn) show ( ) show (up) show ( ) show (to) show ( ) show (N) show ( ) show (agents) show  newline
+(\(http-api) show ( ) show (\(method) show ( ) show (M\)) show ( ) show (\(path) show ( ) show (P\)\)) show ( ) show (HTTP) show ( ) show (API) show ( ) show (access) show  newline
+(\(seal-release\)) show ( ) show (Permission) show ( ) show (to) show ( ) show (create) show ( ) show (releases) show  newline
+(\(seal-publish) show ( ) show (\(remote) show ( ) show (R\)\)) show ( ) show (Permission) show ( ) show (to) show ( ) show (publish) show ( ) show (to) show ( ) show (R) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DELEGATION) show ( ) show (CHAINS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Example:) show ( ) show (Three-Level) show ( ) show (Delegation) show  newline
+newpath margin ypos moveto margin 186 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto (Alice) show
+margin 60 add ypos moveto (\(root\)) show
+% box char 2192 at col 17
+newpath margin 105 add 3 sub ypos 2 add moveto margin 105 add 3 add ypos lineto margin 105 add 3 sub ypos 2 sub lineto closepath fill
+margin 114 add ypos moveto (Bob) show
+margin 138 add ypos moveto (\(admin\)) show
+% box char 2192 at col 31
+newpath margin 189 add 3 sub ypos 2 add moveto margin 189 add 3 add ypos lineto margin 189 add 3 sub ypos 2 sub lineto closepath fill
+margin 198 add ypos moveto (Carol) show
+margin 234 add ypos moveto (\(operator\)) show
+grestore
+newline
+ newline
+(Certificates:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Alice) show ( ) show (grants) show ( ) show (admin) show ( ) show (to) show ( ) show (Bob) show  newline
+(\(cert) show  newline
+(\(issuer) show ( ) show (#${alice-key}\)) show  newline
+(\(subject) show ( ) show (#${bob-key}\)) show  newline
+(\(tag) show ( ) show (\(*\)\)) show  newline
+(\(propagate\)\)) show  newline
+(;;) show ( ) show (Bob) show ( ) show (grants) show ( ) show (operator) show ( ) show (to) show ( ) show (Carol) show  newline
+(\(cert) show  newline
+(\(issuer) show ( ) show (#${bob-key}\)) show  newline
+(\(subject) show ( ) show (#${carol-key}\)) show  newline
+(\(tag) show ( ) show (\(seal-publish) show ( ) show (\(remote) show ( ) show (origin\)\)\)\)) show  newline
+ newline
+(Verification:) show  newline
+ newline
+ newline
+(\(verify-chain) show ( ) show (alice-public) show  newline
+(\(list) show ( ) show (alice-to-bob) show ( ) show (bob-to-carol\)) show  newline
+(\(make-tag) show ( ) show ('\(seal-publish) show ( ) show (\(remote) show ( ) show (origin\)\)\)\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (#t) show ( ) show (if) show ( ) show (Carol) show ( ) show (can) show ( ) show (publish) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Threat) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Trusted:) show  newline
+ newline
+(*) show ( ) show (Local) show ( ) show (key) show ( ) show (storage) show  newline
+(*) show ( ) show (Ed25519/SHA-512) show ( ) show (\(libsodium\)) show  newline
+(*) show ( ) show (Certificate) show ( ) show (chain) show ( ) show (construction) show  newline
+ newline
+(Untrusted:) show  newline
+ newline
+(*) show ( ) show (Certificate) show ( ) show (sources) show ( ) show (\(anyone) show ( ) show (can) show ( ) show (create) show ( ) show (certs\)) show  newline
+(*) show ( ) show (Network) show ( ) show (transport) show ( ) show (\(assume) show ( ) show (hostile\)) show  newline
+(*) show ( ) show (Certificate) show ( ) show (claims) show ( ) show (\(until) show ( ) show (chain) show ( ) show (verified\)) show  newline
+ newline
+ newline
+(Attack) show ( ) show (Mitigations) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(Attack) show ( ) show (Mitigation) show  newline
+(Certificate) show ( ) show (forgery) show ( ) show (Ed25519) show ( ) show (signatures) show  newline
+(Unauthorized) show ( ) show (delegation) show ( ) show (Propagate) show ( ) show (flag) show  newline
+(Expired) show ( ) show (permissions) show ( ) show (Validity) show ( ) show (period) show ( ) show (checks) show  newline
+(Over-delegation) show ( ) show (Tag) show ( ) show (implication) show ( ) show (checking) show  newline
+ newline
+ newline
+(Key) show ( ) show (Management) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Generation:) show ( ) show (Use) show ( ) show (secure) show ( ) show (random) show ( ) show (\(libsodium\)) show  newline
+(*) show ( ) show (Storage:) show ( ) show (Private) show ( ) show (keys) show ( ) show (in) show ( ) show (protected) show ( ) show (files) show  newline
+(*) show ( ) show (Backup:) show ( ) show (Shamir) show ( ) show (secret) show ( ) show (sharing) show ( ) show (\(see) show ( ) show (Memo-004\)) show  newline
+(*) show ( ) show (Rotation:) show ( ) show (Issue) show ( ) show (new) show ( ) show (certs,) show ( ) show (revoke) show ( ) show (old) show  newline
+ newline
+(Key) show ( ) show (management) show ( ) show (is) show ( ) show (the) show ( ) show (operational) show ( ) show (foundation) show ( ) show (of) show ( ) show (SPKI) show ( ) show (security;) show  newline
+(cryptographic) show ( ) show (strength) show ( ) show (means) show ( ) show (nothing) show ( ) show (if) show ( ) show (keys) show ( ) show (are) show ( ) show (generated) show ( ) show (predictably,) show  newline
+(stored) show ( ) show (carelessly,) show ( ) show (or) show ( ) show (lost) show ( ) show (irretrievably.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(INTEGRATION) show ( ) show (POINTS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Vault) show ( ) show (Authorization) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(vault-init) show ( ) show (signing-key:) show ( ) show (alice-private\)) show  newline
+(\(seal-release) show ( ) show ("1.0.0"\)) show ( ) show (;) show ( ) show (Requires) show ( ) show (seal-release) show ( ) show (tag) show  newline
+ newline
+ newline
+(Audit) show ( ) show (Trail) show ( ) show (Attribution) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(audit-append) show  newline
+(actor:) show ( ) show (bob-public) show  newline
+(action:) show ( ) show ('\(seal-commit) show ( ) show ("abc123"\)) show  newline
+(authorization-chain:) show ( ) show (\(list) show ( ) show (alice-to-bob-cert\)\)) show  newline
+ newline
+ newline
+(Replication) show ( ) show (Access) show ( ) show (Control) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(seal-publish) show ( ) show ("1.0.0") show  newline
+(remote:) show ( ) show ("origin") show  newline
+(authorization:) show ( ) show (bob-to-carol-cert\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SPKI) show ( ) show (VS) show ( ) show (X.509) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Aspect) show ( ) show (X.509) show ( ) show (SPKI) show  newline
+(Identity) show ( ) show (Names) show ( ) show (\(DN\)) show ( ) show (Keys) show  newline
+(Trust) show ( ) show (CA) show ( ) show (hierarchy) show ( ) show (Local) show ( ) show (choice) show  newline
+(Namespaces) show ( ) show (Global) show ( ) show (\(DNS\)) show ( ) show (Local) show  newline
+(Revocation) show ( ) show (CRL/OCSP) show ( ) show (Validity) show ( ) show (periods) show  newline
+(Format) show ( ) show (ASN.1/DER) show ( ) show (S-expressions) show  newline
+(Readability) show ( ) show (Requires) show ( ) show (tools) show ( ) show (Human-readable) show  newline
+(Delegation) show ( ) show (Implicit) show ( ) show (\(CA\)) show ( ) show (Explicit) show ( ) show (\(propagate\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Ellison,) show ( ) show (C.,) show ( ) show (et) show ( ) show (al.) show ( ) show (\(1999\).) show ( ) show (SPKI) show ( ) show (Certificate) show ( ) show (Theory.) show ( ) show (RFC) show ( ) show (2693.) show  newline
+(*) show ( ) show (Ellison,) show ( ) show (C.,) show ( ) show (et) show ( ) show (al.) show ( ) show (\(1999\).) show ( ) show (SPKI) show ( ) show (Requirements.) show ( ) show (RFC) show ( ) show (2692.) show  newline
+(*) show ( ) show (Rivest,) show ( ) show (R.,) show ( ) show (&) show ( ) show (Lampson,) show ( ) show (B.) show ( ) show (\(1996\).) show ( ) show (SDSI) show ( ) show (-) show ( ) show (A) show ( ) show (Simple) show ( ) show (Distributed) show ( ) show (Security) show ( ) show (Infrastructure.) show  newline
+(*) show ( ) show (Lampson,) show ( ) show (B.) show ( ) show (\(1971\).) show ( ) show (Protection.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(2026-01-19) show ( ) show (-) show ( ) show (Added) show ( ) show (Ellison) show ( ) show (quote,) show ( ) show (expanded) show ( ) show (narrative,) show ( ) show (fixed) show ( ) show (formatting) show  newline
+ newline
+(2026-01-06) show ( ) show (-) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

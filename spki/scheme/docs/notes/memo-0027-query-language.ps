@@ -15,772 +15,855 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0027: Soup Query Language) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies the query language for the Library of Cyberspace) show newline
-(soup: how principals search, filter, and retrieve objects from the) show newline
-(content-addressed store using the rich metadata layer. Queries are) show newline
-(themselves content-addressed and auditable.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The soup contains infinite metadata. Finding needles requires a query) show newline
-(language that is:) show newline
-() show newline
-(  * Expressive) show newline
-(  * Complex predicates, joins across objects) show newline
-(  * Efficient) show newline
-(  * Indexes, bloom filters, query planning) show newline
-(  * Secure) show newline
-(  * Queries respect capability boundaries) show newline
-(  * Auditable) show newline
-(  * Query patterns reveal access patterns) show newline
-() show newline
-(A query language that sacrifices any of these properties creates either) show newline
-(unusable archives or insecure ones.) show newline
-() show newline
-(Newton's soup had cursor-based queries. We extend this with) show newline
-(content-addressed semantics.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(QUERY MODEL) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Basic Queries) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    ;; Find by type) show newline
-(    \(soup-query type: 'document\)) show newline
-(    ;; Find by attribute) show newline
-(    \(soup-query author: "alice@example.com"\)) show newline
-(    ;; Find by multiple attributes \(AND\)) show newline
-(    \(soup-query type: 'document) show newline
-(                author: "alice@example.com") show newline
-(                created-after: "2026-01-01"\)) show newline
-(    ;; Find by content hash) show newline
-(    \(soup-query hash: "sha256:7f83b1657ff1fc..."\)) show newline
-() show newline
-() show newline
-(Query Results) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    ;; Results are lazy cursors) show newline
-(    \(define results \(soup-query type: 'document\)\)) show newline
-(    ;; Iterate) show newline
-(    \(soup-cursor-next results\)    ; => soup-object or #f) show newline
-(    \(soup-cursor-peek results\)    ; => next without advancing) show newline
-(    \(soup-cursor-reset results\)   ; => back to beginning) show newline
-(    ;; Collect \(careful with large result sets\)) show newline
-(    \(soup-cursor->list results\)   ; => list of soup-objects) show newline
-(    \(soup-cursor-count results\)   ; => total count) show newline
-() show newline
-() show newline
-(Predicates) show newline
-(----------) show newline
-() show newline
-() show newline
-(    ;; Comparison operators) show newline
-(    \(soup-query size: \(> 1000000\)\)           ; larger than 1MB) show newline
-(    \(soup-query created: \(< "2025-01-01"\)\)   ; before 2025) show newline
-(    \(soup-query name: \(like "rfc-*"\)\)        ; glob pattern) show newline
-(    \(soup-query tags: \(contains "urgent"\)\)   ; list membership) show newline
-(    ;; Logical operators) show newline
-(    \(soup-query \(and \(type: 'document\)) show newline
-(                     \(or \(author: "alice"\)) show newline
-(                         \(author: "bob"\)\)\)\)) show newline
-(    ;; Negation) show newline
-(    \(soup-query \(not \(type: 'tombstone\)\)\)) show newline
-(    ;; Existence) show newline
-(    \(soup-query \(exists 'encryption-key\)\)    ; has attribute) show newline
-(    \(soup-query \(missing 'expires\)\)          ; lacks attribute) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ADVANCED QUERIES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Range Queries) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    ;; Numeric ranges) show newline
-(    \(soup-query size: \(between 1000 10000\)\)) show newline
-(    ;; Date ranges) show newline
-(    \(soup-query created: \(between "2026-01-01" "2026-12-31"\)\)) show newline
-(    ;; Lexicographic ranges) show newline
-(    \(soup-query name: \(between "memo-010" "memo-020"\)\)) show newline
-() show newline
-() show newline
-(Full-Text Search) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    ;; Search indexed content) show newline
-(    \(soup-query \(text-search "capability delegation"\)\)) show newline
-(    ;; With highlighting) show newline
-(    \(soup-query \(text-search "SPKI certificate"\)) show newline
-(                highlight: #t\)) show newline
-(    ;; Phrase search) show newline
-(    \(soup-query \(text-search "\\"monotonic attenuation\\""\)\)) show newline
-(    ;; Fuzzy search) show newline
-(    \(soup-query \(text-search "delgation~"\)\)  ; typo-tolerant) show newline
-() show newline
-() show newline
-(Reference Traversal) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    ;; Objects referencing this hash) show newline
-(    \(soup-query references: "sha256:target..."\)) show newline
-(    ;; Objects referenced by this hash) show newline
-(    \(soup-query referenced-by: "sha256:source..."\)) show newline
-(    ;; Transitive closure \(careful - can be huge\)) show newline
-(    \(soup-query \(transitive-references "sha256:root..."\)) show newline
-(                max-depth: 3\)) show newline
-() show newline
-() show newline
-(Temporal Queries) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    ;; Objects as they existed at a point in time) show newline
-(    \(soup-query type: 'document) show newline
-(                as-of: "2026-01-01T00:00:00Z"\)) show newline
-(    ;; Objects modified in time window) show newline
-(    \(soup-query modified: \(between "2026-01-01" "2026-01-07"\)\)) show newline
-(    ;; Version history) show newline
-(    \(soup-query \(versions-of "sha256:current..."\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(QUERY COMPOSITION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Subqueries) show newline
-(----------) show newline
-() show newline
-() show newline
-(    ;; Objects authored by members of a group) show newline
-(    \(soup-query author: \(soup-query type: 'principal) show newline
-(                                    member-of: "engineering"\)\)) show newline
-(    ;; Documents referencing any RFC) show newline
-(    \(soup-query type: 'document) show newline
-(                references: \(soup-query name: \(like "rfc-*"\)\)\)) show newline
-() show newline
-() show newline
-(Aggregation) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    ;; Count by type) show newline
-(    \(soup-aggregate) show newline
-(      group-by: 'type) show newline
-(      aggregate: \(count\)\)) show newline
-(    ;; Total size by author) show newline
-(    \(soup-aggregate) show newline
-(      group-by: 'author) show newline
-(      aggregate: \(sum 'size\)\)) show newline
-(    ;; Average document size) show newline
-(    \(soup-aggregate) show newline
-(      where: \(type: 'document\)) show newline
-(      aggregate: \(avg 'size\)\)) show newline
-(    ;; Distinct values) show newline
-(    \(soup-aggregate) show newline
-(      aggregate: \(distinct 'content-type\)\)) show newline
-() show newline
-() show newline
-(Ordering and Pagination) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(    ;; Sort by creation date, newest first) show newline
-(    \(soup-query type: 'document) show newline
-(                order-by: '\(\(created desc\)\)\)) show newline
-(    ;; Multi-column sort) show newline
-(    \(soup-query type: 'document) show newline
-(                order-by: '\(\(author asc\) \(created desc\)\)\)) show newline
-(    ;; Pagination) show newline
-(    \(soup-query type: 'document) show newline
-(                order-by: '\(\(created desc\)\)) show newline
-(                limit: 20) show newline
-(                offset: 40\)) show newline
-(    ;; Cursor-based pagination \(more efficient\)) show newline
-(    \(soup-query type: 'document) show newline
-(                order-by: '\(\(created desc\)\)) show newline
-(                after: "sha256:last-seen..."\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CAPABILITY-AWARE QUERIES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Query Filtering) show newline
-(---------------) show newline
-() show newline
-(Queries automatically filter results based on the querying principal's) show newline
-(capabilities:) show newline
-() show newline
-() show newline
-(    \(define \(soup-query-with-caps query principal\)) show newline
-(      "Execute query filtered by principal's capabilities") show newline
-(      \(let* \(\(raw-results \(execute-query query\)\)) show newline
-(             \(caps \(principal-capabilities principal\)\)\)) show newline
-(        \(filter \(lambda \(obj\)) show newline
-(                  \(can-read? principal obj caps\)\)) show newline
-(                raw-results\)\)\)) show newline
-() show newline
-() show newline
-(Capability Queries) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    ;; What can I access?) show newline
-(    \(soup-query \(accessible-by \(current-principal\)\)\)) show newline
-(    ;; Who can access this?) show newline
-(    \(soup-query type: 'certificate) show newline
-(                grants-access-to: "sha256:target..."\)) show newline
-(    ;; Find my capabilities) show newline
-(    \(soup-query type: 'certificate) show newline
-(                subject: \(current-principal\)\)) show newline
-() show newline
-() show newline
-(Query Authorization) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    ;; Some queries require explicit capability) show newline
-(    \(soup-query type: 'audit-log\)  ; requires audit-read capability) show newline
-(    ;; Query capability certificate) show newline
-(    \(spki-cert) show newline
-(      \(issuer vault-admin\)) show newline
-(      \(subject auditor-key\)) show newline
-(      \(capability) show newline
-(        \(action query\)) show newline
-(        \(object \(type 'audit-log\)\)\)) show newline
-(      \(validity \(not-after "2027-01-01"\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(INDEXES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Index Types) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    ;; B-tree index \(ordered, range queries\)) show newline
-(    \(define-index 'created-idx) show newline
-(      type: 'btree) show newline
-(      on: 'created\)) show newline
-(    ;; Hash index \(equality only, faster\)) show newline
-(    \(define-index 'hash-idx) show newline
-(      type: 'hash) show newline
-(      on: 'content-hash\)) show newline
-(    ;; Full-text index \(search\)) show newline
-(    \(define-index 'content-idx) show newline
-(      type: 'fulltext) show newline
-(      on: 'content) show newline
-(      language: 'english\)) show newline
-(    ;; Composite index) show newline
-(    \(define-index 'author-date-idx) show newline
-(      type: 'btree) show newline
-(      on: '\(author created\)\)) show newline
-(    ;; Bloom filter index \(membership testing\)) show newline
-(    \(define-index 'tags-bloom) show newline
-(      type: 'bloom) show newline
-(      on: 'tags) show newline
-(      false-positive-rate: 0.01\)) show newline
-() show newline
-() show newline
-(Cost-Based Index Selection) show newline
-(--------------------------) show newline
-() show newline
-(Query planning uses Selinger-style cost estimation to select optimal) show newline
-(execution plans. The optimizer considers:) show newline
-() show newline
-(  * Cardinality estimation: How many rows will each predicate return?) show newline
-(  * Index selectivity: How discriminating is each index?) show newline
-(  * I/O cost: Sequential scan vs. random access) show newline
-(  * Join ordering: Which order minimizes intermediate result sizes?) show newline
-() show newline
-(These factors can cause query performance to vary by orders of) show newline
-(magnitude; the optimizer must consider all of them.) show newline
-() show newline
-() show newline
-(    ;; Cardinality estimation using histograms) show newline
-(    \(define \(estimate-cardinality predicate index-stats\)) show newline
-(      "Estimate result size for predicate") show newline
-(      \(let \(\(histogram \(index-histogram index-stats\)\)\)) show newline
-(        \(case \(predicate-type predicate\)) show newline
-(          \(\(equality\)) show newline
-(           ;; Use histogram bucket counts) show newline
-(           \(histogram-point-estimate histogram \(predicate-value predicate\)\)\)) show newline
-(          \(\(range\)) show newline
-(           ;; Sum histogram buckets in range) show newline
-(           \(histogram-range-estimate histogram) show newline
-(                                      \(predicate-low predicate\)) show newline
-(                                      \(predicate-high predicate\)\)\)) show newline
-(          \(\(like\)) show newline
-(           ;; Estimate based on prefix selectivity) show newline
-(           \( \(total-rows index-stats\)) show newline
-(              \(prefix-selectivity \(predicate-pattern predicate\)\)\)\)) show newline
-(          \(else) show newline
-(           ;; Conservative estimate: 10% of total) show newline
-(           \( 0.1 \(total-rows index-stats\)\)\)\)\)\)) show newline
-(    ;; Cost model for execution plans) show newline
-(    \(define \(plan-cost plan index-stats\)) show newline
-(      "Estimate total cost in I/O operations") show newline
-(      \(let \(\(cardinality \(estimate-cardinality \(plan-predicate plan\) index-stats\)\)\)) show newline
-(        \(case \(plan-access-method plan\)) show newline
-(          \(\(full-scan\)) show newline
-(           ;; Sequential I/O: count all pages) show newline
-(           \(total-pages index-stats\)\)) show newline
-(          \(\(index-scan\)) show newline
-(           ;; Random I/O: estimated rows + index traversal) show newline
-(           \(+ \(log2 \(total-rows index-stats\)\)  ; B-tree depth) show newline
-(              cardinality\)\)                     ; Heap fetches) show newline
-(          \(\(index-only\)) show newline
-(           ;; No heap access needed) show newline
-(           \(log2 \(total-rows index-stats\)\)\)) show newline
-(          \(\(bloom-filter\)) show newline
-(           ;; O\(k\) hash operations, negligible I/O) show newline
-(           \( 0.001 cardinality\)\)\)\)\)) show newline
-(    ;; Dynamic programming for join ordering) show newline
-(    \(define \(optimize-join-order predicates indexes\)) show newline
-(      "Find optimal join order using Selinger algorithm") show newline
-(      \(let \(\(memo \(make-hash-table\)\)\)) show newline
-(        \(define \(best-plan preds\)) show newline
-(          \(cond) show newline
-(            \(\(null? preds\) \(empty-plan\)\)) show newline
-(            \(\(hash-table-exists? memo preds\)) show newline
-(             \(hash-table-ref memo preds\)\)) show newline
-(            \(else) show newline
-(             \(let \(\(candidates) show newline
-(                     \(map \(lambda \(p\)) show newline
-(                            \(let \(\(rest \(delete p preds\)\)\)) show newline
-(                              \(join-plans \(single-predicate-plan p\)) show newline
-(                                          \(best-plan rest\)\)\)\)) show newline
-(                          preds\)\)) show newline
-(                    \(best \(minimum-by plan-cost candidates\)\)\)) show newline
-(               \(hash-table-set! memo preds best\)) show newline
-(               best\)\)\)\)) show newline
-(        \(best-plan predicates\)\)\)) show newline
-(    ;; Select best index for query) show newline
-(    \(define \(plan-query query indexes\)) show newline
-(      "Generate optimal query plan using cost-based optimization") show newline
-(      \(let \(\(predicates \(query-predicates query\)\)) show newline
-(             \(stats \(map index-statistics indexes\)\)) show newline
-(             ;; Generate candidate plans) show newline
-(             \(candidates) show newline
-(              \(append) show newline
-(               ;; Try each applicable index) show newline
-(               \(filter-map \(lambda \(idx stat\)) show newline
-(                            \(and \(index-covers? idx predicates\)) show newline
-(                                 \(make-plan 'index-scan idx) show newline
-(                                            \(plan-cost-for idx predicates stat\)\)\)\)) show newline
-(                          indexes stats\)) show newline
-(               ;; Always consider full scan) show newline
-(               \(list \(make-plan 'full-scan #f \(full-scan-cost predicates stats\)\)\)\)\)) show newline
-(             ;; Select minimum cost plan) show newline
-(             \(best \(minimum-by plan-cost candidates\)\)\)) show newline
-(        \(when \(> \(plan-cost best\) query-cost-warning-threshold*\)) show newline
-(          \(log-warning "Expensive query plan" query \(plan-cost best\)\)\)) show newline
-(        best\)\)) show newline
-() show newline
-() show newline
-(Histogram Maintenance) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(    ;; Equi-depth histograms for cardinality estimation) show newline
-(    \(define \(build-histogram values num-buckets\)) show newline
-(      "Build equi-depth histogram for cardinality estimation") show newline
-(      \(let \(\(sorted \(sort values <\)\)) show newline
-(             \(bucket-size \(ceiling \(/ \(length sorted\) num-buckets\)\)\)) show newline
-(             \(boundaries \(map \(lambda \(i\)) show newline
-(                               \(list-ref sorted \( i bucket-size\)\)\)) show newline
-(                             \(iota num-buckets\)\)\)\)) show newline
-(        \(make-histogram boundaries \(/ \(length sorted\) num-buckets\)\)\)\)) show newline
-(    ;; Update histogram incrementally) show newline
-(    \(define \(histogram-update! hist value\)) show newline
-(      "Incrementally update histogram with new value") show newline
-(      \(let \(\(bucket \(find-bucket hist value\)\)\)) show newline
-(        \(bucket-increment! bucket\)\)\)) show newline
-(    ;; Statistics refresh) show newline
-(    \(define \(refresh-index-statistics idx\)) show newline
-(      "Rebuild index statistics \(run periodically\)") show newline
-(      \(let* \(\(samples \(index-sample idx 10000\)\)  ; Sample 10K rows) show newline
-(             \(histogram \(build-histogram samples 100\)\)\)) show newline
-(        \(set-index-statistics! idx) show newline
-(          \(make-stats) show newline
-(            \(total-rows \(index-count idx\)\)) show newline
-(            \(distinct-values \(length \(delete-duplicates samples\)\)\)) show newline
-(            \(histogram histogram\)) show newline
-(            \(last-analyzed \(current-time\)\)\)\)\)\)) show newline
-() show newline
-() show newline
-(Index Maintenance) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    ;; Indexes are updated on soup-put) show newline
-(    \(define \(soup-put-indexed obj\)) show newline
-(      \(let \(\(hash \(soup-put obj\)\)\)) show newline
-(        \(for-each \(lambda \(idx\)) show newline
-(                    \(index-insert! idx obj hash\)\)) show newline
-(                  \(applicable-indexes obj\)\)) show newline
-(        hash\)\)) show newline
-(    ;; Periodic index optimization) show newline
-(    \(define \(optimize-indexes\)) show newline
-(      \(for-each index-compact! \(all-indexes\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(QUERY EXECUTION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Query Planning) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    \(define \(execute-query query\)) show newline
-(      "Plan and execute query") show newline
-(      \(let \(\(plan \(plan-query query\)\)) show newline
-(             \(cost \(estimate-cost plan\)\)\)) show newline
-(        \(when \(> cost query-cost-limit*\)) show newline
-(          \(error "Query too expensive" cost\)\)) show newline
-(        \(execute-plan plan\)\)\)) show newline
-(    \(define \(plan-query query\)) show newline
-(      "Generate query execution plan") show newline
-(      `\(query-plan) show newline
-(        \(predicates ,\(query-predicates query\)\)) show newline
-(        \(index ,\(select-index query\)\)) show newline
-(        \(filter ,\(remaining-predicates query\)\)) show newline
-(        \(order ,\(query-order query\)\)) show newline
-(        \(limit ,\(query-limit query\)\)\)\)) show newline
-() show newline
-() show newline
-(Execution Strategies) show newline
-(--------------------) show newline
-() show newline
-() show newline
-(    ;; Index scan) show newline
-(    \(define \(index-scan index predicate\)) show newline
-(      \(index-range-query index) show newline
-(                         \(predicate-lower-bound predicate\)) show newline
-(                         \(predicate-upper-bound predicate\)\)\)) show newline
-(    ;; Full scan \(last resort\)) show newline
-(    \(define \(full-scan predicate\)) show newline
-(      \(filter predicate \(all-soup-objects\)\)\)) show newline
-(    ;; Index intersection) show newline
-(    \(define \(index-intersect idx1 idx2 pred1 pred2\)) show newline
-(      \(set-intersection) show newline
-(        \(index-scan idx1 pred1\)) show newline
-(        \(index-scan idx2 pred2\)\)\)) show newline
-() show newline
-() show newline
-(Query Caching) show newline
-(-------------) show newline
-() show newline
-(The soup is archival - objects rarely change, making aggressive caching) show newline
-(safe.) show newline
-() show newline
-() show newline
-(    ;; Multi-tier cache: L1 hot results, L2 warm, L3 persistent) show newline
-(    \(define l1-cache \(make-lru-cache 100\)\)    ; In-memory, microseconds) show newline
-(    \(define l2-cache \(make-lru-cache 10000\)\)  ; Warm, milliseconds) show newline
-(    \(define l3-cache 'persistent-index\)        ; On-disk, query index) show newline
-(    \(define \(cached-query query principal\)) show newline
-(      "Multi-tier cached query with capability awareness") show newline
-(      \(let \(\(key \(query-cache-key query principal\)\)\)) show newline
-(        \(or \(lru-get l1-cache key\)) show newline
-(            \(lru-get l2-cache key\)) show newline
-(            \(persistent-cache-get l3-cache key\)) show newline
-(            \(let \(\(result \(execute-query query\)\)\)) show newline
-(              ;; Promote to appropriate cache tier based on cost) show newline
-(              \(let \(\(cost \(query-cost query\)\)\)) show newline
-(                \(cond) show newline
-(                  \(\(> cost 1000\) \(persistent-cache-put! l3-cache key result\)\)) show newline
-(                  \(\(> cost 100\) \(lru-put! l2-cache key result\)\)) show newline
-(                  \(else \(lru-put! l1-cache key result\)\)\)\)) show newline
-(              result\)\)\)\)) show newline
-() show newline
-(#### Dependency-Based Invalidation) show newline
-() show newline
-(Track which predicates affect which cached queries using Bloom filters:) show newline
-() show newline
-() show newline
-(    ;; Bloom filter tracking which attributes affect cached queries) show newline
-(    \(define query-dependencies \(make-counting-bloom-filter 100000 0.001\)\)) show newline
-(    \(define \(cache-with-deps query result\)) show newline
-(      "Cache query and track its dependencies") show newline
-(      \(let \(\(key \(query->hash query\)\)) show newline
-(            \(deps \(query-attribute-deps query\)\)\)) show newline
-(        \(lru-put! query-cache key result\)) show newline
-(        ;; Track dependencies) show newline
-(        \(for-each \(lambda \(attr\)) show newline
-(                    \(bloom-add! query-dependencies \(cons attr key\)\)\)) show newline
-(                  deps\)\)\)) show newline
-(    \(define \(invalidate-on-change obj\)) show newline
-(      "Invalidate only queries that MIGHT be affected \(conservative\)") show newline
-(      \(let \(\(attrs \(soup-object-attributes obj\)\)\)) show newline
-(        \(for-each \(lambda \(attr\)) show newline
-(                    ;; Check if any cached query depends on this attribute) show newline
-(                    \(when \(bloom-might-contain? query-dependencies attr\)) show newline
-(                      \(invalidate-queries-for-attribute attr\)\)\)) show newline
-(                  attrs\)\)\)) show newline
-() show newline
-(#### Archival Cache Semantics) show newline
-() show newline
-(For the soup's archival nature, implement copy-on-write cache entries:) show newline
-() show newline
-() show newline
-(    ;; Immutable cache entries - archival objects never change) show newline
-(    \(define \(archival-cache-get cache hash\)) show newline
-(      "Archival objects can be cached permanently") show newline
-(      \(let \(\(entry \(hash-table-ref cache hash #f\)\)\)) show newline
-(        \(if entry) show newline
-(            \(if \(archival-generation? \(soup-get hash\)\)) show newline
-(                entry  ; Archival: never expires) show newline
-(                \(if \(cache-entry-fresh? entry\)) show newline
-(                    \(cache-entry-value entry\)) show newline
-(                    #f\)\)  ; Non-archival: check freshness) show newline
-(            #f\)\)\)) show newline
-(    ;; Generation-aware caching) show newline
-(    \(define \(cache-ttl-for-generation gen\)) show newline
-(      \(case gen) show newline
-(        \(\(archival\) +inf.0\)       ; Never expires) show newline
-(        \(\(stable\) 86400\)          ; 1 day) show newline
-(        \(\(maturing\) 3600\)         ; 1 hour) show newline
-(        \(\(young\) 60\)              ; 1 minute) show newline
-(        \(\(ephemeral\) 0\)\)\)         ; No caching) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DISTRIBUTED QUERIES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Federated Query) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    ;; Query across multiple vaults) show newline
-(    \(soup-query type: 'document) show newline
-(                federation: '\(vault-a vault-b vault-c\)\)) show newline
-(    ;; Query with locality preference) show newline
-(    \(soup-query type: 'document) show newline
-(                prefer-local: #t\)) show newline
-() show newline
-() show newline
-(Query Routing) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    \(define \(route-query query vaults\)) show newline
-(      "Route query to appropriate vaults") show newline
-(      \(let \(\(partitions \(query-partitions query\)\)\)) show newline
-(        \(map \(lambda \(vault\)) show newline
-(               \(list vault \(subquery-for-vault query vault\)\)\)) show newline
-(             \(filter \(lambda \(v\)) show newline
-(                       \(vault-has-partition? v partitions\)\)) show newline
-(                     vaults\)\)\)\)) show newline
-() show newline
-() show newline
-(Result Merging) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    \(define \(merge-results results order\)) show newline
-(      "Merge sorted results from multiple vaults") show newline
-(      \(let \(\(streams \(map result->stream results\)\)\)) show newline
-(        \(merge-sorted-streams streams \(order->comparator order\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(QUERY AUDIT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Audit Trail) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    ;; All queries are logged) show newline
-(    \(define \(audited-query query principal\)) show newline
-(      \(let \(\(start \(current-time\)\)) show newline
-(            \(result \(soup-query-with-caps query principal\)\)\)) show newline
-(        \(audit-append) show newline
-(          action: 'query) show newline
-(          principal: principal) show newline
-(          query: \(query->sexp query\)) show newline
-(          result-count: \(soup-cursor-count result\)) show newline
-(          duration: \(- \(current-time\) start\)\)) show newline
-(        result\)\)) show newline
-() show newline
-() show newline
-(Query Analysis) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    ;; Analyze query patterns) show newline
-(    \(soup-query type: 'audit-entry) show newline
-(                action: 'query) show newline
-(                principal: "alice"\)) show newline
-(    ;; Find expensive queries) show newline
-(    \(soup-query type: 'audit-entry) show newline
-(                action: 'query) show newline
-(                duration: \(> 1000\)\)  ; > 1 second) show newline
-(    ;; Access pattern analysis) show newline
-(    \(soup-aggregate) show newline
-(      where: \(and \(type: 'audit-entry\) \(action: 'query\)\)) show newline
-(      group-by: 'principal) show newline
-(      aggregate: \(count\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(QUERY LANGUAGE GRAMMAR) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    query       ::= \(soup-query clause\)) show newline
-(    clause      ::= attribute-clause | predicate-clause | option-clause) show newline
-(    attribute   ::= symbol ':' value) show newline
-(    predicate   ::= '\(' op value '\)') show newline
-(    op          ::= '>' | '<' | '>=' | '<=' | '=' | '!=') show newline
-(                  | 'like' | 'between' | 'contains') show newline
-(                  | 'and' | 'or' | 'not') show newline
-(                  | 'exists' | 'missing') show newline
-(                  | 'text-search' | 'references' | 'referenced-by') show newline
-(    option      ::= 'order-by' | 'limit' | 'offset' | 'after') show newline
-(                  | 'as-of' | 'highlight' | 'federation') show newline
-(    value       ::= string | number | boolean | hash | query) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Query Injection) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    ;; Never interpolate user input into queries) show newline
-(    ;; BAD:) show newline
-(    \(soup-query name: \(string-append "rfc-" user-input\)\)) show newline
-(    ;; GOOD:) show newline
-(    \(soup-query name: \(like \(sanitize-pattern user-input\)\)\)) show newline
-(    \(define \(sanitize-pattern s\)) show newline
-(      \(string-map \(lambda \(c\)) show newline
-(                    \(if \(member c '\(#\\* #\\? #\\[ #\\]\)\)) show newline
-(                        #\\\\) show newline
-(                        c\)\)) show newline
-(                  s\)\)) show newline
-() show newline
-() show newline
-(Query Cost Limits) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    ;; Prevent denial of service via expensive queries) show newline
-(    \(define query-cost-limit 10000\)) show newline
-(    \(define query-timeout 30\)  ; seconds) show newline
-(    \(define \(safe-query query\)) show newline
-(      \(with-timeout query-timeout) show newline
-(        \(let \(\(cost \(estimate-cost query\)\)\)) show newline
-(          \(when \(> cost query-cost-limit\)) show newline
-(            \(error "Query exceeds cost limit"\)\)) show newline
-(          \(execute-query query\)\)\)\)) show newline
-() show newline
-() show newline
-(Information Leakage) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    ;; Query existence can leak information) show newline
-(    ;; Even "not found" reveals something) show newline
-(    ;; Use constant-time responses for sensitive queries) show newline
-(    \(define \(private-query query\)) show newline
-(      \(let \(\(result \(soup-query query\)\)\)) show newline
-(        \(if \(authorized? \(current-principal\) result\)) show newline
-(            result) show newline
-(            \(constant-time-not-found\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION NOTES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Performance) show newline
-(-----------) show newline
-() show newline
-(  * Index selection is critical for large soups) show newline
-(  * Bloom filters for fast negative lookups) show newline
-(  * Query result streaming to avoid memory exhaustion) show newline
-(  * Connection pooling for federated queries) show newline
-() show newline
-() show newline
-(Compatibility) show newline
-(-------------) show newline
-() show newline
-(  * Query language inspired by Newton's soup cursors) show newline
-(  * SQL-like semantics where applicable) show newline
-(  * S-expression syntax for Scheme integration) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Newton Programmer's Guide - Soup and cursor APIs) show newline
-(  * SQLite Query Planner - Query optimization) show newline
-(  * Selinger et al., "Access Path Selection in a Relational Database Management System" \(1979\) - Cost-based optimization) show newline
-(  * Memo-020: Content-Addressed Storage) show newline
-(  * Memo-021: Capability Delegation) show newline
-(  * Memo-026: Garbage Collection \(generation-aware caching\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-09) show newline
-(  * Cost-based query optimization: Selinger algorithm, cardinality estimation, histograms, multi-tier caching with generation-aware TTL - 2026-01-07) show newline
-(  * Initial draft) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0027:) show ( ) show (Soup) show ( ) show (Query) show ( ) show (Language) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (the) show ( ) show (query) show ( ) show (language) show ( ) show (for) show ( ) show (the) show ( ) show (Library) show ( ) show (of) show ( ) show (Cyberspace) show  newline
+(soup:) show ( ) show (how) show ( ) show (principals) show ( ) show (search,) show ( ) show (filter,) show ( ) show (and) show ( ) show (retrieve) show ( ) show (objects) show ( ) show (from) show ( ) show (the) show  newline
+(content-addressed) show ( ) show (store) show ( ) show (using) show ( ) show (the) show ( ) show (rich) show ( ) show (metadata) show ( ) show (layer.) show ( ) show (Queries) show ( ) show (are) show  newline
+(themselves) show ( ) show (content-addressed) show ( ) show (and) show ( ) show (auditable.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (soup) show ( ) show (contains) show ( ) show (infinite) show ( ) show (metadata.) show ( ) show (Finding) show ( ) show (needles) show ( ) show (requires) show ( ) show (a) show ( ) show (query) show  newline
+(language) show ( ) show (that) show ( ) show (is:) show  newline
+ newline
+(*) show ( ) show (Expressive) show  newline
+(*) show ( ) show (Complex) show ( ) show (predicates,) show ( ) show (joins) show ( ) show (across) show ( ) show (objects) show  newline
+(*) show ( ) show (Efficient) show  newline
+(*) show ( ) show (Indexes,) show ( ) show (bloom) show ( ) show (filters,) show ( ) show (query) show ( ) show (planning) show  newline
+(*) show ( ) show (Secure) show  newline
+(*) show ( ) show (Queries) show ( ) show (respect) show ( ) show (capability) show ( ) show (boundaries) show  newline
+(*) show ( ) show (Auditable) show  newline
+(*) show ( ) show (Query) show ( ) show (patterns) show ( ) show (reveal) show ( ) show (access) show ( ) show (patterns) show  newline
+ newline
+(A) show ( ) show (query) show ( ) show (language) show ( ) show (that) show ( ) show (sacrifices) show ( ) show (any) show ( ) show (of) show ( ) show (these) show ( ) show (properties) show ( ) show (creates) show ( ) show (either) show  newline
+(unusable) show ( ) show (archives) show ( ) show (or) show ( ) show (insecure) show ( ) show (ones.) show  newline
+ newline
+(Newton's) show ( ) show (soup) show ( ) show (had) show ( ) show (cursor-based) show ( ) show (queries.) show ( ) show (We) show ( ) show (extend) show ( ) show (this) show ( ) show (with) show  newline
+(content-addressed) show ( ) show (semantics.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(QUERY) show ( ) show (MODEL) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Basic) show ( ) show (Queries) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Find) show ( ) show (by) show ( ) show (type) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document\)) show  newline
+(;;) show ( ) show (Find) show ( ) show (by) show ( ) show (attribute) show  newline
+(\(soup-query) show ( ) show (author:) show ( ) show ("alice@example.com"\)) show  newline
+(;;) show ( ) show (Find) show ( ) show (by) show ( ) show (multiple) show ( ) show (attributes) show ( ) show (\(AND\)) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document) show  newline
+(author:) show ( ) show ("alice@example.com") show  newline
+(created-after:) show ( ) show ("2026-01-01"\)) show  newline
+(;;) show ( ) show (Find) show ( ) show (by) show ( ) show (content) show ( ) show (hash) show  newline
+(\(soup-query) show ( ) show (hash:) show ( ) show ("sha256:7f83b1657ff1fc..."\)) show  newline
+ newline
+ newline
+(Query) show ( ) show (Results) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Results) show ( ) show (are) show ( ) show (lazy) show ( ) show (cursors) show  newline
+(\(define) show ( ) show (results) show ( ) show (\(soup-query) show ( ) show (type:) show ( ) show ('document\)\)) show  newline
+(;;) show ( ) show (Iterate) show  newline
+(\(soup-cursor-next) show ( ) show (results\)) show ( ) show (;) show ( ) show (=>) show ( ) show (soup-object) show ( ) show (or) show ( ) show (#f) show  newline
+(\(soup-cursor-peek) show ( ) show (results\)) show ( ) show (;) show ( ) show (=>) show ( ) show (next) show ( ) show (without) show ( ) show (advancing) show  newline
+(\(soup-cursor-reset) show ( ) show (results\)) show ( ) show (;) show ( ) show (=>) show ( ) show (back) show ( ) show (to) show ( ) show (beginning) show  newline
+(;;) show ( ) show (Collect) show ( ) show (\(careful) show ( ) show (with) show ( ) show (large) show ( ) show (result) show ( ) show (sets\)) show  newline
+(\(soup-cursor->list) show ( ) show (results\)) show ( ) show (;) show ( ) show (=>) show ( ) show (list) show ( ) show (of) show ( ) show (soup-objects) show  newline
+(\(soup-cursor-count) show ( ) show (results\)) show ( ) show (;) show ( ) show (=>) show ( ) show (total) show ( ) show (count) show  newline
+ newline
+ newline
+(Predicates) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Comparison) show ( ) show (operators) show  newline
+(\(soup-query) show ( ) show (size:) show ( ) show (\(>) show ( ) show (1000000\)\)) show ( ) show (;) show ( ) show (larger) show ( ) show (than) show ( ) show (1MB) show  newline
+(\(soup-query) show ( ) show (created:) show ( ) show (\(<) show ( ) show ("2025-01-01"\)\)) show ( ) show (;) show ( ) show (before) show ( ) show (2025) show  newline
+(\(soup-query) show ( ) show (name:) show ( ) show (\(like) show ( ) show ("rfc-*"\)\)) show ( ) show (;) show ( ) show (glob) show ( ) show (pattern) show  newline
+(\(soup-query) show ( ) show (tags:) show ( ) show (\(contains) show ( ) show ("urgent"\)\)) show ( ) show (;) show ( ) show (list) show ( ) show (membership) show  newline
+(;;) show ( ) show (Logical) show ( ) show (operators) show  newline
+(\(soup-query) show ( ) show (\(and) show ( ) show (\(type:) show ( ) show ('document\)) show  newline
+(\(or) show ( ) show (\(author:) show ( ) show ("alice"\)) show  newline
+(\(author:) show ( ) show ("bob"\)\)\)\)) show  newline
+(;;) show ( ) show (Negation) show  newline
+(\(soup-query) show ( ) show (\(not) show ( ) show (\(type:) show ( ) show ('tombstone\)\)\)) show  newline
+(;;) show ( ) show (Existence) show  newline
+(\(soup-query) show ( ) show (\(exists) show ( ) show ('encryption-key\)\)) show ( ) show (;) show ( ) show (has) show ( ) show (attribute) show  newline
+(\(soup-query) show ( ) show (\(missing) show ( ) show ('expires\)\)) show ( ) show (;) show ( ) show (lacks) show ( ) show (attribute) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ADVANCED) show ( ) show (QUERIES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Range) show ( ) show (Queries) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Numeric) show ( ) show (ranges) show  newline
+(\(soup-query) show ( ) show (size:) show ( ) show (\(between) show ( ) show (1000) show ( ) show (10000\)\)) show  newline
+(;;) show ( ) show (Date) show ( ) show (ranges) show  newline
+(\(soup-query) show ( ) show (created:) show ( ) show (\(between) show ( ) show ("2026-01-01") show ( ) show ("2026-12-31"\)\)) show  newline
+(;;) show ( ) show (Lexicographic) show ( ) show (ranges) show  newline
+(\(soup-query) show ( ) show (name:) show ( ) show (\(between) show ( ) show ("memo-010") show ( ) show ("memo-020"\)\)) show  newline
+ newline
+ newline
+(Full-Text) show ( ) show (Search) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Search) show ( ) show (indexed) show ( ) show (content) show  newline
+(\(soup-query) show ( ) show (\(text-search) show ( ) show ("capability) show ( ) show (delegation"\)\)) show  newline
+(;;) show ( ) show (With) show ( ) show (highlighting) show  newline
+(\(soup-query) show ( ) show (\(text-search) show ( ) show ("SPKI) show ( ) show (certificate"\)) show  newline
+(highlight:) show ( ) show (#t\)) show  newline
+(;;) show ( ) show (Phrase) show ( ) show (search) show  newline
+(\(soup-query) show ( ) show (\(text-search) show ( ) show ("\\"monotonic) show ( ) show (attenuation\\""\)\)) show  newline
+(;;) show ( ) show (Fuzzy) show ( ) show (search) show  newline
+(\(soup-query) show ( ) show (\(text-search) show ( ) show ("delgation~"\)\)) show ( ) show (;) show ( ) show (typo-tolerant) show  newline
+ newline
+ newline
+(Reference) show ( ) show (Traversal) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Objects) show ( ) show (referencing) show ( ) show (this) show ( ) show (hash) show  newline
+(\(soup-query) show ( ) show (references:) show ( ) show ("sha256:target..."\)) show  newline
+(;;) show ( ) show (Objects) show ( ) show (referenced) show ( ) show (by) show ( ) show (this) show ( ) show (hash) show  newline
+(\(soup-query) show ( ) show (referenced-by:) show ( ) show ("sha256:source..."\)) show  newline
+(;;) show ( ) show (Transitive) show ( ) show (closure) show ( ) show (\(careful) show ( ) show (-) show ( ) show (can) show ( ) show (be) show ( ) show (huge\)) show  newline
+(\(soup-query) show ( ) show (\(transitive-references) show ( ) show ("sha256:root..."\)) show  newline
+(max-depth:) show ( ) show (3\)) show  newline
+ newline
+ newline
+(Temporal) show ( ) show (Queries) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Objects) show ( ) show (as) show ( ) show (they) show ( ) show (existed) show ( ) show (at) show ( ) show (a) show ( ) show (point) show ( ) show (in) show ( ) show (time) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document) show  newline
+(as-of:) show ( ) show ("2026-01-01T00:00:00Z"\)) show  newline
+(;;) show ( ) show (Objects) show ( ) show (modified) show ( ) show (in) show ( ) show (time) show ( ) show (window) show  newline
+(\(soup-query) show ( ) show (modified:) show ( ) show (\(between) show ( ) show ("2026-01-01") show ( ) show ("2026-01-07"\)\)) show  newline
+(;;) show ( ) show (Version) show ( ) show (history) show  newline
+(\(soup-query) show ( ) show (\(versions-of) show ( ) show ("sha256:current..."\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(QUERY) show ( ) show (COMPOSITION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Subqueries) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Objects) show ( ) show (authored) show ( ) show (by) show ( ) show (members) show ( ) show (of) show ( ) show (a) show ( ) show (group) show  newline
+(\(soup-query) show ( ) show (author:) show ( ) show (\(soup-query) show ( ) show (type:) show ( ) show ('principal) show  newline
+(member-of:) show ( ) show ("engineering"\)\)) show  newline
+(;;) show ( ) show (Documents) show ( ) show (referencing) show ( ) show (any) show ( ) show (RFC) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document) show  newline
+(references:) show ( ) show (\(soup-query) show ( ) show (name:) show ( ) show (\(like) show ( ) show ("rfc-*"\)\)\)) show  newline
+ newline
+ newline
+(Aggregation) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Count) show ( ) show (by) show ( ) show (type) show  newline
+(\(soup-aggregate) show  newline
+(group-by:) show ( ) show ('type) show  newline
+(aggregate:) show ( ) show (\(count\)\)) show  newline
+(;;) show ( ) show (Total) show ( ) show (size) show ( ) show (by) show ( ) show (author) show  newline
+(\(soup-aggregate) show  newline
+(group-by:) show ( ) show ('author) show  newline
+(aggregate:) show ( ) show (\(sum) show ( ) show ('size\)\)) show  newline
+(;;) show ( ) show (Average) show ( ) show (document) show ( ) show (size) show  newline
+(\(soup-aggregate) show  newline
+(where:) show ( ) show (\(type:) show ( ) show ('document\)) show  newline
+(aggregate:) show ( ) show (\(avg) show ( ) show ('size\)\)) show  newline
+(;;) show ( ) show (Distinct) show ( ) show (values) show  newline
+(\(soup-aggregate) show  newline
+(aggregate:) show ( ) show (\(distinct) show ( ) show ('content-type\)\)) show  newline
+ newline
+ newline
+(Ordering) show ( ) show (and) show ( ) show (Pagination) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Sort) show ( ) show (by) show ( ) show (creation) show ( ) show (date,) show ( ) show (newest) show ( ) show (first) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document) show  newline
+(order-by:) show ( ) show ('\(\(created) show ( ) show (desc\)\)\)) show  newline
+(;;) show ( ) show (Multi-column) show ( ) show (sort) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document) show  newline
+(order-by:) show ( ) show ('\(\(author) show ( ) show (asc\)) show ( ) show (\(created) show ( ) show (desc\)\)\)) show  newline
+(;;) show ( ) show (Pagination) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document) show  newline
+(order-by:) show ( ) show ('\(\(created) show ( ) show (desc\)\)) show  newline
+(limit:) show ( ) show (20) show  newline
+(offset:) show ( ) show (40\)) show  newline
+(;;) show ( ) show (Cursor-based) show ( ) show (pagination) show ( ) show (\(more) show ( ) show (efficient\)) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document) show  newline
+(order-by:) show ( ) show ('\(\(created) show ( ) show (desc\)\)) show  newline
+(after:) show ( ) show ("sha256:last-seen..."\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CAPABILITY-AWARE) show ( ) show (QUERIES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Query) show ( ) show (Filtering) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(Queries) show ( ) show (automatically) show ( ) show (filter) show ( ) show (results) show ( ) show (based) show ( ) show (on) show ( ) show (the) show ( ) show (querying) show ( ) show (principal's) show  newline
+(capabilities:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(soup-query-with-caps) show ( ) show (query) show ( ) show (principal\)) show  newline
+("Execute) show ( ) show (query) show ( ) show (filtered) show ( ) show (by) show ( ) show (principal's) show ( ) show (capabilities") show  newline
+(\(let*) show ( ) show (\(\(raw-results) show ( ) show (\(execute-query) show ( ) show (query\)\)) show  newline
+(\(caps) show ( ) show (\(principal-capabilities) show ( ) show (principal\)\)\)) show  newline
+(\(filter) show ( ) show (\(lambda) show ( ) show (\(obj\)) show  newline
+(\(can-read?) show ( ) show (principal) show ( ) show (obj) show ( ) show (caps\)\)) show  newline
+(raw-results\)\)\)) show  newline
+ newline
+ newline
+(Capability) show ( ) show (Queries) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (What) show ( ) show (can) show ( ) show (I) show ( ) show (access?) show  newline
+(\(soup-query) show ( ) show (\(accessible-by) show ( ) show (\(current-principal\)\)\)) show  newline
+(;;) show ( ) show (Who) show ( ) show (can) show ( ) show (access) show ( ) show (this?) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show  newline
+(grants-access-to:) show ( ) show ("sha256:target..."\)) show  newline
+(;;) show ( ) show (Find) show ( ) show (my) show ( ) show (capabilities) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('certificate) show  newline
+(subject:) show ( ) show (\(current-principal\)\)) show  newline
+ newline
+ newline
+(Query) show ( ) show (Authorization) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Some) show ( ) show (queries) show ( ) show (require) show ( ) show (explicit) show ( ) show (capability) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('audit-log\)) show ( ) show (;) show ( ) show (requires) show ( ) show (audit-read) show ( ) show (capability) show  newline
+(;;) show ( ) show (Query) show ( ) show (capability) show ( ) show (certificate) show  newline
+(\(spki-cert) show  newline
+(\(issuer) show ( ) show (vault-admin\)) show  newline
+(\(subject) show ( ) show (auditor-key\)) show  newline
+(\(capability) show  newline
+(\(action) show ( ) show (query\)) show  newline
+(\(object) show ( ) show (\(type) show ( ) show ('audit-log\)\)\)) show  newline
+(\(validity) show ( ) show (\(not-after) show ( ) show ("2027-01-01"\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(INDEXES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Index) show ( ) show (Types) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (B-tree) show ( ) show (index) show ( ) show (\(ordered,) show ( ) show (range) show ( ) show (queries\)) show  newline
+(\(define-index) show ( ) show ('created-idx) show  newline
+(type:) show ( ) show ('btree) show  newline
+(on:) show ( ) show ('created\)) show  newline
+(;;) show ( ) show (Hash) show ( ) show (index) show ( ) show (\(equality) show ( ) show (only,) show ( ) show (faster\)) show  newline
+(\(define-index) show ( ) show ('hash-idx) show  newline
+(type:) show ( ) show ('hash) show  newline
+(on:) show ( ) show ('content-hash\)) show  newline
+(;;) show ( ) show (Full-text) show ( ) show (index) show ( ) show (\(search\)) show  newline
+(\(define-index) show ( ) show ('content-idx) show  newline
+(type:) show ( ) show ('fulltext) show  newline
+(on:) show ( ) show ('content) show  newline
+(language:) show ( ) show ('english\)) show  newline
+(;;) show ( ) show (Composite) show ( ) show (index) show  newline
+(\(define-index) show ( ) show ('author-date-idx) show  newline
+(type:) show ( ) show ('btree) show  newline
+(on:) show ( ) show ('\(author) show ( ) show (created\)\)) show  newline
+(;;) show ( ) show (Bloom) show ( ) show (filter) show ( ) show (index) show ( ) show (\(membership) show ( ) show (testing\)) show  newline
+(\(define-index) show ( ) show ('tags-bloom) show  newline
+(type:) show ( ) show ('bloom) show  newline
+(on:) show ( ) show ('tags) show  newline
+(false-positive-rate:) show ( ) show (0.01\)) show  newline
+ newline
+ newline
+(Cost-Based) show ( ) show (Index) show ( ) show (Selection) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+(Query) show ( ) show (planning) show ( ) show (uses) show ( ) show (Selinger-style) show ( ) show (cost) show ( ) show (estimation) show ( ) show (to) show ( ) show (select) show ( ) show (optimal) show  newline
+(execution) show ( ) show (plans.) show ( ) show (The) show ( ) show (optimizer) show ( ) show (considers:) show  newline
+ newline
+(*) show ( ) show (Cardinality) show ( ) show (estimation:) show ( ) show (How) show ( ) show (many) show ( ) show (rows) show ( ) show (will) show ( ) show (each) show ( ) show (predicate) show ( ) show (return?) show  newline
+(*) show ( ) show (Index) show ( ) show (selectivity:) show ( ) show (How) show ( ) show (discriminating) show ( ) show (is) show ( ) show (each) show ( ) show (index?) show  newline
+(*) show ( ) show (I/O) show ( ) show (cost:) show ( ) show (Sequential) show ( ) show (scan) show ( ) show (vs.) show ( ) show (random) show ( ) show (access) show  newline
+(*) show ( ) show (Join) show ( ) show (ordering:) show ( ) show (Which) show ( ) show (order) show ( ) show (minimizes) show ( ) show (intermediate) show ( ) show (result) show ( ) show (sizes?) show  newline
+ newline
+(These) show ( ) show (factors) show ( ) show (can) show ( ) show (cause) show ( ) show (query) show ( ) show (performance) show ( ) show (to) show ( ) show (vary) show ( ) show (by) show ( ) show (orders) show ( ) show (of) show  newline
+(magnitude;) show ( ) show (the) show ( ) show (optimizer) show ( ) show (must) show ( ) show (consider) show ( ) show (all) show ( ) show (of) show ( ) show (them.) show  newline
+ newline
+ newline
+(;;) show ( ) show (Cardinality) show ( ) show (estimation) show ( ) show (using) show ( ) show (histograms) show  newline
+(\(define) show ( ) show (\(estimate-cardinality) show ( ) show (predicate) show ( ) show (index-stats\)) show  newline
+("Estimate) show ( ) show (result) show ( ) show (size) show ( ) show (for) show ( ) show (predicate") show  newline
+(\(let) show ( ) show (\(\(histogram) show ( ) show (\(index-histogram) show ( ) show (index-stats\)\)\)) show  newline
+(\(case) show ( ) show (\(predicate-type) show ( ) show (predicate\)) show  newline
+(\(\(equality\)) show  newline
+(;;) show ( ) show (Use) show ( ) show (histogram) show ( ) show (bucket) show ( ) show (counts) show  newline
+(\(histogram-point-estimate) show ( ) show (histogram) show ( ) show (\(predicate-value) show ( ) show (predicate\)\)\)) show  newline
+(\(\(range\)) show  newline
+(;;) show ( ) show (Sum) show ( ) show (histogram) show ( ) show (buckets) show ( ) show (in) show ( ) show (range) show  newline
+(\(histogram-range-estimate) show ( ) show (histogram) show  newline
+(\(predicate-low) show ( ) show (predicate\)) show  newline
+(\(predicate-high) show ( ) show (predicate\)\)\)) show  newline
+(\(\(like\)) show  newline
+(;;) show ( ) show (Estimate) show ( ) show (based) show ( ) show (on) show ( ) show (prefix) show ( ) show (selectivity) show  newline
+(\() show ( ) show (\(total-rows) show ( ) show (index-stats\)) show  newline
+(\(prefix-selectivity) show ( ) show (\(predicate-pattern) show ( ) show (predicate\)\)\)\)) show  newline
+(\(else) show  newline
+(;;) show ( ) show (Conservative) show ( ) show (estimate:) show ( ) show (10%) show ( ) show (of) show ( ) show (total) show  newline
+(\() show ( ) show (0.1) show ( ) show (\(total-rows) show ( ) show (index-stats\)\)\)\)\)\)) show  newline
+(;;) show ( ) show (Cost) show ( ) show (model) show ( ) show (for) show ( ) show (execution) show ( ) show (plans) show  newline
+(\(define) show ( ) show (\(plan-cost) show ( ) show (plan) show ( ) show (index-stats\)) show  newline
+("Estimate) show ( ) show (total) show ( ) show (cost) show ( ) show (in) show ( ) show (I/O) show ( ) show (operations") show  newline
+(\(let) show ( ) show (\(\(cardinality) show ( ) show (\(estimate-cardinality) show ( ) show (\(plan-predicate) show ( ) show (plan\)) show ( ) show (index-stats\)\)\)) show  newline
+(\(case) show ( ) show (\(plan-access-method) show ( ) show (plan\)) show  newline
+(\(\(full-scan\)) show  newline
+(;;) show ( ) show (Sequential) show ( ) show (I/O:) show ( ) show (count) show ( ) show (all) show ( ) show (pages) show  newline
+(\(total-pages) show ( ) show (index-stats\)\)) show  newline
+(\(\(index-scan\)) show  newline
+(;;) show ( ) show (Random) show ( ) show (I/O:) show ( ) show (estimated) show ( ) show (rows) show ( ) show (+) show ( ) show (index) show ( ) show (traversal) show  newline
+(\(+) show ( ) show (\(log2) show ( ) show (\(total-rows) show ( ) show (index-stats\)\)) show ( ) show (;) show ( ) show (B-tree) show ( ) show (depth) show  newline
+(cardinality\)\)) show ( ) show (;) show ( ) show (Heap) show ( ) show (fetches) show  newline
+(\(\(index-only\)) show  newline
+(;;) show ( ) show (No) show ( ) show (heap) show ( ) show (access) show ( ) show (needed) show  newline
+(\(log2) show ( ) show (\(total-rows) show ( ) show (index-stats\)\)\)) show  newline
+(\(\(bloom-filter\)) show  newline
+(;;) show ( ) show (O\(k\)) show ( ) show (hash) show ( ) show (operations,) show ( ) show (negligible) show ( ) show (I/O) show  newline
+(\() show ( ) show (0.001) show ( ) show (cardinality\)\)\)\)\)) show  newline
+(;;) show ( ) show (Dynamic) show ( ) show (programming) show ( ) show (for) show ( ) show (join) show ( ) show (ordering) show  newline
+(\(define) show ( ) show (\(optimize-join-order) show ( ) show (predicates) show ( ) show (indexes\)) show  newline
+("Find) show ( ) show (optimal) show ( ) show (join) show ( ) show (order) show ( ) show (using) show ( ) show (Selinger) show ( ) show (algorithm") show  newline
+(\(let) show ( ) show (\(\(memo) show ( ) show (\(make-hash-table\)\)\)) show  newline
+(\(define) show ( ) show (\(best-plan) show ( ) show (preds\)) show  newline
+(\(cond) show  newline
+(\(\(null?) show ( ) show (preds\)) show ( ) show (\(empty-plan\)\)) show  newline
+(\(\(hash-table-exists?) show ( ) show (memo) show ( ) show (preds\)) show  newline
+(\(hash-table-ref) show ( ) show (memo) show ( ) show (preds\)\)) show  newline
+(\(else) show  newline
+(\(let) show ( ) show (\(\(candidates) show  newline
+(\(map) show ( ) show (\(lambda) show ( ) show (\(p\)) show  newline
+(\(let) show ( ) show (\(\(rest) show ( ) show (\(delete) show ( ) show (p) show ( ) show (preds\)\)\)) show  newline
+(\(join-plans) show ( ) show (\(single-predicate-plan) show ( ) show (p\)) show  newline
+(\(best-plan) show ( ) show (rest\)\)\)\)) show  newline
+(preds\)\)) show  newline
+(\(best) show ( ) show (\(minimum-by) show ( ) show (plan-cost) show ( ) show (candidates\)\)\)) show  newline
+(\(hash-table-set!) show ( ) show (memo) show ( ) show (preds) show ( ) show (best\)) show  newline
+(best\)\)\)\)) show  newline
+(\(best-plan) show ( ) show (predicates\)\)\)) show  newline
+(;;) show ( ) show (Select) show ( ) show (best) show ( ) show (index) show ( ) show (for) show ( ) show (query) show  newline
+(\(define) show ( ) show (\(plan-query) show ( ) show (query) show ( ) show (indexes\)) show  newline
+("Generate) show ( ) show (optimal) show ( ) show (query) show ( ) show (plan) show ( ) show (using) show ( ) show (cost-based) show ( ) show (optimization") show  newline
+(\(let) show ( ) show (\(\(predicates) show ( ) show (\(query-predicates) show ( ) show (query\)\)) show  newline
+(\(stats) show ( ) show (\(map) show ( ) show (index-statistics) show ( ) show (indexes\)\)) show  newline
+(;;) show ( ) show (Generate) show ( ) show (candidate) show ( ) show (plans) show  newline
+(\(candidates) show  newline
+(\(append) show  newline
+(;;) show ( ) show (Try) show ( ) show (each) show ( ) show (applicable) show ( ) show (index) show  newline
+(\(filter-map) show ( ) show (\(lambda) show ( ) show (\(idx) show ( ) show (stat\)) show  newline
+(\(and) show ( ) show (\(index-covers?) show ( ) show (idx) show ( ) show (predicates\)) show  newline
+(\(make-plan) show ( ) show ('index-scan) show ( ) show (idx) show  newline
+(\(plan-cost-for) show ( ) show (idx) show ( ) show (predicates) show ( ) show (stat\)\)\)\)) show  newline
+(indexes) show ( ) show (stats\)) show  newline
+(;;) show ( ) show (Always) show ( ) show (consider) show ( ) show (full) show ( ) show (scan) show  newline
+(\(list) show ( ) show (\(make-plan) show ( ) show ('full-scan) show ( ) show (#f) show ( ) show (\(full-scan-cost) show ( ) show (predicates) show ( ) show (stats\)\)\)\)\)) show  newline
+(;;) show ( ) show (Select) show ( ) show (minimum) show ( ) show (cost) show ( ) show (plan) show  newline
+(\(best) show ( ) show (\(minimum-by) show ( ) show (plan-cost) show ( ) show (candidates\)\)\)) show  newline
+(\(when) show ( ) show (\(>) show ( ) show (\(plan-cost) show ( ) show (best\)) show ( ) show (query-cost-warning-threshold*\)) show  newline
+(\(log-warning) show ( ) show ("Expensive) show ( ) show (query) show ( ) show (plan") show ( ) show (query) show ( ) show (\(plan-cost) show ( ) show (best\)\)\)) show  newline
+(best\)\)) show  newline
+ newline
+ newline
+(Histogram) show ( ) show (Maintenance) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Equi-depth) show ( ) show (histograms) show ( ) show (for) show ( ) show (cardinality) show ( ) show (estimation) show  newline
+(\(define) show ( ) show (\(build-histogram) show ( ) show (values) show ( ) show (num-buckets\)) show  newline
+("Build) show ( ) show (equi-depth) show ( ) show (histogram) show ( ) show (for) show ( ) show (cardinality) show ( ) show (estimation") show  newline
+(\(let) show ( ) show (\(\(sorted) show ( ) show (\(sort) show ( ) show (values) show ( ) show (<\)\)) show  newline
+(\(bucket-size) show ( ) show (\(ceiling) show ( ) show (\(/) show ( ) show (\(length) show ( ) show (sorted\)) show ( ) show (num-buckets\)\)\)) show  newline
+(\(boundaries) show ( ) show (\(map) show ( ) show (\(lambda) show ( ) show (\(i\)) show  newline
+(\(list-ref) show ( ) show (sorted) show ( ) show (\() show ( ) show (i) show ( ) show (bucket-size\)\)\)) show  newline
+(\(iota) show ( ) show (num-buckets\)\)\)\)) show  newline
+(\(make-histogram) show ( ) show (boundaries) show ( ) show (\(/) show ( ) show (\(length) show ( ) show (sorted\)) show ( ) show (num-buckets\)\)\)\)) show  newline
+(;;) show ( ) show (Update) show ( ) show (histogram) show ( ) show (incrementally) show  newline
+(\(define) show ( ) show (\(histogram-update!) show ( ) show (hist) show ( ) show (value\)) show  newline
+("Incrementally) show ( ) show (update) show ( ) show (histogram) show ( ) show (with) show ( ) show (new) show ( ) show (value") show  newline
+(\(let) show ( ) show (\(\(bucket) show ( ) show (\(find-bucket) show ( ) show (hist) show ( ) show (value\)\)\)) show  newline
+(\(bucket-increment!) show ( ) show (bucket\)\)\)) show  newline
+(;;) show ( ) show (Statistics) show ( ) show (refresh) show  newline
+(\(define) show ( ) show (\(refresh-index-statistics) show ( ) show (idx\)) show  newline
+("Rebuild) show ( ) show (index) show ( ) show (statistics) show ( ) show (\(run) show ( ) show (periodically\)") show  newline
+(\(let*) show ( ) show (\(\(samples) show ( ) show (\(index-sample) show ( ) show (idx) show ( ) show (10000\)\)) show ( ) show (;) show ( ) show (Sample) show ( ) show (10K) show ( ) show (rows) show  newline
+(\(histogram) show ( ) show (\(build-histogram) show ( ) show (samples) show ( ) show (100\)\)\)) show  newline
+(\(set-index-statistics!) show ( ) show (idx) show  newline
+(\(make-stats) show  newline
+(\(total-rows) show ( ) show (\(index-count) show ( ) show (idx\)\)) show  newline
+(\(distinct-values) show ( ) show (\(length) show ( ) show (\(delete-duplicates) show ( ) show (samples\)\)\)) show  newline
+(\(histogram) show ( ) show (histogram\)) show  newline
+(\(last-analyzed) show ( ) show (\(current-time\)\)\)\)\)\)) show  newline
+ newline
+ newline
+(Index) show ( ) show (Maintenance) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Indexes) show ( ) show (are) show ( ) show (updated) show ( ) show (on) show ( ) show (soup-put) show  newline
+(\(define) show ( ) show (\(soup-put-indexed) show ( ) show (obj\)) show  newline
+(\(let) show ( ) show (\(\(hash) show ( ) show (\(soup-put) show ( ) show (obj\)\)\)) show  newline
+(\(for-each) show ( ) show (\(lambda) show ( ) show (\(idx\)) show  newline
+(\(index-insert!) show ( ) show (idx) show ( ) show (obj) show ( ) show (hash\)\)) show  newline
+(\(applicable-indexes) show ( ) show (obj\)\)) show  newline
+(hash\)\)) show  newline
+(;;) show ( ) show (Periodic) show ( ) show (index) show ( ) show (optimization) show  newline
+(\(define) show ( ) show (\(optimize-indexes\)) show  newline
+(\(for-each) show ( ) show (index-compact!) show ( ) show (\(all-indexes\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(QUERY) show ( ) show (EXECUTION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Query) show ( ) show (Planning) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(execute-query) show ( ) show (query\)) show  newline
+("Plan) show ( ) show (and) show ( ) show (execute) show ( ) show (query") show  newline
+(\(let) show ( ) show (\(\(plan) show ( ) show (\(plan-query) show ( ) show (query\)\)) show  newline
+(\(cost) show ( ) show (\(estimate-cost) show ( ) show (plan\)\)\)) show  newline
+(\(when) show ( ) show (\(>) show ( ) show (cost) show ( ) show (query-cost-limit*\)) show  newline
+(\(error) show ( ) show ("Query) show ( ) show (too) show ( ) show (expensive") show ( ) show (cost\)\)) show  newline
+(\(execute-plan) show ( ) show (plan\)\)\)) show  newline
+(\(define) show ( ) show (\(plan-query) show ( ) show (query\)) show  newline
+("Generate) show ( ) show (query) show ( ) show (execution) show ( ) show (plan") show  newline
+(`\(query-plan) show  newline
+(\(predicates) show ( ) show (,\(query-predicates) show ( ) show (query\)\)) show  newline
+(\(index) show ( ) show (,\(select-index) show ( ) show (query\)\)) show  newline
+(\(filter) show ( ) show (,\(remaining-predicates) show ( ) show (query\)\)) show  newline
+(\(order) show ( ) show (,\(query-order) show ( ) show (query\)\)) show  newline
+(\(limit) show ( ) show (,\(query-limit) show ( ) show (query\)\)\)\)) show  newline
+ newline
+ newline
+(Execution) show ( ) show (Strategies) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Index) show ( ) show (scan) show  newline
+(\(define) show ( ) show (\(index-scan) show ( ) show (index) show ( ) show (predicate\)) show  newline
+(\(index-range-query) show ( ) show (index) show  newline
+(\(predicate-lower-bound) show ( ) show (predicate\)) show  newline
+(\(predicate-upper-bound) show ( ) show (predicate\)\)\)) show  newline
+(;;) show ( ) show (Full) show ( ) show (scan) show ( ) show (\(last) show ( ) show (resort\)) show  newline
+(\(define) show ( ) show (\(full-scan) show ( ) show (predicate\)) show  newline
+(\(filter) show ( ) show (predicate) show ( ) show (\(all-soup-objects\)\)\)) show  newline
+(;;) show ( ) show (Index) show ( ) show (intersection) show  newline
+(\(define) show ( ) show (\(index-intersect) show ( ) show (idx1) show ( ) show (idx2) show ( ) show (pred1) show ( ) show (pred2\)) show  newline
+(\(set-intersection) show  newline
+(\(index-scan) show ( ) show (idx1) show ( ) show (pred1\)) show  newline
+(\(index-scan) show ( ) show (idx2) show ( ) show (pred2\)\)\)) show  newline
+ newline
+ newline
+(Query) show ( ) show (Caching) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (soup) show ( ) show (is) show ( ) show (archival) show ( ) show (-) show ( ) show (objects) show ( ) show (rarely) show ( ) show (change,) show ( ) show (making) show ( ) show (aggressive) show ( ) show (caching) show  newline
+(safe.) show  newline
+ newline
+ newline
+(;;) show ( ) show (Multi-tier) show ( ) show (cache:) show ( ) show (L1) show ( ) show (hot) show ( ) show (results,) show ( ) show (L2) show ( ) show (warm,) show ( ) show (L3) show ( ) show (persistent) show  newline
+(\(define) show ( ) show (l1-cache) show ( ) show (\(make-lru-cache) show ( ) show (100\)\)) show ( ) show (;) show ( ) show (In-memory,) show ( ) show (microseconds) show  newline
+(\(define) show ( ) show (l2-cache) show ( ) show (\(make-lru-cache) show ( ) show (10000\)\)) show ( ) show (;) show ( ) show (Warm,) show ( ) show (milliseconds) show  newline
+(\(define) show ( ) show (l3-cache) show ( ) show ('persistent-index\)) show ( ) show (;) show ( ) show (On-disk,) show ( ) show (query) show ( ) show (index) show  newline
+(\(define) show ( ) show (\(cached-query) show ( ) show (query) show ( ) show (principal\)) show  newline
+("Multi-tier) show ( ) show (cached) show ( ) show (query) show ( ) show (with) show ( ) show (capability) show ( ) show (awareness") show  newline
+(\(let) show ( ) show (\(\(key) show ( ) show (\(query-cache-key) show ( ) show (query) show ( ) show (principal\)\)\)) show  newline
+(\(or) show ( ) show (\(lru-get) show ( ) show (l1-cache) show ( ) show (key\)) show  newline
+(\(lru-get) show ( ) show (l2-cache) show ( ) show (key\)) show  newline
+(\(persistent-cache-get) show ( ) show (l3-cache) show ( ) show (key\)) show  newline
+(\(let) show ( ) show (\(\(result) show ( ) show (\(execute-query) show ( ) show (query\)\)\)) show  newline
+(;;) show ( ) show (Promote) show ( ) show (to) show ( ) show (appropriate) show ( ) show (cache) show ( ) show (tier) show ( ) show (based) show ( ) show (on) show ( ) show (cost) show  newline
+(\(let) show ( ) show (\(\(cost) show ( ) show (\(query-cost) show ( ) show (query\)\)\)) show  newline
+(\(cond) show  newline
+(\(\(>) show ( ) show (cost) show ( ) show (1000\)) show ( ) show (\(persistent-cache-put!) show ( ) show (l3-cache) show ( ) show (key) show ( ) show (result\)\)) show  newline
+(\(\(>) show ( ) show (cost) show ( ) show (100\)) show ( ) show (\(lru-put!) show ( ) show (l2-cache) show ( ) show (key) show ( ) show (result\)\)) show  newline
+(\(else) show ( ) show (\(lru-put!) show ( ) show (l1-cache) show ( ) show (key) show ( ) show (result\)\)\)\)) show  newline
+(result\)\)\)\)) show  newline
+ newline
+(####) show ( ) show (Dependency-Based) show ( ) show (Invalidation) show  newline
+ newline
+(Track) show ( ) show (which) show ( ) show (predicates) show ( ) show (affect) show ( ) show (which) show ( ) show (cached) show ( ) show (queries) show ( ) show (using) show ( ) show (Bloom) show ( ) show (filters:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Bloom) show ( ) show (filter) show ( ) show (tracking) show ( ) show (which) show ( ) show (attributes) show ( ) show (affect) show ( ) show (cached) show ( ) show (queries) show  newline
+(\(define) show ( ) show (query-dependencies) show ( ) show (\(make-counting-bloom-filter) show ( ) show (100000) show ( ) show (0.001\)\)) show  newline
+(\(define) show ( ) show (\(cache-with-deps) show ( ) show (query) show ( ) show (result\)) show  newline
+("Cache) show ( ) show (query) show ( ) show (and) show ( ) show (track) show ( ) show (its) show ( ) show (dependencies") show  newline
+(\(let) show ( ) show (\(\(key) show ( ) show (\(query->hash) show ( ) show (query\)\)) show  newline
+(\(deps) show ( ) show (\(query-attribute-deps) show ( ) show (query\)\)\)) show  newline
+(\(lru-put!) show ( ) show (query-cache) show ( ) show (key) show ( ) show (result\)) show  newline
+(;;) show ( ) show (Track) show ( ) show (dependencies) show  newline
+(\(for-each) show ( ) show (\(lambda) show ( ) show (\(attr\)) show  newline
+(\(bloom-add!) show ( ) show (query-dependencies) show ( ) show (\(cons) show ( ) show (attr) show ( ) show (key\)\)\)) show  newline
+(deps\)\)\)) show  newline
+(\(define) show ( ) show (\(invalidate-on-change) show ( ) show (obj\)) show  newline
+("Invalidate) show ( ) show (only) show ( ) show (queries) show ( ) show (that) show ( ) show (MIGHT) show ( ) show (be) show ( ) show (affected) show ( ) show (\(conservative\)") show  newline
+(\(let) show ( ) show (\(\(attrs) show ( ) show (\(soup-object-attributes) show ( ) show (obj\)\)\)) show  newline
+(\(for-each) show ( ) show (\(lambda) show ( ) show (\(attr\)) show  newline
+(;;) show ( ) show (Check) show ( ) show (if) show ( ) show (any) show ( ) show (cached) show ( ) show (query) show ( ) show (depends) show ( ) show (on) show ( ) show (this) show ( ) show (attribute) show  newline
+(\(when) show ( ) show (\(bloom-might-contain?) show ( ) show (query-dependencies) show ( ) show (attr\)) show  newline
+(\(invalidate-queries-for-attribute) show ( ) show (attr\)\)\)) show  newline
+(attrs\)\)\)) show  newline
+ newline
+(####) show ( ) show (Archival) show ( ) show (Cache) show ( ) show (Semantics) show  newline
+ newline
+(For) show ( ) show (the) show ( ) show (soup's) show ( ) show (archival) show ( ) show (nature,) show ( ) show (implement) show ( ) show (copy-on-write) show ( ) show (cache) show ( ) show (entries:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Immutable) show ( ) show (cache) show ( ) show (entries) show ( ) show (-) show ( ) show (archival) show ( ) show (objects) show ( ) show (never) show ( ) show (change) show  newline
+(\(define) show ( ) show (\(archival-cache-get) show ( ) show (cache) show ( ) show (hash\)) show  newline
+("Archival) show ( ) show (objects) show ( ) show (can) show ( ) show (be) show ( ) show (cached) show ( ) show (permanently") show  newline
+(\(let) show ( ) show (\(\(entry) show ( ) show (\(hash-table-ref) show ( ) show (cache) show ( ) show (hash) show ( ) show (#f\)\)\)) show  newline
+(\(if) show ( ) show (entry) show  newline
+(\(if) show ( ) show (\(archival-generation?) show ( ) show (\(soup-get) show ( ) show (hash\)\)) show  newline
+(entry) show ( ) show (;) show ( ) show (Archival:) show ( ) show (never) show ( ) show (expires) show  newline
+(\(if) show ( ) show (\(cache-entry-fresh?) show ( ) show (entry\)) show  newline
+(\(cache-entry-value) show ( ) show (entry\)) show  newline
+(#f\)\)) show ( ) show (;) show ( ) show (Non-archival:) show ( ) show (check) show ( ) show (freshness) show  newline
+(#f\)\)\)) show  newline
+(;;) show ( ) show (Generation-aware) show ( ) show (caching) show  newline
+(\(define) show ( ) show (\(cache-ttl-for-generation) show ( ) show (gen\)) show  newline
+(\(case) show ( ) show (gen) show  newline
+(\(\(archival\)) show ( ) show (+inf.0\)) show ( ) show (;) show ( ) show (Never) show ( ) show (expires) show  newline
+(\(\(stable\)) show ( ) show (86400\)) show ( ) show (;) show ( ) show (1) show ( ) show (day) show  newline
+(\(\(maturing\)) show ( ) show (3600\)) show ( ) show (;) show ( ) show (1) show ( ) show (hour) show  newline
+(\(\(young\)) show ( ) show (60\)) show ( ) show (;) show ( ) show (1) show ( ) show (minute) show  newline
+(\(\(ephemeral\)) show ( ) show (0\)\)\)) show ( ) show (;) show ( ) show (No) show ( ) show (caching) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DISTRIBUTED) show ( ) show (QUERIES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Federated) show ( ) show (Query) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Query) show ( ) show (across) show ( ) show (multiple) show ( ) show (vaults) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document) show  newline
+(federation:) show ( ) show ('\(vault-a) show ( ) show (vault-b) show ( ) show (vault-c\)\)) show  newline
+(;;) show ( ) show (Query) show ( ) show (with) show ( ) show (locality) show ( ) show (preference) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('document) show  newline
+(prefer-local:) show ( ) show (#t\)) show  newline
+ newline
+ newline
+(Query) show ( ) show (Routing) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(route-query) show ( ) show (query) show ( ) show (vaults\)) show  newline
+("Route) show ( ) show (query) show ( ) show (to) show ( ) show (appropriate) show ( ) show (vaults") show  newline
+(\(let) show ( ) show (\(\(partitions) show ( ) show (\(query-partitions) show ( ) show (query\)\)\)) show  newline
+(\(map) show ( ) show (\(lambda) show ( ) show (\(vault\)) show  newline
+(\(list) show ( ) show (vault) show ( ) show (\(subquery-for-vault) show ( ) show (query) show ( ) show (vault\)\)\)) show  newline
+(\(filter) show ( ) show (\(lambda) show ( ) show (\(v\)) show  newline
+(\(vault-has-partition?) show ( ) show (v) show ( ) show (partitions\)\)) show  newline
+(vaults\)\)\)\)) show  newline
+ newline
+ newline
+(Result) show ( ) show (Merging) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(merge-results) show ( ) show (results) show ( ) show (order\)) show  newline
+("Merge) show ( ) show (sorted) show ( ) show (results) show ( ) show (from) show ( ) show (multiple) show ( ) show (vaults") show  newline
+(\(let) show ( ) show (\(\(streams) show ( ) show (\(map) show ( ) show (result->stream) show ( ) show (results\)\)\)) show  newline
+(\(merge-sorted-streams) show ( ) show (streams) show ( ) show (\(order->comparator) show ( ) show (order\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(QUERY) show ( ) show (AUDIT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Audit) show ( ) show (Trail) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (All) show ( ) show (queries) show ( ) show (are) show ( ) show (logged) show  newline
+(\(define) show ( ) show (\(audited-query) show ( ) show (query) show ( ) show (principal\)) show  newline
+(\(let) show ( ) show (\(\(start) show ( ) show (\(current-time\)\)) show  newline
+(\(result) show ( ) show (\(soup-query-with-caps) show ( ) show (query) show ( ) show (principal\)\)\)) show  newline
+(\(audit-append) show  newline
+(action:) show ( ) show ('query) show  newline
+(principal:) show ( ) show (principal) show  newline
+(query:) show ( ) show (\(query->sexp) show ( ) show (query\)) show  newline
+(result-count:) show ( ) show (\(soup-cursor-count) show ( ) show (result\)) show  newline
+(duration:) show ( ) show (\(-) show ( ) show (\(current-time\)) show ( ) show (start\)\)) show  newline
+(result\)\)) show  newline
+ newline
+ newline
+(Query) show ( ) show (Analysis) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Analyze) show ( ) show (query) show ( ) show (patterns) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('audit-entry) show  newline
+(action:) show ( ) show ('query) show  newline
+(principal:) show ( ) show ("alice"\)) show  newline
+(;;) show ( ) show (Find) show ( ) show (expensive) show ( ) show (queries) show  newline
+(\(soup-query) show ( ) show (type:) show ( ) show ('audit-entry) show  newline
+(action:) show ( ) show ('query) show  newline
+(duration:) show ( ) show (\(>) show ( ) show (1000\)\)) show ( ) show (;) show ( ) show (>) show ( ) show (1) show ( ) show (second) show  newline
+(;;) show ( ) show (Access) show ( ) show (pattern) show ( ) show (analysis) show  newline
+(\(soup-aggregate) show  newline
+(where:) show ( ) show (\(and) show ( ) show (\(type:) show ( ) show ('audit-entry\)) show ( ) show (\(action:) show ( ) show ('query\)\)) show  newline
+(group-by:) show ( ) show ('principal) show  newline
+(aggregate:) show ( ) show (\(count\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(QUERY) show ( ) show (LANGUAGE) show ( ) show (GRAMMAR) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(query) show ( ) show (::=) show ( ) show (\(soup-query) show ( ) show (clause\)) show  newline
+(clause) show ( ) show (::=) show ( ) show (attribute-clause) show ( ) show (|) show ( ) show (predicate-clause) show ( ) show (|) show ( ) show (option-clause) show  newline
+(attribute) show ( ) show (::=) show ( ) show (symbol) show ( ) show (':') show ( ) show (value) show  newline
+(predicate) show ( ) show (::=) show ( ) show ('\(') show ( ) show (op) show ( ) show (value) show ( ) show ('\)') show  newline
+(op) show ( ) show (::=) show ( ) show ('>') show ( ) show (|) show ( ) show ('<') show ( ) show (|) show ( ) show ('>=') show ( ) show (|) show ( ) show ('<=') show ( ) show (|) show ( ) show ('=') show ( ) show (|) show ( ) show ('!=') show  newline
+(|) show ( ) show ('like') show ( ) show (|) show ( ) show ('between') show ( ) show (|) show ( ) show ('contains') show  newline
+(|) show ( ) show ('and') show ( ) show (|) show ( ) show ('or') show ( ) show (|) show ( ) show ('not') show  newline
+(|) show ( ) show ('exists') show ( ) show (|) show ( ) show ('missing') show  newline
+(|) show ( ) show ('text-search') show ( ) show (|) show ( ) show ('references') show ( ) show (|) show ( ) show ('referenced-by') show  newline
+(option) show ( ) show (::=) show ( ) show ('order-by') show ( ) show (|) show ( ) show ('limit') show ( ) show (|) show ( ) show ('offset') show ( ) show (|) show ( ) show ('after') show  newline
+(|) show ( ) show ('as-of') show ( ) show (|) show ( ) show ('highlight') show ( ) show (|) show ( ) show ('federation') show  newline
+(value) show ( ) show (::=) show ( ) show (string) show ( ) show (|) show ( ) show (number) show ( ) show (|) show ( ) show (boolean) show ( ) show (|) show ( ) show (hash) show ( ) show (|) show ( ) show (query) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Query) show ( ) show (Injection) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Never) show ( ) show (interpolate) show ( ) show (user) show ( ) show (input) show ( ) show (into) show ( ) show (queries) show  newline
+(;;) show ( ) show (BAD:) show  newline
+(\(soup-query) show ( ) show (name:) show ( ) show (\(string-append) show ( ) show ("rfc-") show ( ) show (user-input\)\)) show  newline
+(;;) show ( ) show (GOOD:) show  newline
+(\(soup-query) show ( ) show (name:) show ( ) show (\(like) show ( ) show (\(sanitize-pattern) show ( ) show (user-input\)\)\)) show  newline
+(\(define) show ( ) show (\(sanitize-pattern) show ( ) show (s\)) show  newline
+(\(string-map) show ( ) show (\(lambda) show ( ) show (\(c\)) show  newline
+(\(if) show ( ) show (\(member) show ( ) show (c) show ( ) show ('\(#\\*) show ( ) show (#\\?) show ( ) show (#\\[) show ( ) show (#\\]\)\)) show  newline
+(#\\\\) show  newline
+(c\)\)) show  newline
+(s\)\)) show  newline
+ newline
+ newline
+(Query) show ( ) show (Cost) show ( ) show (Limits) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Prevent) show ( ) show (denial) show ( ) show (of) show ( ) show (service) show ( ) show (via) show ( ) show (expensive) show ( ) show (queries) show  newline
+(\(define) show ( ) show (query-cost-limit) show ( ) show (10000\)) show  newline
+(\(define) show ( ) show (query-timeout) show ( ) show (30\)) show ( ) show (;) show ( ) show (seconds) show  newline
+(\(define) show ( ) show (\(safe-query) show ( ) show (query\)) show  newline
+(\(with-timeout) show ( ) show (query-timeout) show  newline
+(\(let) show ( ) show (\(\(cost) show ( ) show (\(estimate-cost) show ( ) show (query\)\)\)) show  newline
+(\(when) show ( ) show (\(>) show ( ) show (cost) show ( ) show (query-cost-limit\)) show  newline
+(\(error) show ( ) show ("Query) show ( ) show (exceeds) show ( ) show (cost) show ( ) show (limit"\)\)) show  newline
+(\(execute-query) show ( ) show (query\)\)\)\)) show  newline
+ newline
+ newline
+(Information) show ( ) show (Leakage) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Query) show ( ) show (existence) show ( ) show (can) show ( ) show (leak) show ( ) show (information) show  newline
+(;;) show ( ) show (Even) show ( ) show ("not) show ( ) show (found") show ( ) show (reveals) show ( ) show (something) show  newline
+(;;) show ( ) show (Use) show ( ) show (constant-time) show ( ) show (responses) show ( ) show (for) show ( ) show (sensitive) show ( ) show (queries) show  newline
+(\(define) show ( ) show (\(private-query) show ( ) show (query\)) show  newline
+(\(let) show ( ) show (\(\(result) show ( ) show (\(soup-query) show ( ) show (query\)\)\)) show  newline
+(\(if) show ( ) show (\(authorized?) show ( ) show (\(current-principal\)) show ( ) show (result\)) show  newline
+(result) show  newline
+(\(constant-time-not-found\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show ( ) show (NOTES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Performance) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Index) show ( ) show (selection) show ( ) show (is) show ( ) show (critical) show ( ) show (for) show ( ) show (large) show ( ) show (soups) show  newline
+(*) show ( ) show (Bloom) show ( ) show (filters) show ( ) show (for) show ( ) show (fast) show ( ) show (negative) show ( ) show (lookups) show  newline
+(*) show ( ) show (Query) show ( ) show (result) show ( ) show (streaming) show ( ) show (to) show ( ) show (avoid) show ( ) show (memory) show ( ) show (exhaustion) show  newline
+(*) show ( ) show (Connection) show ( ) show (pooling) show ( ) show (for) show ( ) show (federated) show ( ) show (queries) show  newline
+ newline
+ newline
+(Compatibility) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Query) show ( ) show (language) show ( ) show (inspired) show ( ) show (by) show ( ) show (Newton's) show ( ) show (soup) show ( ) show (cursors) show  newline
+(*) show ( ) show (SQL-like) show ( ) show (semantics) show ( ) show (where) show ( ) show (applicable) show  newline
+(*) show ( ) show (S-expression) show ( ) show (syntax) show ( ) show (for) show ( ) show (Scheme) show ( ) show (integration) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Newton) show ( ) show (Programmer's) show ( ) show (Guide) show ( ) show (-) show ( ) show (Soup) show ( ) show (and) show ( ) show (cursor) show ( ) show (APIs) show  newline
+(*) show ( ) show (SQLite) show ( ) show (Query) show ( ) show (Planner) show ( ) show (-) show ( ) show (Query) show ( ) show (optimization) show  newline
+(*) show ( ) show (Selinger) show ( ) show (et) show ( ) show (al.,) show ( ) show ("Access) show ( ) show (Path) show ( ) show (Selection) show ( ) show (in) show ( ) show (a) show ( ) show (Relational) show ( ) show (Database) show ( ) show (Management) show ( ) show (System") show ( ) show (\(1979\)) show ( ) show (-) show ( ) show (Cost-based) show ( ) show (optimization) show  newline
+(*) show ( ) show (Memo-020:) show ( ) show (Content-Addressed) show ( ) show (Storage) show  newline
+(*) show ( ) show (Memo-021:) show ( ) show (Capability) show ( ) show (Delegation) show  newline
+(*) show ( ) show (Memo-026:) show ( ) show (Garbage) show ( ) show (Collection) show ( ) show (\(generation-aware) show ( ) show (caching\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-09) show  newline
+(*) show ( ) show (Cost-based) show ( ) show (query) show ( ) show (optimization:) show ( ) show (Selinger) show ( ) show (algorithm,) show ( ) show (cardinality) show ( ) show (estimation,) show ( ) show (histograms,) show ( ) show (multi-tier) show ( ) show (caching) show ( ) show (with) show ( ) show (generation-aware) show ( ) show (TTL) show ( ) show (-) show ( ) show (2026-01-07) show  newline
+(*) show ( ) show (Initial) show ( ) show (draft) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

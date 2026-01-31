@@ -15,481 +15,668 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0005: Audit Trail) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies the cryptographic audit trail system for the Library) show newline
-(of Cyberspace, providing tamper-evident, hash-chained logging with) show newline
-(Simple Public Key Infrastructure \(SPKI\) principal attribution and) show newline
-(Ed25519 signatures.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    "The first principle is that you must not fool yourself—and you are the easiest person to fool. — Richard Feynman") show newline
-() show newline
-(Distributed systems require accountability. Who did what, when, and) show newline
-(under whose authority? Without cryptographic audit trails, the answer is) show newline
-(always "we think so" rather than "we can prove it.") show newline
-() show newline
-(Every security breach postmortem asks the same questions: What happened?) show newline
-(When? Who had access? Could the logs have been tampered with?) show newline
-(Traditional logging cannot answer these questions with certainty.) show newline
-(Cyberspace audit trails can.) show newline
-() show newline
-() show newline
-(Heritage) show newline
-(--------) show newline
-() show newline
-(Inspired by VMS cluster-wide audit \(1993\). See Memo-0009 section 7.7 for) show newline
-(design heritage.) show newline
-() show newline
-() show newline
-(The Problem) show newline
-(-----------) show newline
-() show newline
-(Traditional logging fails on all counts:) show newline
-() show newline
-(  * Tamperable: Text files can be edited after the fact) show newline
-(  * Anonymous: No cryptographic identity binds actor to action) show newline
-(  * Disconnected: No provable ordering between entries) show newline
-(  * Unverifiable: No mathematical proof of integrity) show newline
-() show newline
-(Cyberspace audit trails provide:) show newline
-() show newline
-(  * Content-addressed entries - Tamper-evident by hash) show newline
-(  * Hash-chained structure - Append-only ordering) show newline
-(  * SPKI attribution - Cryptographic actor identity) show newline
-(  * Ed25519 seals - Mathematical proof of authenticity) show newline
-(  * Dual context - Human-readable motivation + machine-parseable environment) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SPECIFICATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Entry Structure) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(audit-entry) show newline
-(      \(id "sha512:b14471cd57ea557f..."\)) show newline
-(      \(timestamp "2026-01-05 23:38:20Z"\)) show newline
-(      \(sequence 1\)) show newline
-(      \(parent-id "sha512:previous..."\)) show newline
-(      \(actor) show newline
-(        \(principal #${public-key-blob}\)) show newline
-(        \(authorization-chain\)\)) show newline
-(      \(action) show newline
-(        \(verb seal-publish\)) show newline
-(        \(object "1.0.0"\)) show newline
-(        \(parameters "/path/to/remote"\)\)) show newline
-(      \(context) show newline
-(        \(motivation "Published to filesystem"\)) show newline
-(        \(language "en"\)\)) show newline
-(      \(environment) show newline
-(        \(platform "darwin"\)) show newline
-(        \(timestamp 1767685100\)\)) show newline
-(      \(seal) show newline
-(        \(algorithm "ed25519-sha512"\)) show newline
-(        \(content-hash "..."\)) show newline
-(        \(signature "..."\)\)\)) show newline
-() show newline
-() show newline
-(Core Fields) show newline
-(-----------) show newline
-() show newline
-() show newline
-(  Field         Type         Description                                            ) show newline
-(  id            string       Content-addressed hash \(SHA-512, first 32 hex chars\)   ) show newline
-(  timestamp     string       ISO 8601 UTC \(YYYY-MM-DD HH:MM:SSZ\)                    ) show newline
-(  sequence      integer      Monotonic counter within audit trail                   ) show newline
-(  parent-id     string/nil   ID of previous entry \(hash chain\)                      ) show newline
-(  actor         record       SPKI principal who performed action                    ) show newline
-(  action        record       What was done \(verb, object, parameters\)               ) show newline
-(  context       record       Human-readable motivation                              ) show newline
-(  environment   alist        Machine environment snapshot                           ) show newline
-(  seal          record       Cryptographic signature                                ) show newline
-() show newline
-() show newline
-(Actor Record) show newline
-(------------) show newline
-() show newline
-(Every action has an actor. Not a username—a cryptographic identity) show newline
-(that can be verified mathematically.) show newline
-() show newline
-() show newline
-(    \(define-record-type <audit-actor>) show newline
-(      \(make-audit-actor principal authorization-chain\)) show newline
-(      audit-actor?) show newline
-(      \(principal actor-principal\)              ; Public key blob) show newline
-(      \(authorization-chain actor-authorization-chain\)\)  ; SPKI cert chain) show newline
-() show newline
-(The actor is identified by:) show newline
-() show newline
-(  * Principal: Ed25519 public key \(32 bytes\) - unforgeable identity) show newline
-(  * Authorization chain: Optional SPKI certificate chain proving delegation) show newline
-() show newline
-(The authorization chain answers "under whose authority?" - crucial for) show newline
-(auditing delegated actions.) show newline
-() show newline
-() show newline
-(Action Record) show newline
-(-------------) show newline
-() show newline
-(Actions are structured as verb-object-parameters, mirroring natural) show newline
-(language: "Alice committed version 1.0 to the vault.") show newline
-() show newline
-() show newline
-(    \(define-record-type <audit-action>) show newline
-(      \(make-audit-action verb object parameters\)) show newline
-(      audit-action?) show newline
-(      \(verb action-verb\)        ; Symbol: seal-commit, seal-publish, etc.) show newline
-(      \(object action-object\)    ; Primary target) show newline
-(      \(parameters action-parameters\)\)  ; Additional arguments) show newline
-() show newline
-(Standard verbs:) show newline
-() show newline
-() show newline
-(  Verb               Meaning                                 ) show newline
-(  seal-commit        Version control commit to local vault   ) show newline
-(  seal-publish       Release publication to remote           ) show newline
-(  seal-subscribe     Subscription to remote feed             ) show newline
-(  seal-synchronize   Bidirectional sync with peer            ) show newline
-(  seal-release       Version tagging for distribution        ) show newline
-() show newline
-() show newline
-(Context Record) show newline
-(--------------) show newline
-() show newline
-(Machines record what happened. Humans need to know why. The context) show newline
-(record captures motivation in natural language—the commit message, the) show newline
-(reason for the release, the justification for the access.) show newline
-() show newline
-() show newline
-(    \(define-record-type <audit-context>) show newline
-(      \(make-audit-context motivation relates-to language\)) show newline
-(      audit-context?) show newline
-(      \(motivation context-motivation\)    ; Human explanation) show newline
-(      \(relates-to context-relates-to\)    ; Related entries) show newline
-(      \(language context-language\)\)       ; ISO 639-1 code) show newline
-() show newline
-(Context provides:) show newline
-() show newline
-(  * Motivation: Why the action was taken, in the actor's own words) show newline
-(  * Relates-to: Cross-references to related audit entries) show newline
-(  * Language: ISO 639-1 code for internationalization) show newline
-() show newline
-(Six months later, "Fixed the bug" means nothing. "Fixed CVE-2026-1234) show newline
-(buffer overflow in certificate parser" means everything.) show newline
-() show newline
-() show newline
-(Seal Record) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    \(define-record-type <audit-seal>) show newline
-(      \(make-audit-seal algorithm content-hash signature\)) show newline
-(      audit-seal?) show newline
-(      \(algorithm seal-algorithm\)        ; "ed25519-sha512") show newline
-(      \(content-hash seal-content-hash\)  ; SHA-512 of unsealed entry) show newline
-(      \(signature seal-signature\)\)       ; Ed25519 signature) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(OPERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(audit-init) show newline
-(----------) show newline
-() show newline
-(Initialize audit trail for a vault.) show newline
-() show newline
-() show newline
-(    \(audit-init signing-key: key audit-dir: ".vault/audit"\)) show newline
-() show newline
-() show newline
-(audit-append) show newline
-(------------) show newline
-() show newline
-(Create and sign a new audit entry.) show newline
-() show newline
-() show newline
-(    \(audit-append) show newline
-(      actor: public-key-blob) show newline
-(      action: '\(seal-commit "hash123"\)) show newline
-(      motivation: "Added new feature") show newline
-(      signing-key: private-key-blob\)) show newline
-() show newline
-(Process:) show newline
-() show newline
-(  * Increment sequence counter) show newline
-(  * Get parent entry ID \(hash chain link\)) show newline
-(  * Build unsealed entry structure) show newline
-(  * Compute SHA-512 hash of canonical S-expression) show newline
-(  * Sign hash with Ed25519) show newline
-(  * Create seal record) show newline
-(  * Save entry to disk) show newline
-() show newline
-() show newline
-(audit-verify) show newline
-(------------) show newline
-() show newline
-(Verify cryptographic seal on an entry.) show newline
-() show newline
-() show newline
-(    \(audit-verify entry public-key: key\)) show newline
-() show newline
-(Verification steps:) show newline
-() show newline
-(  * Reconstruct unsealed entry) show newline
-(  * Compute SHA-512 hash) show newline
-(  * Compare with stored content-hash) show newline
-(  * Verify Ed25519 signature) show newline
-() show newline
-() show newline
-(audit-chain) show newline
-(-----------) show newline
-() show newline
-(Verify the entire audit chain from genesis to present. One broken link) show newline
-(invalidates everything after it.) show newline
-() show newline
-() show newline
-(    \(audit-chain verify-key: public-key\)) show newline
-() show newline
-(Verifies:) show newline
-() show newline
-(  * Each entry's signature is valid) show newline
-(  * Parent-id references form unbroken chain) show newline
-(  * Sequence numbers are strictly monotonic) show newline
-() show newline
-(A valid chain proves no entries were inserted, deleted, or modified) show newline
-(after signing.) show newline
-() show newline
-() show newline
-(audit-read) show newline
-(----------) show newline
-() show newline
-(Read specific audit entry.) show newline
-() show newline
-() show newline
-(    \(audit-read sequence: 42\)) show newline
-(    \(audit-read id: "sha512:..."\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(STORAGE FORMAT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Simplicity over cleverness. Entries are individual S-expression files,) show newline
-(one per action, named by sequence number.) show newline
-() show newline
-() show newline
-(    .vault/audit/) show newline
-(      1.sexp) show newline
-(      2.sexp) show newline
-(      3.sexp) show newline
-(      ...) show newline
-() show newline
-(This format trades storage density for operational simplicity:) show newline
-() show newline
-(  * Sequential reads: cat the files in order) show newline
-(  * Range queries: list files between N and M) show newline
-(  * Latest entry: highest-numbered file) show newline
-(  * Debugging: read any entry with a text editor) show newline
-() show newline
-(No database. No binary format. No special tools required to inspect the) show newline
-(audit trail.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Threat Model) show newline
-(------------) show newline
-() show newline
-(We trust as little as possible.) show newline
-() show newline
-(Trusted:) show newline
-() show newline
-(  * Local filesystem during operation \(not after\)) show newline
-(  * Ed25519 implementation \(libsodium, audited\)) show newline
-(  * Private keys \(your responsibility\)) show newline
-() show newline
-(Untrusted:) show newline
-() show newline
-(  * Storage medium after entry creation) show newline
-(  * Network transport between nodes) show newline
-(  * Other actors, including administrators) show newline
-() show newline
-(This threat model assumes a hostile environment where storage can be) show newline
-(tampered with and network traffic can be intercepted. The cryptography) show newline
-(protects the audit trail even when everything else is compromised.) show newline
-() show newline
-() show newline
-(Attack Mitigations) show newline
-(------------------) show newline
-() show newline
-() show newline
-(  Attack                Mitigation                           ) show newline
-(  Entry modification    SHA-512 hash detects tampering       ) show newline
-(  Entry deletion        Chain breaks are detectable          ) show newline
-(  Entry insertion       Hash chain prevents backdating       ) show newline
-(  Actor impersonation   Ed25519 signatures verify identity   ) show newline
-(  Replay attacks        Sequence numbers detect duplicates   ) show newline
-() show newline
-() show newline
-(Non-Repudiation) show newline
-(---------------) show newline
-() show newline
-(Once an entry is signed and published, the actor cannot credibly deny) show newline
-(it. This is non-repudiation: mathematical proof of authorship.) show newline
-() show newline
-(  * Actor cannot deny performing the action—their key signed it) show newline
-(  * Timestamp cannot be backdated—hash chain enforces ordering) show newline
-(  * Content cannot be altered—hash would change) show newline
-(  * Signature mathematically proves authorship—no "someone else used my account") show newline
-() show newline
-(In court, in audits, in incident response: cryptographic proof beats) show newline
-(testimony.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(INTEGRATION POINTS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Vault Operations) show newline
-(----------------) show newline
-() show newline
-(All vault operations record audit entries:) show newline
-() show newline
-() show newline
-(    \(seal-commit "message"\)     → \(action \(verb seal-commit\) ...\)) show newline
-(    \(seal-publish "1.0.0" ...\)  → \(action \(verb seal-publish\) ...\)) show newline
-(    \(seal-subscribe remote ...\) → \(action \(verb seal-subscribe\) ...\)) show newline
-() show newline
-() show newline
-(SPKI Authorization) show newline
-(------------------) show newline
-() show newline
-(Audit entries can include authorization chains:) show newline
-() show newline
-() show newline
-(    \(actor) show newline
-(      \(principal #${bob-public-key}\)) show newline
-(      \(authorization-chain) show newline
-(        \(signed-cert ...\)   ; Alice delegated to Bob) show newline
-(        \(signed-cert ...\)\)\) ; Root delegated to Alice) show newline
-() show newline
-(This proves not just who acted, but under whose authority.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(EXPORT FORMATS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(S-expression Export) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    \(audit-export-sexp output: "audit-export.sexp"\)) show newline
-() show newline
-(Produces:) show newline
-() show newline
-() show newline
-(    \(audit-trail) show newline
-(      \(audit-entry ...\)) show newline
-(      \(audit-entry ...\)) show newline
-(      ...\)) show newline
-() show newline
-() show newline
-(Human-readable Export) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(    \(audit-export-human output: "audit-export.txt"\)) show newline
-() show newline
-(Produces:) show newline
-() show newline
-() show newline
-(    AUDIT TRAIL - Library of Cyberspace) show newline
-(    ===================================) show newline
-(    Entry #1) show newline
-(      ID: sha512:b14471cd57ea557f...) show newline
-(      Time: 2026-01-05 23:38:20Z) show newline
-(      Action: seal-publish) show newline
-(      Why: Published release to filesystem) show newline
-(    Entry #2) show newline
-(      ...) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION NOTES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Dependencies) show newline
-(------------) show newline
-() show newline
-(  * crypto-ffi: Ed25519 signatures, SHA-512 hashing) show newline
-(  * srfi-1: List utilities) show newline
-(  * srfi-4: u8vectors for binary data) show newline
-(  * srfi-13: String utilities) show newline
-() show newline
-() show newline
-(Performance Considerations) show newline
-(--------------------------) show newline
-() show newline
-(  * Content-addressed IDs enable O\(1\) lookup by hash) show newline
-(  * Sequential file naming enables efficient range queries) show newline
-(  * Lazy verification: verify on read, not on load) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Haber, S., & Stornetta, W. S. \(1991\). How to time-stamp a digital document.) show newline
-(  * Merkle, R. C. \(1987\). A digital signature based on a conventional encryption function.) show newline
-(  * Bernstein, D. J. \(2006\). Curve25519: new Diffie-Hellman speed records.) show newline
-(  * SDSI/SPKI - RFC 2693, RFC 2692) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(2026-01-19 - Expanded narrative and rationale) show newline
-() show newline
-(2026-01-06 - Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0005:) show ( ) show (Audit) show ( ) show (Trail) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (the) show ( ) show (cryptographic) show ( ) show (audit) show ( ) show (trail) show ( ) show (system) show ( ) show (for) show ( ) show (the) show ( ) show (Library) show  newline
+(of) show ( ) show (Cyberspace,) show ( ) show (providing) show ( ) show (tamper-evident,) show ( ) show (hash-chained) show ( ) show (logging) show ( ) show (with) show  newline
+(Simple) show ( ) show (Public) show ( ) show (Key) show ( ) show (Infrastructure) show ( ) show (\(SPKI\)) show ( ) show (principal) show ( ) show (attribution) show ( ) show (and) show  newline
+(Ed25519) show ( ) show (signatures.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto ("The) show
+margin 54 add ypos moveto (first) show
+margin 90 add ypos moveto (principle) show
+margin 150 add ypos moveto (is) show
+margin 168 add ypos moveto (that) show
+margin 198 add ypos moveto (you) show
+margin 222 add ypos moveto (must) show
+margin 252 add ypos moveto (not) show
+margin 276 add ypos moveto (fool) show
+margin 306 add ypos moveto (yourself--and) show
+margin 384 add ypos moveto (you) show
+margin 408 add ypos moveto (are) show
+margin 432 add ypos moveto (the) show
+margin 456 add ypos moveto (easiest) show
+margin 504 add ypos moveto (person) show
+margin 546 add ypos moveto (to) show
+margin 564 add ypos moveto (fool.) show
+margin 600 add ypos moveto (--) show
+margin 612 add ypos moveto (Richard) show
+margin 660 add ypos moveto (Feynman") show
+grestore
+newline
+ newline
+(Distributed) show ( ) show (systems) show ( ) show (require) show ( ) show (accountability.) show ( ) show (Who) show ( ) show (did) show ( ) show (what,) show ( ) show (when,) show ( ) show (and) show  newline
+(under) show ( ) show (whose) show ( ) show (authority?) show ( ) show (Without) show ( ) show (cryptographic) show ( ) show (audit) show ( ) show (trails,) show ( ) show (the) show ( ) show (answer) show ( ) show (is) show  newline
+(always) show ( ) show ("we) show ( ) show (think) show ( ) show (so") show ( ) show (rather) show ( ) show (than) show ( ) show ("we) show ( ) show (can) show ( ) show (prove) show ( ) show (it.") show  newline
+ newline
+(Every) show ( ) show (security) show ( ) show (breach) show ( ) show (postmortem) show ( ) show (asks) show ( ) show (the) show ( ) show (same) show ( ) show (questions:) show ( ) show (What) show ( ) show (happened?) show  newline
+(When?) show ( ) show (Who) show ( ) show (had) show ( ) show (access?) show ( ) show (Could) show ( ) show (the) show ( ) show (logs) show ( ) show (have) show ( ) show (been) show ( ) show (tampered) show ( ) show (with?) show  newline
+(Traditional) show ( ) show (logging) show ( ) show (cannot) show ( ) show (answer) show ( ) show (these) show ( ) show (questions) show ( ) show (with) show ( ) show (certainty.) show  newline
+(Cyberspace) show ( ) show (audit) show ( ) show (trails) show ( ) show (can.) show  newline
+ newline
+ newline
+(Heritage) show  newline
+newpath margin ypos moveto margin 48 add ypos lineto stroke
+newline
+ newline
+(Inspired) show ( ) show (by) show ( ) show (VMS) show ( ) show (cluster-wide) show ( ) show (audit) show ( ) show (\(1993\).) show ( ) show (See) show ( ) show (Memo-0009) show ( ) show (section) show ( ) show (7.7) show ( ) show (for) show  newline
+(design) show ( ) show (heritage.) show  newline
+ newline
+ newline
+(The) show ( ) show (Problem) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(Traditional) show ( ) show (logging) show ( ) show (fails) show ( ) show (on) show ( ) show (all) show ( ) show (counts:) show  newline
+ newline
+(*) show ( ) show (Tamperable:) show ( ) show (Text) show ( ) show (files) show ( ) show (can) show ( ) show (be) show ( ) show (edited) show ( ) show (after) show ( ) show (the) show ( ) show (fact) show  newline
+(*) show ( ) show (Anonymous:) show ( ) show (No) show ( ) show (cryptographic) show ( ) show (identity) show ( ) show (binds) show ( ) show (actor) show ( ) show (to) show ( ) show (action) show  newline
+(*) show ( ) show (Disconnected:) show ( ) show (No) show ( ) show (provable) show ( ) show (ordering) show ( ) show (between) show ( ) show (entries) show  newline
+(*) show ( ) show (Unverifiable:) show ( ) show (No) show ( ) show (mathematical) show ( ) show (proof) show ( ) show (of) show ( ) show (integrity) show  newline
+ newline
+(Cyberspace) show ( ) show (audit) show ( ) show (trails) show ( ) show (provide:) show  newline
+ newline
+(*) show ( ) show (Content-addressed) show ( ) show (entries) show ( ) show (-) show ( ) show (Tamper-evident) show ( ) show (by) show ( ) show (hash) show  newline
+(*) show ( ) show (Hash-chained) show ( ) show (structure) show ( ) show (-) show ( ) show (Append-only) show ( ) show (ordering) show  newline
+(*) show ( ) show (SPKI) show ( ) show (attribution) show ( ) show (-) show ( ) show (Cryptographic) show ( ) show (actor) show ( ) show (identity) show  newline
+(*) show ( ) show (Ed25519) show ( ) show (seals) show ( ) show (-) show ( ) show (Mathematical) show ( ) show (proof) show ( ) show (of) show ( ) show (authenticity) show  newline
+(*) show ( ) show (Dual) show ( ) show (context) show ( ) show (-) show ( ) show (Human-readable) show ( ) show (motivation) show ( ) show (+) show ( ) show (machine-parseable) show ( ) show (environment) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SPECIFICATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Entry) show ( ) show (Structure) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(audit-entry) show  newline
+(\(id) show ( ) show ("sha512:b14471cd57ea557f..."\)) show  newline
+(\(timestamp) show ( ) show ("2026-01-05) show ( ) show (23:38:20Z"\)) show  newline
+(\(sequence) show ( ) show (1\)) show  newline
+(\(parent-id) show ( ) show ("sha512:previous..."\)) show  newline
+(\(actor) show  newline
+(\(principal) show ( ) show (#${public-key-blob}\)) show  newline
+(\(authorization-chain\)\)) show  newline
+(\(action) show  newline
+(\(verb) show ( ) show (seal-publish\)) show  newline
+(\(object) show ( ) show ("1.0.0"\)) show  newline
+(\(parameters) show ( ) show ("/path/to/remote"\)\)) show  newline
+(\(context) show  newline
+(\(motivation) show ( ) show ("Published) show ( ) show (to) show ( ) show (filesystem"\)) show  newline
+(\(language) show ( ) show ("en"\)\)) show  newline
+(\(environment) show  newline
+(\(platform) show ( ) show ("darwin"\)) show  newline
+(\(timestamp) show ( ) show (1767685100\)\)) show  newline
+(\(seal) show  newline
+(\(algorithm) show ( ) show ("ed25519-sha512"\)) show  newline
+(\(content-hash) show ( ) show ("..."\)) show  newline
+(\(signature) show ( ) show ("..."\)\)\)) show  newline
+ newline
+ newline
+(Core) show ( ) show (Fields) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(Field) show ( ) show (Type) show ( ) show (Description) show  newline
+(id) show ( ) show (string) show ( ) show (Content-addressed) show ( ) show (hash) show ( ) show (\(SHA-512,) show ( ) show (first) show ( ) show (32) show ( ) show (hex) show ( ) show (chars\)) show  newline
+(timestamp) show ( ) show (string) show ( ) show (ISO) show ( ) show (8601) show ( ) show (UTC) show ( ) show (\(YYYY-MM-DD) show ( ) show (HH:MM:SSZ\)) show  newline
+(sequence) show ( ) show (integer) show ( ) show (Monotonic) show ( ) show (counter) show ( ) show (within) show ( ) show (audit) show ( ) show (trail) show  newline
+(parent-id) show ( ) show (string/nil) show ( ) show (ID) show ( ) show (of) show ( ) show (previous) show ( ) show (entry) show ( ) show (\(hash) show ( ) show (chain\)) show  newline
+(actor) show ( ) show (record) show ( ) show (SPKI) show ( ) show (principal) show ( ) show (who) show ( ) show (performed) show ( ) show (action) show  newline
+(action) show ( ) show (record) show ( ) show (What) show ( ) show (was) show ( ) show (done) show ( ) show (\(verb,) show ( ) show (object,) show ( ) show (parameters\)) show  newline
+(context) show ( ) show (record) show ( ) show (Human-readable) show ( ) show (motivation) show  newline
+(environment) show ( ) show (alist) show ( ) show (Machine) show ( ) show (environment) show ( ) show (snapshot) show  newline
+(seal) show ( ) show (record) show ( ) show (Cryptographic) show ( ) show (signature) show  newline
+ newline
+ newline
+(Actor) show ( ) show (Record) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+gsave
+margin 0 add ypos moveto (Every) show
+margin 36 add ypos moveto (action) show
+margin 78 add ypos moveto (has) show
+margin 102 add ypos moveto (an) show
+margin 120 add ypos moveto (actor.) show
+margin 162 add ypos moveto (Not) show
+margin 186 add ypos moveto (a) show
+margin 198 add ypos moveto (username--a) show
+margin 264 add ypos moveto (cryptographic) show
+margin 348 add ypos moveto (identity) show
+grestore
+newline
+(that) show ( ) show (can) show ( ) show (be) show ( ) show (verified) show ( ) show (mathematically.) show  newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<audit-actor>) show  newline
+(\(make-audit-actor) show ( ) show (principal) show ( ) show (authorization-chain\)) show  newline
+(audit-actor?) show  newline
+(\(principal) show ( ) show (actor-principal\)) show ( ) show (;) show ( ) show (Public) show ( ) show (key) show ( ) show (blob) show  newline
+(\(authorization-chain) show ( ) show (actor-authorization-chain\)\)) show ( ) show (;) show ( ) show (SPKI) show ( ) show (cert) show ( ) show (chain) show  newline
+ newline
+(The) show ( ) show (actor) show ( ) show (is) show ( ) show (identified) show ( ) show (by:) show  newline
+ newline
+(*) show ( ) show (Principal:) show ( ) show (Ed25519) show ( ) show (public) show ( ) show (key) show ( ) show (\(32) show ( ) show (bytes\)) show ( ) show (-) show ( ) show (unforgeable) show ( ) show (identity) show  newline
+(*) show ( ) show (Authorization) show ( ) show (chain:) show ( ) show (Optional) show ( ) show (SPKI) show ( ) show (certificate) show ( ) show (chain) show ( ) show (proving) show ( ) show (delegation) show  newline
+ newline
+(The) show ( ) show (authorization) show ( ) show (chain) show ( ) show (answers) show ( ) show ("under) show ( ) show (whose) show ( ) show (authority?") show ( ) show (-) show ( ) show (crucial) show ( ) show (for) show  newline
+(auditing) show ( ) show (delegated) show ( ) show (actions.) show  newline
+ newline
+ newline
+(Action) show ( ) show (Record) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+(Actions) show ( ) show (are) show ( ) show (structured) show ( ) show (as) show ( ) show (verb-object-parameters,) show ( ) show (mirroring) show ( ) show (natural) show  newline
+(language:) show ( ) show ("Alice) show ( ) show (committed) show ( ) show (version) show ( ) show (1.0) show ( ) show (to) show ( ) show (the) show ( ) show (vault.") show  newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<audit-action>) show  newline
+(\(make-audit-action) show ( ) show (verb) show ( ) show (object) show ( ) show (parameters\)) show  newline
+(audit-action?) show  newline
+(\(verb) show ( ) show (action-verb\)) show ( ) show (;) show ( ) show (Symbol:) show ( ) show (seal-commit,) show ( ) show (seal-publish,) show ( ) show (etc.) show  newline
+(\(object) show ( ) show (action-object\)) show ( ) show (;) show ( ) show (Primary) show ( ) show (target) show  newline
+(\(parameters) show ( ) show (action-parameters\)\)) show ( ) show (;) show ( ) show (Additional) show ( ) show (arguments) show  newline
+ newline
+(Standard) show ( ) show (verbs:) show  newline
+ newline
+ newline
+(Verb) show ( ) show (Meaning) show  newline
+(seal-commit) show ( ) show (Version) show ( ) show (control) show ( ) show (commit) show ( ) show (to) show ( ) show (local) show ( ) show (vault) show  newline
+(seal-publish) show ( ) show (Release) show ( ) show (publication) show ( ) show (to) show ( ) show (remote) show  newline
+(seal-subscribe) show ( ) show (Subscription) show ( ) show (to) show ( ) show (remote) show ( ) show (feed) show  newline
+(seal-synchronize) show ( ) show (Bidirectional) show ( ) show (sync) show ( ) show (with) show ( ) show (peer) show  newline
+(seal-release) show ( ) show (Version) show ( ) show (tagging) show ( ) show (for) show ( ) show (distribution) show  newline
+ newline
+ newline
+(Context) show ( ) show (Record) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(Machines) show ( ) show (record) show ( ) show (what) show ( ) show (happened.) show ( ) show (Humans) show ( ) show (need) show ( ) show (to) show ( ) show (know) show ( ) show (why.) show ( ) show (The) show ( ) show (context) show  newline
+gsave
+margin 0 add ypos moveto (record) show
+margin 42 add ypos moveto (captures) show
+margin 96 add ypos moveto (motivation) show
+margin 162 add ypos moveto (in) show
+margin 180 add ypos moveto (natural) show
+margin 228 add ypos moveto (language--the) show
+margin 306 add ypos moveto (commit) show
+margin 348 add ypos moveto (message,) show
+margin 402 add ypos moveto (the) show
+grestore
+newline
+(reason) show ( ) show (for) show ( ) show (the) show ( ) show (release,) show ( ) show (the) show ( ) show (justification) show ( ) show (for) show ( ) show (the) show ( ) show (access.) show  newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<audit-context>) show  newline
+(\(make-audit-context) show ( ) show (motivation) show ( ) show (relates-to) show ( ) show (language\)) show  newline
+(audit-context?) show  newline
+(\(motivation) show ( ) show (context-motivation\)) show ( ) show (;) show ( ) show (Human) show ( ) show (explanation) show  newline
+(\(relates-to) show ( ) show (context-relates-to\)) show ( ) show (;) show ( ) show (Related) show ( ) show (entries) show  newline
+(\(language) show ( ) show (context-language\)\)) show ( ) show (;) show ( ) show (ISO) show ( ) show (639-1) show ( ) show (code) show  newline
+ newline
+(Context) show ( ) show (provides:) show  newline
+ newline
+(*) show ( ) show (Motivation:) show ( ) show (Why) show ( ) show (the) show ( ) show (action) show ( ) show (was) show ( ) show (taken,) show ( ) show (in) show ( ) show (the) show ( ) show (actor's) show ( ) show (own) show ( ) show (words) show  newline
+(*) show ( ) show (Relates-to:) show ( ) show (Cross-references) show ( ) show (to) show ( ) show (related) show ( ) show (audit) show ( ) show (entries) show  newline
+(*) show ( ) show (Language:) show ( ) show (ISO) show ( ) show (639-1) show ( ) show (code) show ( ) show (for) show ( ) show (internationalization) show  newline
+ newline
+(Six) show ( ) show (months) show ( ) show (later,) show ( ) show ("Fixed) show ( ) show (the) show ( ) show (bug") show ( ) show (means) show ( ) show (nothing.) show ( ) show ("Fixed) show ( ) show (CVE-2026-1234) show  newline
+(buffer) show ( ) show (overflow) show ( ) show (in) show ( ) show (certificate) show ( ) show (parser") show ( ) show (means) show ( ) show (everything.) show  newline
+ newline
+ newline
+(Seal) show ( ) show (Record) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<audit-seal>) show  newline
+(\(make-audit-seal) show ( ) show (algorithm) show ( ) show (content-hash) show ( ) show (signature\)) show  newline
+(audit-seal?) show  newline
+(\(algorithm) show ( ) show (seal-algorithm\)) show ( ) show (;) show ( ) show ("ed25519-sha512") show  newline
+(\(content-hash) show ( ) show (seal-content-hash\)) show ( ) show (;) show ( ) show (SHA-512) show ( ) show (of) show ( ) show (unsealed) show ( ) show (entry) show  newline
+(\(signature) show ( ) show (seal-signature\)\)) show ( ) show (;) show ( ) show (Ed25519) show ( ) show (signature) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(OPERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(audit-init) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+(Initialize) show ( ) show (audit) show ( ) show (trail) show ( ) show (for) show ( ) show (a) show ( ) show (vault.) show  newline
+ newline
+ newline
+(\(audit-init) show ( ) show (signing-key:) show ( ) show (key) show ( ) show (audit-dir:) show ( ) show (".vault/audit"\)) show  newline
+ newline
+ newline
+(audit-append) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Create) show ( ) show (and) show ( ) show (sign) show ( ) show (a) show ( ) show (new) show ( ) show (audit) show ( ) show (entry.) show  newline
+ newline
+ newline
+(\(audit-append) show  newline
+(actor:) show ( ) show (public-key-blob) show  newline
+(action:) show ( ) show ('\(seal-commit) show ( ) show ("hash123"\)) show  newline
+(motivation:) show ( ) show ("Added) show ( ) show (new) show ( ) show (feature") show  newline
+(signing-key:) show ( ) show (private-key-blob\)) show  newline
+ newline
+(Process:) show  newline
+ newline
+(*) show ( ) show (Increment) show ( ) show (sequence) show ( ) show (counter) show  newline
+(*) show ( ) show (Get) show ( ) show (parent) show ( ) show (entry) show ( ) show (ID) show ( ) show (\(hash) show ( ) show (chain) show ( ) show (link\)) show  newline
+(*) show ( ) show (Build) show ( ) show (unsealed) show ( ) show (entry) show ( ) show (structure) show  newline
+(*) show ( ) show (Compute) show ( ) show (SHA-512) show ( ) show (hash) show ( ) show (of) show ( ) show (canonical) show ( ) show (S-expression) show  newline
+(*) show ( ) show (Sign) show ( ) show (hash) show ( ) show (with) show ( ) show (Ed25519) show  newline
+(*) show ( ) show (Create) show ( ) show (seal) show ( ) show (record) show  newline
+(*) show ( ) show (Save) show ( ) show (entry) show ( ) show (to) show ( ) show (disk) show  newline
+ newline
+ newline
+(audit-verify) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Verify) show ( ) show (cryptographic) show ( ) show (seal) show ( ) show (on) show ( ) show (an) show ( ) show (entry.) show  newline
+ newline
+ newline
+(\(audit-verify) show ( ) show (entry) show ( ) show (public-key:) show ( ) show (key\)) show  newline
+ newline
+(Verification) show ( ) show (steps:) show  newline
+ newline
+(*) show ( ) show (Reconstruct) show ( ) show (unsealed) show ( ) show (entry) show  newline
+(*) show ( ) show (Compute) show ( ) show (SHA-512) show ( ) show (hash) show  newline
+(*) show ( ) show (Compare) show ( ) show (with) show ( ) show (stored) show ( ) show (content-hash) show  newline
+(*) show ( ) show (Verify) show ( ) show (Ed25519) show ( ) show (signature) show  newline
+ newline
+ newline
+(audit-chain) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(Verify) show ( ) show (the) show ( ) show (entire) show ( ) show (audit) show ( ) show (chain) show ( ) show (from) show ( ) show (genesis) show ( ) show (to) show ( ) show (present.) show ( ) show (One) show ( ) show (broken) show ( ) show (link) show  newline
+(invalidates) show ( ) show (everything) show ( ) show (after) show ( ) show (it.) show  newline
+ newline
+ newline
+(\(audit-chain) show ( ) show (verify-key:) show ( ) show (public-key\)) show  newline
+ newline
+(Verifies:) show  newline
+ newline
+(*) show ( ) show (Each) show ( ) show (entry's) show ( ) show (signature) show ( ) show (is) show ( ) show (valid) show  newline
+(*) show ( ) show (Parent-id) show ( ) show (references) show ( ) show (form) show ( ) show (unbroken) show ( ) show (chain) show  newline
+(*) show ( ) show (Sequence) show ( ) show (numbers) show ( ) show (are) show ( ) show (strictly) show ( ) show (monotonic) show  newline
+ newline
+(A) show ( ) show (valid) show ( ) show (chain) show ( ) show (proves) show ( ) show (no) show ( ) show (entries) show ( ) show (were) show ( ) show (inserted,) show ( ) show (deleted,) show ( ) show (or) show ( ) show (modified) show  newline
+(after) show ( ) show (signing.) show  newline
+ newline
+ newline
+(audit-read) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+(Read) show ( ) show (specific) show ( ) show (audit) show ( ) show (entry.) show  newline
+ newline
+ newline
+(\(audit-read) show ( ) show (sequence:) show ( ) show (42\)) show  newline
+(\(audit-read) show ( ) show (id:) show ( ) show ("sha512:..."\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(STORAGE) show ( ) show (FORMAT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Simplicity) show ( ) show (over) show ( ) show (cleverness.) show ( ) show (Entries) show ( ) show (are) show ( ) show (individual) show ( ) show (S-expression) show ( ) show (files,) show  newline
+(one) show ( ) show (per) show ( ) show (action,) show ( ) show (named) show ( ) show (by) show ( ) show (sequence) show ( ) show (number.) show  newline
+ newline
+ newline
+(.vault/audit/) show  newline
+(1.sexp) show  newline
+(2.sexp) show  newline
+(3.sexp) show  newline
+(...) show  newline
+ newline
+(This) show ( ) show (format) show ( ) show (trades) show ( ) show (storage) show ( ) show (density) show ( ) show (for) show ( ) show (operational) show ( ) show (simplicity:) show  newline
+ newline
+(*) show ( ) show (Sequential) show ( ) show (reads:) show ( ) show (cat) show ( ) show (the) show ( ) show (files) show ( ) show (in) show ( ) show (order) show  newline
+(*) show ( ) show (Range) show ( ) show (queries:) show ( ) show (list) show ( ) show (files) show ( ) show (between) show ( ) show (N) show ( ) show (and) show ( ) show (M) show  newline
+(*) show ( ) show (Latest) show ( ) show (entry:) show ( ) show (highest-numbered) show ( ) show (file) show  newline
+(*) show ( ) show (Debugging:) show ( ) show (read) show ( ) show (any) show ( ) show (entry) show ( ) show (with) show ( ) show (a) show ( ) show (text) show ( ) show (editor) show  newline
+ newline
+(No) show ( ) show (database.) show ( ) show (No) show ( ) show (binary) show ( ) show (format.) show ( ) show (No) show ( ) show (special) show ( ) show (tools) show ( ) show (required) show ( ) show (to) show ( ) show (inspect) show ( ) show (the) show  newline
+(audit) show ( ) show (trail.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Threat) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(We) show ( ) show (trust) show ( ) show (as) show ( ) show (little) show ( ) show (as) show ( ) show (possible.) show  newline
+ newline
+(Trusted:) show  newline
+ newline
+(*) show ( ) show (Local) show ( ) show (filesystem) show ( ) show (during) show ( ) show (operation) show ( ) show (\(not) show ( ) show (after\)) show  newline
+(*) show ( ) show (Ed25519) show ( ) show (implementation) show ( ) show (\(libsodium,) show ( ) show (audited\)) show  newline
+(*) show ( ) show (Private) show ( ) show (keys) show ( ) show (\(your) show ( ) show (responsibility\)) show  newline
+ newline
+(Untrusted:) show  newline
+ newline
+(*) show ( ) show (Storage) show ( ) show (medium) show ( ) show (after) show ( ) show (entry) show ( ) show (creation) show  newline
+(*) show ( ) show (Network) show ( ) show (transport) show ( ) show (between) show ( ) show (nodes) show  newline
+(*) show ( ) show (Other) show ( ) show (actors,) show ( ) show (including) show ( ) show (administrators) show  newline
+ newline
+(This) show ( ) show (threat) show ( ) show (model) show ( ) show (assumes) show ( ) show (a) show ( ) show (hostile) show ( ) show (environment) show ( ) show (where) show ( ) show (storage) show ( ) show (can) show ( ) show (be) show  newline
+(tampered) show ( ) show (with) show ( ) show (and) show ( ) show (network) show ( ) show (traffic) show ( ) show (can) show ( ) show (be) show ( ) show (intercepted.) show ( ) show (The) show ( ) show (cryptography) show  newline
+(protects) show ( ) show (the) show ( ) show (audit) show ( ) show (trail) show ( ) show (even) show ( ) show (when) show ( ) show (everything) show ( ) show (else) show ( ) show (is) show ( ) show (compromised.) show  newline
+ newline
+ newline
+(Attack) show ( ) show (Mitigations) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(Attack) show ( ) show (Mitigation) show  newline
+(Entry) show ( ) show (modification) show ( ) show (SHA-512) show ( ) show (hash) show ( ) show (detects) show ( ) show (tampering) show  newline
+(Entry) show ( ) show (deletion) show ( ) show (Chain) show ( ) show (breaks) show ( ) show (are) show ( ) show (detectable) show  newline
+(Entry) show ( ) show (insertion) show ( ) show (Hash) show ( ) show (chain) show ( ) show (prevents) show ( ) show (backdating) show  newline
+(Actor) show ( ) show (impersonation) show ( ) show (Ed25519) show ( ) show (signatures) show ( ) show (verify) show ( ) show (identity) show  newline
+(Replay) show ( ) show (attacks) show ( ) show (Sequence) show ( ) show (numbers) show ( ) show (detect) show ( ) show (duplicates) show  newline
+ newline
+ newline
+(Non-Repudiation) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(Once) show ( ) show (an) show ( ) show (entry) show ( ) show (is) show ( ) show (signed) show ( ) show (and) show ( ) show (published,) show ( ) show (the) show ( ) show (actor) show ( ) show (cannot) show ( ) show (credibly) show ( ) show (deny) show  newline
+(it.) show ( ) show (This) show ( ) show (is) show ( ) show (non-repudiation:) show ( ) show (mathematical) show ( ) show (proof) show ( ) show (of) show ( ) show (authorship.) show  newline
+ newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Actor) show
+margin 60 add ypos moveto (cannot) show
+margin 102 add ypos moveto (deny) show
+margin 132 add ypos moveto (performing) show
+margin 198 add ypos moveto (the) show
+margin 222 add ypos moveto (action--their) show
+margin 300 add ypos moveto (key) show
+margin 324 add ypos moveto (signed) show
+margin 366 add ypos moveto (it) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Timestamp) show
+margin 84 add ypos moveto (cannot) show
+margin 126 add ypos moveto (be) show
+margin 144 add ypos moveto (backdated--hash) show
+margin 234 add ypos moveto (chain) show
+margin 270 add ypos moveto (enforces) show
+margin 324 add ypos moveto (ordering) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Content) show
+margin 72 add ypos moveto (cannot) show
+margin 114 add ypos moveto (be) show
+margin 132 add ypos moveto (altered--hash) show
+margin 210 add ypos moveto (would) show
+margin 246 add ypos moveto (change) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (Signature) show
+margin 84 add ypos moveto (mathematically) show
+margin 174 add ypos moveto (proves) show
+margin 216 add ypos moveto (authorship--no) show
+margin 300 add ypos moveto ("someone) show
+margin 354 add ypos moveto (else) show
+margin 384 add ypos moveto (used) show
+margin 414 add ypos moveto (my) show
+margin 432 add ypos moveto (account") show
+grestore
+newline
+ newline
+(In) show ( ) show (court,) show ( ) show (in) show ( ) show (audits,) show ( ) show (in) show ( ) show (incident) show ( ) show (response:) show ( ) show (cryptographic) show ( ) show (proof) show ( ) show (beats) show  newline
+(testimony.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(INTEGRATION) show ( ) show (POINTS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Vault) show ( ) show (Operations) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(All) show ( ) show (vault) show ( ) show (operations) show ( ) show (record) show ( ) show (audit) show ( ) show (entries:) show  newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto (\(seal-commit) show
+margin 102 add ypos moveto ("message"\)) show
+% box char 2192 at col 32
+newpath margin 195 add 3 sub ypos 2 add moveto margin 195 add 3 add ypos lineto margin 195 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (\(action) show
+margin 252 add ypos moveto (\(verb) show
+margin 288 add ypos moveto (seal-commit\)) show
+margin 366 add ypos moveto (...\)) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (\(seal-publish) show
+margin 108 add ypos moveto ("1.0.0") show
+margin 156 add ypos moveto (...\)) show
+% box char 2192 at col 32
+newpath margin 195 add 3 sub ypos 2 add moveto margin 195 add 3 add ypos lineto margin 195 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (\(action) show
+margin 252 add ypos moveto (\(verb) show
+margin 288 add ypos moveto (seal-publish\)) show
+margin 372 add ypos moveto (...\)) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (\(seal-subscribe) show
+margin 120 add ypos moveto (remote) show
+margin 162 add ypos moveto (...\)) show
+% box char 2192 at col 32
+newpath margin 195 add 3 sub ypos 2 add moveto margin 195 add 3 add ypos lineto margin 195 add 3 sub ypos 2 sub lineto closepath fill
+margin 204 add ypos moveto (\(action) show
+margin 252 add ypos moveto (\(verb) show
+margin 288 add ypos moveto (seal-subscribe\)) show
+margin 384 add ypos moveto (...\)) show
+grestore
+newline
+ newline
+ newline
+(SPKI) show ( ) show (Authorization) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(Audit) show ( ) show (entries) show ( ) show (can) show ( ) show (include) show ( ) show (authorization) show ( ) show (chains:) show  newline
+ newline
+ newline
+(\(actor) show  newline
+(\(principal) show ( ) show (#${bob-public-key}\)) show  newline
+(\(authorization-chain) show  newline
+(\(signed-cert) show ( ) show (...\)) show ( ) show (;) show ( ) show (Alice) show ( ) show (delegated) show ( ) show (to) show ( ) show (Bob) show  newline
+(\(signed-cert) show ( ) show (...\)\)\)) show ( ) show (;) show ( ) show (Root) show ( ) show (delegated) show ( ) show (to) show ( ) show (Alice) show  newline
+ newline
+(This) show ( ) show (proves) show ( ) show (not) show ( ) show (just) show ( ) show (who) show ( ) show (acted,) show ( ) show (but) show ( ) show (under) show ( ) show (whose) show ( ) show (authority.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(EXPORT) show ( ) show (FORMATS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(S-expression) show ( ) show (Export) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(audit-export-sexp) show ( ) show (output:) show ( ) show ("audit-export.sexp"\)) show  newline
+ newline
+(Produces:) show  newline
+ newline
+ newline
+(\(audit-trail) show  newline
+(\(audit-entry) show ( ) show (...\)) show  newline
+(\(audit-entry) show ( ) show (...\)) show  newline
+(...\)) show  newline
+ newline
+ newline
+(Human-readable) show ( ) show (Export) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(audit-export-human) show ( ) show (output:) show ( ) show ("audit-export.txt"\)) show  newline
+ newline
+(Produces:) show  newline
+ newline
+ newline
+(AUDIT) show ( ) show (TRAIL) show ( ) show (-) show ( ) show (Library) show ( ) show (of) show ( ) show (Cyberspace) show  newline
+(===================================) show  newline
+(Entry) show ( ) show (#1) show  newline
+(ID:) show ( ) show (sha512:b14471cd57ea557f...) show  newline
+(Time:) show ( ) show (2026-01-05) show ( ) show (23:38:20Z) show  newline
+(Action:) show ( ) show (seal-publish) show  newline
+(Why:) show ( ) show (Published) show ( ) show (release) show ( ) show (to) show ( ) show (filesystem) show  newline
+(Entry) show ( ) show (#2) show  newline
+(...) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show ( ) show (NOTES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Dependencies) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (crypto-ffi:) show ( ) show (Ed25519) show ( ) show (signatures,) show ( ) show (SHA-512) show ( ) show (hashing) show  newline
+(*) show ( ) show (srfi-1:) show ( ) show (List) show ( ) show (utilities) show  newline
+(*) show ( ) show (srfi-4:) show ( ) show (u8vectors) show ( ) show (for) show ( ) show (binary) show ( ) show (data) show  newline
+(*) show ( ) show (srfi-13:) show ( ) show (String) show ( ) show (utilities) show  newline
+ newline
+ newline
+(Performance) show ( ) show (Considerations) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Content-addressed) show ( ) show (IDs) show ( ) show (enable) show ( ) show (O\(1\)) show ( ) show (lookup) show ( ) show (by) show ( ) show (hash) show  newline
+(*) show ( ) show (Sequential) show ( ) show (file) show ( ) show (naming) show ( ) show (enables) show ( ) show (efficient) show ( ) show (range) show ( ) show (queries) show  newline
+(*) show ( ) show (Lazy) show ( ) show (verification:) show ( ) show (verify) show ( ) show (on) show ( ) show (read,) show ( ) show (not) show ( ) show (on) show ( ) show (load) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Haber,) show ( ) show (S.,) show ( ) show (&) show ( ) show (Stornetta,) show ( ) show (W.) show ( ) show (S.) show ( ) show (\(1991\).) show ( ) show (How) show ( ) show (to) show ( ) show (time-stamp) show ( ) show (a) show ( ) show (digital) show ( ) show (document.) show  newline
+(*) show ( ) show (Merkle,) show ( ) show (R.) show ( ) show (C.) show ( ) show (\(1987\).) show ( ) show (A) show ( ) show (digital) show ( ) show (signature) show ( ) show (based) show ( ) show (on) show ( ) show (a) show ( ) show (conventional) show ( ) show (encryption) show ( ) show (function.) show  newline
+(*) show ( ) show (Bernstein,) show ( ) show (D.) show ( ) show (J.) show ( ) show (\(2006\).) show ( ) show (Curve25519:) show ( ) show (new) show ( ) show (Diffie-Hellman) show ( ) show (speed) show ( ) show (records.) show  newline
+(*) show ( ) show (SDSI/SPKI) show ( ) show (-) show ( ) show (RFC) show ( ) show (2693,) show ( ) show (RFC) show ( ) show (2692) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(2026-01-19) show ( ) show (-) show ( ) show (Expanded) show ( ) show (narrative) show ( ) show (and) show ( ) show (rationale) show  newline
+ newline
+(2026-01-06) show ( ) show (-) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

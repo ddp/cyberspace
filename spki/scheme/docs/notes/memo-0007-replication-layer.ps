@@ -15,439 +15,514 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0007: Replication Layer) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies a replication layer for the Library of Cyberspace) show newline
-(preservation architecture, enabling cryptographically sealed releases to) show newline
-(be published, subscribed to, and synchronized across distributed) show newline
-(locations while maintaining tamper-evident audit trails.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    "The network is the computer. — John Gage, Sun Microsystems") show newline
-() show newline
-() show newline
-(Heritage: "Behave as One") show newline
-(-------------------------) show newline
-() show newline
-(The VAXcluster principle \(1984\): N nodes must behave as one. Not) show newline
-(eventually consistent. Not loosely coupled. Identical. One security) show newline
-(domain, one namespace, one view of the world.) show newline
-() show newline
-(DECnet Phase IV's 24-bit addressing was fatal for internet scale.) show newline
-(Cyberspace applies the same principle to IPv6's 128-bit address space.) show newline
-(Federated nodes, behaving as one.) show newline
-() show newline
-(But unlike VAXcluster's tight coupling over CI bus, Cyberspace) show newline
-(replication works over any transport: git pushes, HTTP posts, USB drives) show newline
-(carried across air gaps. The cryptography travels with the data.) show newline
-() show newline
-() show newline
-(Requirements) show newline
-(------------) show newline
-() show newline
-(The Library of Cyberspace requires a distribution mechanism that:) show newline
-() show newline
-(  * Preserves cryptographic authenticity - Signatures travel with artifacts) show newline
-(  * Enables offline verification - No centralized authority required) show newline
-(  * Records provenance - All publication events are audited) show newline
-(  * Supports multiple transports - Git, HTTP, filesystem) show newline
-(  * Maintains loose coupling - Works for confederations of friends) show newline
-() show newline
-(These requirements reflect the reality of distributed archival: networks) show newline
-(partition, authorities disappear, and trust must be verifiable without) show newline
-(phoning home.) show newline
-() show newline
-(Traditional package managers and distribution systems assume centralized) show newline
-(registries and online verification. This replication layer is designed) show newline
-(for decentralized, long-term preservation where trust is established) show newline
-(through Simple Public Key Infrastructure \(SPKI\) certificates and) show newline
-(cryptographic seals.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DESIGN PRINCIPLES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Sealed Releases - Only cryptographically signed releases can be published) show newline
-(  * Transport Agnostic - Same API works for git, HTTP, filesystem) show newline
-(  * Audit Everything - All replication events are recorded in tamper-evident log) show newline
-(  * Verify Before Trust - Subscribers must verify cryptographic seals) show newline
-(  * Explicit Authorization - SPKI certificates determine who can publish) show newline
-() show newline
-(These principles ensure that trust is established cryptographically) show newline
-(rather than administratively, and that the system works regardless of) show newline
-(network topology or transport mechanism.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SPECIFICATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(seal-publish) show newline
-(------------) show newline
-() show newline
-(Publish a sealed release to a remote location. The fundamental) show newline
-(operation: take what's been cryptographically sealed locally and make it) show newline
-(available elsewhere.) show newline
-() show newline
-() show newline
-(    \(seal-publish version) show newline
-(                  remote: target) show newline
-(                  archive-format: format) show newline
-(                  message: notes\)) show newline
-() show newline
-(Parameters:) show newline
-() show newline
-() show newline
-(  Parameter        Description                                              ) show newline
-(  version          Semantic version string \(e.g., "1.0.0"\)                  ) show newline
-(  remote           Publication target: git remote, URL, or directory path   ) show newline
-(  archive-format   'tarball, 'bundle, or 'cryptographic \(default\)           ) show newline
-(  message          Release notes \(optional\)                                 ) show newline
-() show newline
-(Behavior:) show newline
-() show newline
-(  * Verify release exists \(creates if needed via seal-release\)) show newline
-(  * Create cryptographic archive with: tarball of repository at version tag, SHA-512 hash of tarball, Ed25519 signature of hash, manifest with version, hash, signature) show newline
-(  * Publish to remote based on type: Git remote \(push tag, optionally upload archive\), HTTP URL \(POST archive to endpoint\), Filesystem \(copy archive to directory\)) show newline
-(  * Record publication in audit trail with: actor \(public key from signing key\), action \(seal-publish version remote\), motivation \(release notes\), cryptographic seal \(signature\)) show newline
-() show newline
-(Audit Entry Format:) show newline
-() show newline
-() show newline
-(    \(audit-entry) show newline
-(      \(id "sha512:..."\)) show newline
-(      \(timestamp "Mon Jan 5 23:38:20 2026"\)) show newline
-(      \(sequence 1\)) show newline
-(      \(actor) show newline
-(        \(principal #${public-key-blob}\)) show newline
-(        \(authorization-chain\)\)) show newline
-(      \(action) show newline
-(        \(verb seal-publish\)) show newline
-(        \(object "1.0.0"\)) show newline
-(        \(parameters "/path/to/remote"\)\)) show newline
-(      \(context) show newline
-(        \(motivation "Published to filesystem"\)) show newline
-(        \(language "en"\)\)) show newline
-(      \(environment) show newline
-(        \(platform "unknown"\)) show newline
-(        \(timestamp 1767685100\)\)) show newline
-(      \(seal) show newline
-(        \(algorithm "ed25519-sha512"\)) show newline
-(        \(content-hash "..."\)) show newline
-(        \(signature "..."\)\)\)) show newline
-() show newline
-() show newline
-(seal-subscribe) show newline
-(--------------) show newline
-() show newline
-(Subscribe to sealed releases from a remote source. Pull what others have) show newline
-(published, verify it cryptographically, trust nothing until proven.) show newline
-() show newline
-() show newline
-(    \(seal-subscribe remote) show newline
-(                    target: local-path) show newline
-(                    verify-key: public-key\)) show newline
-() show newline
-(Parameters:) show newline
-() show newline
-() show newline
-(  Parameter    Description                                        ) show newline
-(  remote       Source location: git remote, URL, or directory     ) show newline
-(  target       Local path for downloaded archives \(optional\)      ) show newline
-(  verify-key   Public key for signature verification \(optional\)   ) show newline
-() show newline
-(Behavior:) show newline
-() show newline
-(  * Discover available releases from remote: Git remote \(list tags\), HTTP URL \(GET /releases endpoint\), Filesystem \(list .archive files\)) show newline
-(  * Download cryptographic archives) show newline
-(  * Verify each archive: check manifest structure, verify SHA-512 hash of tarball, verify Ed25519 signature \(if verify-key provided\)) show newline
-(  * Extract verified archives to target directory) show newline
-(  * Record subscription in audit trail: count of releases downloaded, source location, verification status) show newline
-() show newline
-(Security Consideration: Without verify-key, subscription downloads) show newline
-(archives but cannot verify authenticity. SPKI certificate chains should) show newline
-(be used to establish trust.) show newline
-() show newline
-() show newline
-(seal-synchronize) show newline
-(----------------) show newline
-() show newline
-(Bidirectional synchronization of sealed releases. For peers who trust) show newline
-(each other: what you have that I don't, what I have that you don't,) show newline
-(reconcile.) show newline
-() show newline
-() show newline
-(    \(seal-synchronize remote) show newline
-(                      direction: 'both) show newline
-(                      verify-key: public-key\)) show newline
-() show newline
-(Parameters:) show newline
-() show newline
-() show newline
-(  Parameter    Description                                        ) show newline
-(  remote       Sync target: git remote, URL, or directory         ) show newline
-(  direction    'both \(default\), 'push-only, or 'pull-only         ) show newline
-(  verify-key   Public key for signature verification \(optional\)   ) show newline
-() show newline
-(Behavior:) show newline
-() show newline
-(  * Discover local and remote releases) show newline
-(  * Compare versions to determine: releases to push \(local but not remote\), releases to pull \(remote but not local\)) show newline
-(  * Execute publication for new local releases) show newline
-(  * Execute subscription for new remote releases) show newline
-(  * Record synchronization in audit trail: count pushed and pulled, remote location, direction) show newline
-() show newline
-(Use Case: Periodic sync between trusted peers in a confederation.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ARCHIVE FORMAT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Cryptographic Archive Structure) show newline
-(-------------------------------) show newline
-() show newline
-() show newline
-(    vault-1.0.0.archive          # Manifest file) show newline
-(    vault-1.0.0.archive.tar.gz   # Actual tarball) show newline
-() show newline
-(Manifest S-expression:) show newline
-() show newline
-() show newline
-(    \(sealed-archive) show newline
-(      \(version "1.0.0"\)) show newline
-(      \(format cryptographic\)) show newline
-(      \(tarball "vault-1.0.0.archive.tar.gz"\)) show newline
-(      \(hash "sha512:..."\)) show newline
-(      \(signature "ed25519:..."\)) show newline
-(      \(timestamp 1767685100\)) show newline
-(      \(sealer #${public-key-blob}\)\)) show newline
-() show newline
-(Verification Steps:) show newline
-() show newline
-(  * Read manifest) show newline
-(  * Hash tarball with SHA-512) show newline
-(  * Verify hash matches manifest) show newline
-(  * Verify Ed25519 signature on hash) show newline
-(  * Check SPKI authorization \(optional\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TRANSPORT IMPLEMENTATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Git Remote) show newline
-(----------) show newline
-() show newline
-(  * Uses git push to share tags) show newline
-(  * Optionally uploads archives as release assets \(GitHub, GitLab\)) show newline
-(  * Fetch uses git fetch + git tag -l) show newline
-() show newline
-() show newline
-(HTTP Endpoint) show newline
-(-------------) show newline
-() show newline
-(  * POST to /releases/<version> for publication) show newline
-(  * GET /releases for discovery) show newline
-(  * Content-Type: application/x-sealed-archive) show newline
-() show newline
-() show newline
-(Filesystem) show newline
-(----------) show newline
-() show newline
-(  * Copy archives to shared directory) show newline
-(  * Directory structure: <remote>/<archive-name>) show newline
-(  * No network required, works with NFS, USB drives, etc.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(AUDIT INTEGRATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Every replication operation creates an audit entry. No silent) show newline
-(operations. No unattributed changes. See Memo-005 for the full audit) show newline
-(trail specification.) show newline
-() show newline
-(Each entry contains:) show newline
-() show newline
-(  * Content-addressed ID: SHA-512 hash of entry) show newline
-(  * Chained structure: References parent entry) show newline
-(  * SPKI principal: Public key of actor) show newline
-(  * Dual context: Human motivation + machine environment) show newline
-(  * Cryptographic seal: Ed25519 signature) show newline
-() show newline
-(This provides:) show newline
-() show newline
-(  * Non-repudiation: Cannot deny publication) show newline
-(  * Tamper evidence: Changes are detectable) show newline
-(  * Causality: Chain shows temporal order) show newline
-(  * Accountability: Know who published what, when, and why) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Threat Model) show newline
-(------------) show newline
-() show newline
-(Trusted:) show newline
-() show newline
-(  * Local filesystem and vault) show newline
-(  * SPKI private keys \(your responsibility\)) show newline
-(  * Cryptographic primitives \(libsodium, audited\)) show newline
-() show newline
-(Untrusted:) show newline
-() show newline
-(  * Remote repositories \(anyone can host anything\)) show newline
-(  * Network transport \(assume hostile\)) show newline
-(  * Downloaded archives \(verify before use\)) show newline
-(  * Remote publishers \(until SPKI chain verified\)) show newline
-() show newline
-(The key insight: trust the math, not the infrastructure. A verified) show newline
-(signature is proof regardless of how it arrived.) show newline
-() show newline
-() show newline
-(Attack Scenarios) show newline
-(----------------) show newline
-() show newline
-(  * Malicious Archive Substitution - Attacker replaces archive on remote - Mitigation: Signature verification fails) show newline
-(  * Version Rollback Attack - Attacker removes newer releases - Mitigation: Audit trail shows previous versions) show newline
-(  * Unauthorized Publication - Attacker publishes fake release - Mitigation: SPKI authorization chain required) show newline
-(  * Transport Tampering - Network attacker modifies download - Mitigation: Hash and signature verification) show newline
-() show newline
-(Each attack is addressed at the cryptographic layer rather than the) show newline
-(transport layer, ensuring protection regardless of network conditions.) show newline
-() show newline
-() show newline
-(Best Practices) show newline
-(--------------) show newline
-() show newline
-(  * Always verify signatures - Use verify-key parameter) show newline
-(  * Check SPKI certificates - Verify authorization chain) show newline
-(  * Maintain audit trail - Detect suspicious patterns) show newline
-(  * Use HTTPS for HTTP transport - Prevent network attacks) show newline
-(  * Backup signing keys - Use Shamir secret sharing) show newline
-() show newline
-(Defense in depth: cryptographic verification is primary, but transport) show newline
-(security and operational practices add additional layers.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION NOTES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Helper Functions) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    \(tag-exists? tag-name\)        ; Check if git tag exists) show newline
-(    \(git-remote? str\)             ; Detect git remote format) show newline
-(    \(http-url? str\)               ; Detect HTTP/HTTPS URL) show newline
-(    \(publish-filesystem remote version archive\)  ; Copy to directory) show newline
-(    \(publish-http url version archive\)           ; POST to endpoint) show newline
-() show newline
-() show newline
-(Dependencies) show newline
-(------------) show newline
-() show newline
-(  * Git: Version control and tag management) show newline
-(  * libsodium: Ed25519 signatures, SHA-512 hashing) show newline
-(  * \(chicken process\): Run git commands) show newline
-(  * \(chicken file\): Filesystem operations) show newline
-(  * \(chicken irregex\): URL/remote detection) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(COMPATIBILITY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This specification builds on existing standards rather than inventing) show newline
-(new ones:) show newline
-() show newline
-() show newline
-(  Technology         Role                                  ) show newline
-(  Git tags           Standard version control operations   ) show newline
-(  Git bundles        Portable repository format            ) show newline
-(  Tarball archives   Universal archive format              ) show newline
-(  S-expressions      LISP/Scheme readable manifests        ) show newline
-(  SDSI/SPKI          Authorization certificates            ) show newline
-() show newline
-(Future extensions may add:) show newline
-() show newline
-(  * IPFS transport: Content-addressed distribution) show newline
-(  * Tor hidden services: Anonymous publication) show newline
-(  * Encrypted archives: Confidential distribution) show newline
-(  * Multi-signature releases: Threshold authorization) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TEST COVERAGE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(See test-replication.scm:) show newline
-() show newline
-() show newline
-(    ;; Test seal-publish to filesystem) show newline
-(    \(seal-publish "1.0.0") show newline
-(                  remote: "/tmp/cyberspace-publish-test") show newline
-(                  message: "Published to filesystem"\)) show newline
-(    ;; Verify archive exists) show newline
-(    \(file-exists? "/tmp/cyberspace-publish-test/vault-1.0.0.archive"\)) show newline
-(    ;; Verify audit entry created) show newline
-(    \(audit-read sequence: 1\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * SDSI/SPKI: RFC 2693, RFC 2692) show newline
-(  * Content-Addressed Storage: Git internals, IPFS) show newline
-(  * Semantic Versioning: semver.org) show newline
-(  * Ed25519: Bernstein et al., 2006) show newline
-(  * Audit Trails: Memo-005 \(Cryptographic Audit Trail\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(2026-01-19 - Expanded narrative, fixed formatting) show newline
-() show newline
-(2026-01-05 - Initial specification: seal-publish, seal-subscribe,) show newline
-(seal-synchronize with full audit trail integration) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0007:) show ( ) show (Replication) show ( ) show (Layer) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (a) show ( ) show (replication) show ( ) show (layer) show ( ) show (for) show ( ) show (the) show ( ) show (Library) show ( ) show (of) show ( ) show (Cyberspace) show  newline
+(preservation) show ( ) show (architecture,) show ( ) show (enabling) show ( ) show (cryptographically) show ( ) show (sealed) show ( ) show (releases) show ( ) show (to) show  newline
+(be) show ( ) show (published,) show ( ) show (subscribed) show ( ) show (to,) show ( ) show (and) show ( ) show (synchronized) show ( ) show (across) show ( ) show (distributed) show  newline
+(locations) show ( ) show (while) show ( ) show (maintaining) show ( ) show (tamper-evident) show ( ) show (audit) show ( ) show (trails.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto ("The) show
+margin 54 add ypos moveto (network) show
+margin 102 add ypos moveto (is) show
+margin 120 add ypos moveto (the) show
+margin 144 add ypos moveto (computer.) show
+margin 204 add ypos moveto (--) show
+margin 216 add ypos moveto (John) show
+margin 246 add ypos moveto (Gage,) show
+margin 282 add ypos moveto (Sun) show
+margin 306 add ypos moveto (Microsystems") show
+grestore
+newline
+ newline
+ newline
+(Heritage:) show ( ) show ("Behave) show ( ) show (as) show ( ) show (One") show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (VAXcluster) show ( ) show (principle) show ( ) show (\(1984\):) show ( ) show (N) show ( ) show (nodes) show ( ) show (must) show ( ) show (behave) show ( ) show (as) show ( ) show (one.) show ( ) show (Not) show  newline
+(eventually) show ( ) show (consistent.) show ( ) show (Not) show ( ) show (loosely) show ( ) show (coupled.) show ( ) show (Identical.) show ( ) show (One) show ( ) show (security) show  newline
+(domain,) show ( ) show (one) show ( ) show (namespace,) show ( ) show (one) show ( ) show (view) show ( ) show (of) show ( ) show (the) show ( ) show (world.) show  newline
+ newline
+(DECnet) show ( ) show (Phase) show ( ) show (IV's) show ( ) show (24-bit) show ( ) show (addressing) show ( ) show (was) show ( ) show (fatal) show ( ) show (for) show ( ) show (internet) show ( ) show (scale.) show  newline
+(Cyberspace) show ( ) show (applies) show ( ) show (the) show ( ) show (same) show ( ) show (principle) show ( ) show (to) show ( ) show (IPv6's) show ( ) show (128-bit) show ( ) show (address) show ( ) show (space.) show  newline
+(Federated) show ( ) show (nodes,) show ( ) show (behaving) show ( ) show (as) show ( ) show (one.) show  newline
+ newline
+(But) show ( ) show (unlike) show ( ) show (VAXcluster's) show ( ) show (tight) show ( ) show (coupling) show ( ) show (over) show ( ) show (CI) show ( ) show (bus,) show ( ) show (Cyberspace) show  newline
+(replication) show ( ) show (works) show ( ) show (over) show ( ) show (any) show ( ) show (transport:) show ( ) show (git) show ( ) show (pushes,) show ( ) show (HTTP) show ( ) show (posts,) show ( ) show (USB) show ( ) show (drives) show  newline
+(carried) show ( ) show (across) show ( ) show (air) show ( ) show (gaps.) show ( ) show (The) show ( ) show (cryptography) show ( ) show (travels) show ( ) show (with) show ( ) show (the) show ( ) show (data.) show  newline
+ newline
+ newline
+(Requirements) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (Library) show ( ) show (of) show ( ) show (Cyberspace) show ( ) show (requires) show ( ) show (a) show ( ) show (distribution) show ( ) show (mechanism) show ( ) show (that:) show  newline
+ newline
+(*) show ( ) show (Preserves) show ( ) show (cryptographic) show ( ) show (authenticity) show ( ) show (-) show ( ) show (Signatures) show ( ) show (travel) show ( ) show (with) show ( ) show (artifacts) show  newline
+(*) show ( ) show (Enables) show ( ) show (offline) show ( ) show (verification) show ( ) show (-) show ( ) show (No) show ( ) show (centralized) show ( ) show (authority) show ( ) show (required) show  newline
+(*) show ( ) show (Records) show ( ) show (provenance) show ( ) show (-) show ( ) show (All) show ( ) show (publication) show ( ) show (events) show ( ) show (are) show ( ) show (audited) show  newline
+(*) show ( ) show (Supports) show ( ) show (multiple) show ( ) show (transports) show ( ) show (-) show ( ) show (Git,) show ( ) show (HTTP,) show ( ) show (filesystem) show  newline
+(*) show ( ) show (Maintains) show ( ) show (loose) show ( ) show (coupling) show ( ) show (-) show ( ) show (Works) show ( ) show (for) show ( ) show (confederations) show ( ) show (of) show ( ) show (friends) show  newline
+ newline
+(These) show ( ) show (requirements) show ( ) show (reflect) show ( ) show (the) show ( ) show (reality) show ( ) show (of) show ( ) show (distributed) show ( ) show (archival:) show ( ) show (networks) show  newline
+(partition,) show ( ) show (authorities) show ( ) show (disappear,) show ( ) show (and) show ( ) show (trust) show ( ) show (must) show ( ) show (be) show ( ) show (verifiable) show ( ) show (without) show  newline
+(phoning) show ( ) show (home.) show  newline
+ newline
+(Traditional) show ( ) show (package) show ( ) show (managers) show ( ) show (and) show ( ) show (distribution) show ( ) show (systems) show ( ) show (assume) show ( ) show (centralized) show  newline
+(registries) show ( ) show (and) show ( ) show (online) show ( ) show (verification.) show ( ) show (This) show ( ) show (replication) show ( ) show (layer) show ( ) show (is) show ( ) show (designed) show  newline
+(for) show ( ) show (decentralized,) show ( ) show (long-term) show ( ) show (preservation) show ( ) show (where) show ( ) show (trust) show ( ) show (is) show ( ) show (established) show  newline
+(through) show ( ) show (Simple) show ( ) show (Public) show ( ) show (Key) show ( ) show (Infrastructure) show ( ) show (\(SPKI\)) show ( ) show (certificates) show ( ) show (and) show  newline
+(cryptographic) show ( ) show (seals.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DESIGN) show ( ) show (PRINCIPLES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Sealed) show ( ) show (Releases) show ( ) show (-) show ( ) show (Only) show ( ) show (cryptographically) show ( ) show (signed) show ( ) show (releases) show ( ) show (can) show ( ) show (be) show ( ) show (published) show  newline
+(*) show ( ) show (Transport) show ( ) show (Agnostic) show ( ) show (-) show ( ) show (Same) show ( ) show (API) show ( ) show (works) show ( ) show (for) show ( ) show (git,) show ( ) show (HTTP,) show ( ) show (filesystem) show  newline
+(*) show ( ) show (Audit) show ( ) show (Everything) show ( ) show (-) show ( ) show (All) show ( ) show (replication) show ( ) show (events) show ( ) show (are) show ( ) show (recorded) show ( ) show (in) show ( ) show (tamper-evident) show ( ) show (log) show  newline
+(*) show ( ) show (Verify) show ( ) show (Before) show ( ) show (Trust) show ( ) show (-) show ( ) show (Subscribers) show ( ) show (must) show ( ) show (verify) show ( ) show (cryptographic) show ( ) show (seals) show  newline
+(*) show ( ) show (Explicit) show ( ) show (Authorization) show ( ) show (-) show ( ) show (SPKI) show ( ) show (certificates) show ( ) show (determine) show ( ) show (who) show ( ) show (can) show ( ) show (publish) show  newline
+ newline
+(These) show ( ) show (principles) show ( ) show (ensure) show ( ) show (that) show ( ) show (trust) show ( ) show (is) show ( ) show (established) show ( ) show (cryptographically) show  newline
+(rather) show ( ) show (than) show ( ) show (administratively,) show ( ) show (and) show ( ) show (that) show ( ) show (the) show ( ) show (system) show ( ) show (works) show ( ) show (regardless) show ( ) show (of) show  newline
+(network) show ( ) show (topology) show ( ) show (or) show ( ) show (transport) show ( ) show (mechanism.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SPECIFICATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(seal-publish) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Publish) show ( ) show (a) show ( ) show (sealed) show ( ) show (release) show ( ) show (to) show ( ) show (a) show ( ) show (remote) show ( ) show (location.) show ( ) show (The) show ( ) show (fundamental) show  newline
+(operation:) show ( ) show (take) show ( ) show (what's) show ( ) show (been) show ( ) show (cryptographically) show ( ) show (sealed) show ( ) show (locally) show ( ) show (and) show ( ) show (make) show ( ) show (it) show  newline
+(available) show ( ) show (elsewhere.) show  newline
+ newline
+ newline
+(\(seal-publish) show ( ) show (version) show  newline
+(remote:) show ( ) show (target) show  newline
+(archive-format:) show ( ) show (format) show  newline
+(message:) show ( ) show (notes\)) show  newline
+ newline
+(Parameters:) show  newline
+ newline
+ newline
+(Parameter) show ( ) show (Description) show  newline
+(version) show ( ) show (Semantic) show ( ) show (version) show ( ) show (string) show ( ) show (\(e.g.,) show ( ) show ("1.0.0"\)) show  newline
+(remote) show ( ) show (Publication) show ( ) show (target:) show ( ) show (git) show ( ) show (remote,) show ( ) show (URL,) show ( ) show (or) show ( ) show (directory) show ( ) show (path) show  newline
+(archive-format) show ( ) show ('tarball,) show ( ) show ('bundle,) show ( ) show (or) show ( ) show ('cryptographic) show ( ) show (\(default\)) show  newline
+(message) show ( ) show (Release) show ( ) show (notes) show ( ) show (\(optional\)) show  newline
+ newline
+(Behavior:) show  newline
+ newline
+(*) show ( ) show (Verify) show ( ) show (release) show ( ) show (exists) show ( ) show (\(creates) show ( ) show (if) show ( ) show (needed) show ( ) show (via) show ( ) show (seal-release\)) show  newline
+(*) show ( ) show (Create) show ( ) show (cryptographic) show ( ) show (archive) show ( ) show (with:) show ( ) show (tarball) show ( ) show (of) show ( ) show (repository) show ( ) show (at) show ( ) show (version) show ( ) show (tag,) show ( ) show (SHA-512) show ( ) show (hash) show ( ) show (of) show ( ) show (tarball,) show ( ) show (Ed25519) show ( ) show (signature) show ( ) show (of) show ( ) show (hash,) show ( ) show (manifest) show ( ) show (with) show ( ) show (version,) show ( ) show (hash,) show ( ) show (signature) show  newline
+(*) show ( ) show (Publish) show ( ) show (to) show ( ) show (remote) show ( ) show (based) show ( ) show (on) show ( ) show (type:) show ( ) show (Git) show ( ) show (remote) show ( ) show (\(push) show ( ) show (tag,) show ( ) show (optionally) show ( ) show (upload) show ( ) show (archive\),) show ( ) show (HTTP) show ( ) show (URL) show ( ) show (\(POST) show ( ) show (archive) show ( ) show (to) show ( ) show (endpoint\),) show ( ) show (Filesystem) show ( ) show (\(copy) show ( ) show (archive) show ( ) show (to) show ( ) show (directory\)) show  newline
+(*) show ( ) show (Record) show ( ) show (publication) show ( ) show (in) show ( ) show (audit) show ( ) show (trail) show ( ) show (with:) show ( ) show (actor) show ( ) show (\(public) show ( ) show (key) show ( ) show (from) show ( ) show (signing) show ( ) show (key\),) show ( ) show (action) show ( ) show (\(seal-publish) show ( ) show (version) show ( ) show (remote\),) show ( ) show (motivation) show ( ) show (\(release) show ( ) show (notes\),) show ( ) show (cryptographic) show ( ) show (seal) show ( ) show (\(signature\)) show  newline
+ newline
+(Audit) show ( ) show (Entry) show ( ) show (Format:) show  newline
+ newline
+ newline
+(\(audit-entry) show  newline
+(\(id) show ( ) show ("sha512:..."\)) show  newline
+(\(timestamp) show ( ) show ("Mon) show ( ) show (Jan) show ( ) show (5) show ( ) show (23:38:20) show ( ) show (2026"\)) show  newline
+(\(sequence) show ( ) show (1\)) show  newline
+(\(actor) show  newline
+(\(principal) show ( ) show (#${public-key-blob}\)) show  newline
+(\(authorization-chain\)\)) show  newline
+(\(action) show  newline
+(\(verb) show ( ) show (seal-publish\)) show  newline
+(\(object) show ( ) show ("1.0.0"\)) show  newline
+(\(parameters) show ( ) show ("/path/to/remote"\)\)) show  newline
+(\(context) show  newline
+(\(motivation) show ( ) show ("Published) show ( ) show (to) show ( ) show (filesystem"\)) show  newline
+(\(language) show ( ) show ("en"\)\)) show  newline
+(\(environment) show  newline
+(\(platform) show ( ) show ("unknown"\)) show  newline
+(\(timestamp) show ( ) show (1767685100\)\)) show  newline
+(\(seal) show  newline
+(\(algorithm) show ( ) show ("ed25519-sha512"\)) show  newline
+(\(content-hash) show ( ) show ("..."\)) show  newline
+(\(signature) show ( ) show ("..."\)\)\)) show  newline
+ newline
+ newline
+(seal-subscribe) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(Subscribe) show ( ) show (to) show ( ) show (sealed) show ( ) show (releases) show ( ) show (from) show ( ) show (a) show ( ) show (remote) show ( ) show (source.) show ( ) show (Pull) show ( ) show (what) show ( ) show (others) show ( ) show (have) show  newline
+(published,) show ( ) show (verify) show ( ) show (it) show ( ) show (cryptographically,) show ( ) show (trust) show ( ) show (nothing) show ( ) show (until) show ( ) show (proven.) show  newline
+ newline
+ newline
+(\(seal-subscribe) show ( ) show (remote) show  newline
+(target:) show ( ) show (local-path) show  newline
+(verify-key:) show ( ) show (public-key\)) show  newline
+ newline
+(Parameters:) show  newline
+ newline
+ newline
+(Parameter) show ( ) show (Description) show  newline
+(remote) show ( ) show (Source) show ( ) show (location:) show ( ) show (git) show ( ) show (remote,) show ( ) show (URL,) show ( ) show (or) show ( ) show (directory) show  newline
+(target) show ( ) show (Local) show ( ) show (path) show ( ) show (for) show ( ) show (downloaded) show ( ) show (archives) show ( ) show (\(optional\)) show  newline
+(verify-key) show ( ) show (Public) show ( ) show (key) show ( ) show (for) show ( ) show (signature) show ( ) show (verification) show ( ) show (\(optional\)) show  newline
+ newline
+(Behavior:) show  newline
+ newline
+(*) show ( ) show (Discover) show ( ) show (available) show ( ) show (releases) show ( ) show (from) show ( ) show (remote:) show ( ) show (Git) show ( ) show (remote) show ( ) show (\(list) show ( ) show (tags\),) show ( ) show (HTTP) show ( ) show (URL) show ( ) show (\(GET) show ( ) show (/releases) show ( ) show (endpoint\),) show ( ) show (Filesystem) show ( ) show (\(list) show ( ) show (.archive) show ( ) show (files\)) show  newline
+(*) show ( ) show (Download) show ( ) show (cryptographic) show ( ) show (archives) show  newline
+(*) show ( ) show (Verify) show ( ) show (each) show ( ) show (archive:) show ( ) show (check) show ( ) show (manifest) show ( ) show (structure,) show ( ) show (verify) show ( ) show (SHA-512) show ( ) show (hash) show ( ) show (of) show ( ) show (tarball,) show ( ) show (verify) show ( ) show (Ed25519) show ( ) show (signature) show ( ) show (\(if) show ( ) show (verify-key) show ( ) show (provided\)) show  newline
+(*) show ( ) show (Extract) show ( ) show (verified) show ( ) show (archives) show ( ) show (to) show ( ) show (target) show ( ) show (directory) show  newline
+(*) show ( ) show (Record) show ( ) show (subscription) show ( ) show (in) show ( ) show (audit) show ( ) show (trail:) show ( ) show (count) show ( ) show (of) show ( ) show (releases) show ( ) show (downloaded,) show ( ) show (source) show ( ) show (location,) show ( ) show (verification) show ( ) show (status) show  newline
+ newline
+(Security) show ( ) show (Consideration:) show ( ) show (Without) show ( ) show (verify-key,) show ( ) show (subscription) show ( ) show (downloads) show  newline
+(archives) show ( ) show (but) show ( ) show (cannot) show ( ) show (verify) show ( ) show (authenticity.) show ( ) show (SPKI) show ( ) show (certificate) show ( ) show (chains) show ( ) show (should) show  newline
+(be) show ( ) show (used) show ( ) show (to) show ( ) show (establish) show ( ) show (trust.) show  newline
+ newline
+ newline
+(seal-synchronize) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(Bidirectional) show ( ) show (synchronization) show ( ) show (of) show ( ) show (sealed) show ( ) show (releases.) show ( ) show (For) show ( ) show (peers) show ( ) show (who) show ( ) show (trust) show  newline
+(each) show ( ) show (other:) show ( ) show (what) show ( ) show (you) show ( ) show (have) show ( ) show (that) show ( ) show (I) show ( ) show (don't,) show ( ) show (what) show ( ) show (I) show ( ) show (have) show ( ) show (that) show ( ) show (you) show ( ) show (don't,) show  newline
+(reconcile.) show  newline
+ newline
+ newline
+(\(seal-synchronize) show ( ) show (remote) show  newline
+(direction:) show ( ) show ('both) show  newline
+(verify-key:) show ( ) show (public-key\)) show  newline
+ newline
+(Parameters:) show  newline
+ newline
+ newline
+(Parameter) show ( ) show (Description) show  newline
+(remote) show ( ) show (Sync) show ( ) show (target:) show ( ) show (git) show ( ) show (remote,) show ( ) show (URL,) show ( ) show (or) show ( ) show (directory) show  newline
+(direction) show ( ) show ('both) show ( ) show (\(default\),) show ( ) show ('push-only,) show ( ) show (or) show ( ) show ('pull-only) show  newline
+(verify-key) show ( ) show (Public) show ( ) show (key) show ( ) show (for) show ( ) show (signature) show ( ) show (verification) show ( ) show (\(optional\)) show  newline
+ newline
+(Behavior:) show  newline
+ newline
+(*) show ( ) show (Discover) show ( ) show (local) show ( ) show (and) show ( ) show (remote) show ( ) show (releases) show  newline
+(*) show ( ) show (Compare) show ( ) show (versions) show ( ) show (to) show ( ) show (determine:) show ( ) show (releases) show ( ) show (to) show ( ) show (push) show ( ) show (\(local) show ( ) show (but) show ( ) show (not) show ( ) show (remote\),) show ( ) show (releases) show ( ) show (to) show ( ) show (pull) show ( ) show (\(remote) show ( ) show (but) show ( ) show (not) show ( ) show (local\)) show  newline
+(*) show ( ) show (Execute) show ( ) show (publication) show ( ) show (for) show ( ) show (new) show ( ) show (local) show ( ) show (releases) show  newline
+(*) show ( ) show (Execute) show ( ) show (subscription) show ( ) show (for) show ( ) show (new) show ( ) show (remote) show ( ) show (releases) show  newline
+(*) show ( ) show (Record) show ( ) show (synchronization) show ( ) show (in) show ( ) show (audit) show ( ) show (trail:) show ( ) show (count) show ( ) show (pushed) show ( ) show (and) show ( ) show (pulled,) show ( ) show (remote) show ( ) show (location,) show ( ) show (direction) show  newline
+ newline
+(Use) show ( ) show (Case:) show ( ) show (Periodic) show ( ) show (sync) show ( ) show (between) show ( ) show (trusted) show ( ) show (peers) show ( ) show (in) show ( ) show (a) show ( ) show (confederation.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ARCHIVE) show ( ) show (FORMAT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Cryptographic) show ( ) show (Archive) show ( ) show (Structure) show  newline
+newpath margin ypos moveto margin 186 add ypos lineto stroke
+newline
+ newline
+ newline
+(vault-1.0.0.archive) show ( ) show (#) show ( ) show (Manifest) show ( ) show (file) show  newline
+(vault-1.0.0.archive.tar.gz) show ( ) show (#) show ( ) show (Actual) show ( ) show (tarball) show  newline
+ newline
+(Manifest) show ( ) show (S-expression:) show  newline
+ newline
+ newline
+(\(sealed-archive) show  newline
+(\(version) show ( ) show ("1.0.0"\)) show  newline
+(\(format) show ( ) show (cryptographic\)) show  newline
+(\(tarball) show ( ) show ("vault-1.0.0.archive.tar.gz"\)) show  newline
+(\(hash) show ( ) show ("sha512:..."\)) show  newline
+(\(signature) show ( ) show ("ed25519:..."\)) show  newline
+(\(timestamp) show ( ) show (1767685100\)) show  newline
+(\(sealer) show ( ) show (#${public-key-blob}\)\)) show  newline
+ newline
+(Verification) show ( ) show (Steps:) show  newline
+ newline
+(*) show ( ) show (Read) show ( ) show (manifest) show  newline
+(*) show ( ) show (Hash) show ( ) show (tarball) show ( ) show (with) show ( ) show (SHA-512) show  newline
+(*) show ( ) show (Verify) show ( ) show (hash) show ( ) show (matches) show ( ) show (manifest) show  newline
+(*) show ( ) show (Verify) show ( ) show (Ed25519) show ( ) show (signature) show ( ) show (on) show ( ) show (hash) show  newline
+(*) show ( ) show (Check) show ( ) show (SPKI) show ( ) show (authorization) show ( ) show (\(optional\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TRANSPORT) show ( ) show (IMPLEMENTATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Git) show ( ) show (Remote) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Uses) show ( ) show (git) show ( ) show (push) show ( ) show (to) show ( ) show (share) show ( ) show (tags) show  newline
+(*) show ( ) show (Optionally) show ( ) show (uploads) show ( ) show (archives) show ( ) show (as) show ( ) show (release) show ( ) show (assets) show ( ) show (\(GitHub,) show ( ) show (GitLab\)) show  newline
+(*) show ( ) show (Fetch) show ( ) show (uses) show ( ) show (git) show ( ) show (fetch) show ( ) show (+) show ( ) show (git) show ( ) show (tag) show ( ) show (-l) show  newline
+ newline
+ newline
+(HTTP) show ( ) show (Endpoint) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (POST) show ( ) show (to) show ( ) show (/releases/<version>) show ( ) show (for) show ( ) show (publication) show  newline
+(*) show ( ) show (GET) show ( ) show (/releases) show ( ) show (for) show ( ) show (discovery) show  newline
+(*) show ( ) show (Content-Type:) show ( ) show (application/x-sealed-archive) show  newline
+ newline
+ newline
+(Filesystem) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Copy) show ( ) show (archives) show ( ) show (to) show ( ) show (shared) show ( ) show (directory) show  newline
+(*) show ( ) show (Directory) show ( ) show (structure:) show ( ) show (<remote>/<archive-name>) show  newline
+(*) show ( ) show (No) show ( ) show (network) show ( ) show (required,) show ( ) show (works) show ( ) show (with) show ( ) show (NFS,) show ( ) show (USB) show ( ) show (drives,) show ( ) show (etc.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(AUDIT) show ( ) show (INTEGRATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Every) show ( ) show (replication) show ( ) show (operation) show ( ) show (creates) show ( ) show (an) show ( ) show (audit) show ( ) show (entry.) show ( ) show (No) show ( ) show (silent) show  newline
+(operations.) show ( ) show (No) show ( ) show (unattributed) show ( ) show (changes.) show ( ) show (See) show ( ) show (Memo-005) show ( ) show (for) show ( ) show (the) show ( ) show (full) show ( ) show (audit) show  newline
+(trail) show ( ) show (specification.) show  newline
+ newline
+(Each) show ( ) show (entry) show ( ) show (contains:) show  newline
+ newline
+(*) show ( ) show (Content-addressed) show ( ) show (ID:) show ( ) show (SHA-512) show ( ) show (hash) show ( ) show (of) show ( ) show (entry) show  newline
+(*) show ( ) show (Chained) show ( ) show (structure:) show ( ) show (References) show ( ) show (parent) show ( ) show (entry) show  newline
+(*) show ( ) show (SPKI) show ( ) show (principal:) show ( ) show (Public) show ( ) show (key) show ( ) show (of) show ( ) show (actor) show  newline
+(*) show ( ) show (Dual) show ( ) show (context:) show ( ) show (Human) show ( ) show (motivation) show ( ) show (+) show ( ) show (machine) show ( ) show (environment) show  newline
+(*) show ( ) show (Cryptographic) show ( ) show (seal:) show ( ) show (Ed25519) show ( ) show (signature) show  newline
+ newline
+(This) show ( ) show (provides:) show  newline
+ newline
+(*) show ( ) show (Non-repudiation:) show ( ) show (Cannot) show ( ) show (deny) show ( ) show (publication) show  newline
+(*) show ( ) show (Tamper) show ( ) show (evidence:) show ( ) show (Changes) show ( ) show (are) show ( ) show (detectable) show  newline
+(*) show ( ) show (Causality:) show ( ) show (Chain) show ( ) show (shows) show ( ) show (temporal) show ( ) show (order) show  newline
+(*) show ( ) show (Accountability:) show ( ) show (Know) show ( ) show (who) show ( ) show (published) show ( ) show (what,) show ( ) show (when,) show ( ) show (and) show ( ) show (why) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Threat) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Trusted:) show  newline
+ newline
+(*) show ( ) show (Local) show ( ) show (filesystem) show ( ) show (and) show ( ) show (vault) show  newline
+(*) show ( ) show (SPKI) show ( ) show (private) show ( ) show (keys) show ( ) show (\(your) show ( ) show (responsibility\)) show  newline
+(*) show ( ) show (Cryptographic) show ( ) show (primitives) show ( ) show (\(libsodium,) show ( ) show (audited\)) show  newline
+ newline
+(Untrusted:) show  newline
+ newline
+(*) show ( ) show (Remote) show ( ) show (repositories) show ( ) show (\(anyone) show ( ) show (can) show ( ) show (host) show ( ) show (anything\)) show  newline
+(*) show ( ) show (Network) show ( ) show (transport) show ( ) show (\(assume) show ( ) show (hostile\)) show  newline
+(*) show ( ) show (Downloaded) show ( ) show (archives) show ( ) show (\(verify) show ( ) show (before) show ( ) show (use\)) show  newline
+(*) show ( ) show (Remote) show ( ) show (publishers) show ( ) show (\(until) show ( ) show (SPKI) show ( ) show (chain) show ( ) show (verified\)) show  newline
+ newline
+(The) show ( ) show (key) show ( ) show (insight:) show ( ) show (trust) show ( ) show (the) show ( ) show (math,) show ( ) show (not) show ( ) show (the) show ( ) show (infrastructure.) show ( ) show (A) show ( ) show (verified) show  newline
+(signature) show ( ) show (is) show ( ) show (proof) show ( ) show (regardless) show ( ) show (of) show ( ) show (how) show ( ) show (it) show ( ) show (arrived.) show  newline
+ newline
+ newline
+(Attack) show ( ) show (Scenarios) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Malicious) show ( ) show (Archive) show ( ) show (Substitution) show ( ) show (-) show ( ) show (Attacker) show ( ) show (replaces) show ( ) show (archive) show ( ) show (on) show ( ) show (remote) show ( ) show (-) show ( ) show (Mitigation:) show ( ) show (Signature) show ( ) show (verification) show ( ) show (fails) show  newline
+(*) show ( ) show (Version) show ( ) show (Rollback) show ( ) show (Attack) show ( ) show (-) show ( ) show (Attacker) show ( ) show (removes) show ( ) show (newer) show ( ) show (releases) show ( ) show (-) show ( ) show (Mitigation:) show ( ) show (Audit) show ( ) show (trail) show ( ) show (shows) show ( ) show (previous) show ( ) show (versions) show  newline
+(*) show ( ) show (Unauthorized) show ( ) show (Publication) show ( ) show (-) show ( ) show (Attacker) show ( ) show (publishes) show ( ) show (fake) show ( ) show (release) show ( ) show (-) show ( ) show (Mitigation:) show ( ) show (SPKI) show ( ) show (authorization) show ( ) show (chain) show ( ) show (required) show  newline
+(*) show ( ) show (Transport) show ( ) show (Tampering) show ( ) show (-) show ( ) show (Network) show ( ) show (attacker) show ( ) show (modifies) show ( ) show (download) show ( ) show (-) show ( ) show (Mitigation:) show ( ) show (Hash) show ( ) show (and) show ( ) show (signature) show ( ) show (verification) show  newline
+ newline
+(Each) show ( ) show (attack) show ( ) show (is) show ( ) show (addressed) show ( ) show (at) show ( ) show (the) show ( ) show (cryptographic) show ( ) show (layer) show ( ) show (rather) show ( ) show (than) show ( ) show (the) show  newline
+(transport) show ( ) show (layer,) show ( ) show (ensuring) show ( ) show (protection) show ( ) show (regardless) show ( ) show (of) show ( ) show (network) show ( ) show (conditions.) show  newline
+ newline
+ newline
+(Best) show ( ) show (Practices) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Always) show ( ) show (verify) show ( ) show (signatures) show ( ) show (-) show ( ) show (Use) show ( ) show (verify-key) show ( ) show (parameter) show  newline
+(*) show ( ) show (Check) show ( ) show (SPKI) show ( ) show (certificates) show ( ) show (-) show ( ) show (Verify) show ( ) show (authorization) show ( ) show (chain) show  newline
+(*) show ( ) show (Maintain) show ( ) show (audit) show ( ) show (trail) show ( ) show (-) show ( ) show (Detect) show ( ) show (suspicious) show ( ) show (patterns) show  newline
+(*) show ( ) show (Use) show ( ) show (HTTPS) show ( ) show (for) show ( ) show (HTTP) show ( ) show (transport) show ( ) show (-) show ( ) show (Prevent) show ( ) show (network) show ( ) show (attacks) show  newline
+(*) show ( ) show (Backup) show ( ) show (signing) show ( ) show (keys) show ( ) show (-) show ( ) show (Use) show ( ) show (Shamir) show ( ) show (secret) show ( ) show (sharing) show  newline
+ newline
+(Defense) show ( ) show (in) show ( ) show (depth:) show ( ) show (cryptographic) show ( ) show (verification) show ( ) show (is) show ( ) show (primary,) show ( ) show (but) show ( ) show (transport) show  newline
+(security) show ( ) show (and) show ( ) show (operational) show ( ) show (practices) show ( ) show (add) show ( ) show (additional) show ( ) show (layers.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show ( ) show (NOTES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Helper) show ( ) show (Functions) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(tag-exists?) show ( ) show (tag-name\)) show ( ) show (;) show ( ) show (Check) show ( ) show (if) show ( ) show (git) show ( ) show (tag) show ( ) show (exists) show  newline
+(\(git-remote?) show ( ) show (str\)) show ( ) show (;) show ( ) show (Detect) show ( ) show (git) show ( ) show (remote) show ( ) show (format) show  newline
+(\(http-url?) show ( ) show (str\)) show ( ) show (;) show ( ) show (Detect) show ( ) show (HTTP/HTTPS) show ( ) show (URL) show  newline
+(\(publish-filesystem) show ( ) show (remote) show ( ) show (version) show ( ) show (archive\)) show ( ) show (;) show ( ) show (Copy) show ( ) show (to) show ( ) show (directory) show  newline
+(\(publish-http) show ( ) show (url) show ( ) show (version) show ( ) show (archive\)) show ( ) show (;) show ( ) show (POST) show ( ) show (to) show ( ) show (endpoint) show  newline
+ newline
+ newline
+(Dependencies) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Git:) show ( ) show (Version) show ( ) show (control) show ( ) show (and) show ( ) show (tag) show ( ) show (management) show  newline
+(*) show ( ) show (libsodium:) show ( ) show (Ed25519) show ( ) show (signatures,) show ( ) show (SHA-512) show ( ) show (hashing) show  newline
+(*) show ( ) show (\(chicken) show ( ) show (process\):) show ( ) show (Run) show ( ) show (git) show ( ) show (commands) show  newline
+(*) show ( ) show (\(chicken) show ( ) show (file\):) show ( ) show (Filesystem) show ( ) show (operations) show  newline
+(*) show ( ) show (\(chicken) show ( ) show (irregex\):) show ( ) show (URL/remote) show ( ) show (detection) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(COMPATIBILITY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (specification) show ( ) show (builds) show ( ) show (on) show ( ) show (existing) show ( ) show (standards) show ( ) show (rather) show ( ) show (than) show ( ) show (inventing) show  newline
+(new) show ( ) show (ones:) show  newline
+ newline
+ newline
+(Technology) show ( ) show (Role) show  newline
+(Git) show ( ) show (tags) show ( ) show (Standard) show ( ) show (version) show ( ) show (control) show ( ) show (operations) show  newline
+(Git) show ( ) show (bundles) show ( ) show (Portable) show ( ) show (repository) show ( ) show (format) show  newline
+(Tarball) show ( ) show (archives) show ( ) show (Universal) show ( ) show (archive) show ( ) show (format) show  newline
+(S-expressions) show ( ) show (LISP/Scheme) show ( ) show (readable) show ( ) show (manifests) show  newline
+(SDSI/SPKI) show ( ) show (Authorization) show ( ) show (certificates) show  newline
+ newline
+(Future) show ( ) show (extensions) show ( ) show (may) show ( ) show (add:) show  newline
+ newline
+(*) show ( ) show (IPFS) show ( ) show (transport:) show ( ) show (Content-addressed) show ( ) show (distribution) show  newline
+(*) show ( ) show (Tor) show ( ) show (hidden) show ( ) show (services:) show ( ) show (Anonymous) show ( ) show (publication) show  newline
+(*) show ( ) show (Encrypted) show ( ) show (archives:) show ( ) show (Confidential) show ( ) show (distribution) show  newline
+(*) show ( ) show (Multi-signature) show ( ) show (releases:) show ( ) show (Threshold) show ( ) show (authorization) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TEST) show ( ) show (COVERAGE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(See) show ( ) show (test-replication.scm:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Test) show ( ) show (seal-publish) show ( ) show (to) show ( ) show (filesystem) show  newline
+(\(seal-publish) show ( ) show ("1.0.0") show  newline
+(remote:) show ( ) show ("/tmp/cyberspace-publish-test") show  newline
+(message:) show ( ) show ("Published) show ( ) show (to) show ( ) show (filesystem"\)) show  newline
+(;;) show ( ) show (Verify) show ( ) show (archive) show ( ) show (exists) show  newline
+(\(file-exists?) show ( ) show ("/tmp/cyberspace-publish-test/vault-1.0.0.archive"\)) show  newline
+(;;) show ( ) show (Verify) show ( ) show (audit) show ( ) show (entry) show ( ) show (created) show  newline
+(\(audit-read) show ( ) show (sequence:) show ( ) show (1\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (SDSI/SPKI:) show ( ) show (RFC) show ( ) show (2693,) show ( ) show (RFC) show ( ) show (2692) show  newline
+(*) show ( ) show (Content-Addressed) show ( ) show (Storage:) show ( ) show (Git) show ( ) show (internals,) show ( ) show (IPFS) show  newline
+(*) show ( ) show (Semantic) show ( ) show (Versioning:) show ( ) show (semver.org) show  newline
+(*) show ( ) show (Ed25519:) show ( ) show (Bernstein) show ( ) show (et) show ( ) show (al.,) show ( ) show (2006) show  newline
+(*) show ( ) show (Audit) show ( ) show (Trails:) show ( ) show (Memo-005) show ( ) show (\(Cryptographic) show ( ) show (Audit) show ( ) show (Trail\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(2026-01-19) show ( ) show (-) show ( ) show (Expanded) show ( ) show (narrative,) show ( ) show (fixed) show ( ) show (formatting) show  newline
+ newline
+(2026-01-05) show ( ) show (-) show ( ) show (Initial) show ( ) show (specification:) show ( ) show (seal-publish,) show ( ) show (seal-subscribe,) show  newline
+(seal-synchronize) show ( ) show (with) show ( ) show (full) show ( ) show (audit) show ( ) show (trail) show ( ) show (integration) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

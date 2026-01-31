@@ -15,589 +15,793 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0059: Quantum Day Migration Plan) show newline
-() show newline
-(Date: January 2026 \(2026-01-24T00:00:00Z\)) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The TCB now has post-quantum signatures. ML-DSA-65 and) show newline
-(SLH-DSA-SHAKE-256s are implemented, tested, and deployed. This Memo) show newline
-(specifies the operational migration plan: how to transition existing) show newline
-(Ed25519 keys, certificates, and vaults to quantum-resistant cryptography) show newline
-(before Q-Day renders them forgeable.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(STATUS: IMPLEMENTATION COMPLETE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(As of 2026-01-24, the SPKI TCB includes:) show newline
-() show newline
-(  * ML-DSA-65 \(FIPS 204\): Lattice-based signatures, 3.3KB signatures) show newline
-(  * SLH-DSA-SHAKE-256s \(FIPS 205\): Hash-based signatures, 29KB signatures) show newline
-(  * Hybrid signature support: Ed25519 + PQ for transition period) show newline
-(  * liboqs integration: Built WITHOUT OpenSSL dependency) show newline
-(  * Comprehensive test suite: All tests passing) show newline
-() show newline
-(The theory is in Memo-048. This memo is about execution.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(THE MIGRATION PROBLEM) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Every existing Cyberspace installation has:) show newline
-() show newline
-(  * Ed25519 realm keys in ~/.cyberspace/vault/keystore) show newline
-(  * Ed25519-signed capability certificates) show newline
-(  * Ed25519-signed audit trail entries) show newline
-(  * Ed25519-signed sealed releases) show newline
-() show newline
-(After Q-Day, all of these become forgeable. Migration is not optional.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MIGRATION PHASES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Phase 1: Hybrid Keys \(Now - Q-Day minus 3 years\)) show newline
-(------------------------------------------------) show newline
-() show newline
-(Generate hybrid keys that sign with BOTH Ed25519 and post-quantum) show newline
-(algorithms:) show newline
-() show newline
-() show newline
-(    ;; In keystore initialization) show newline
-(    \(define \(generate-hybrid-keypair\)) show newline
-(      \(let \(\(ed25519-pair \(ed25519-keypair\)\)) show newline
-(            \(mldsa-pair \(mldsa-keypair\)\)\)) show newline
-(        \(keystore-add-key! 'ed25519 ed25519-pair\)) show newline
-(        \(keystore-add-key! 'ml-dsa-65 mldsa-pair\)) show newline
-(        \(keystore-set-mode! 'hybrid-sign\)\)\)) show newline
-() show newline
-(Hybrid signatures verify if EITHER signature is valid during transition,) show newline
-(but BOTH signatures are created. This allows:) show newline
-() show newline
-(  * Legacy verifiers \(Ed25519-only\) still work) show newline
-(  * Future verifiers \(PQ-capable\) get quantum resistance) show newline
-(  * No flag day: gradual deployment) show newline
-() show newline
-(Action items:) show newline
-() show newline
-(  * Run: cyberspace-vault upgrade-to-hybrid) show newline
-(  * Verify: cyberspace-vault list-keys shows both key types) show newline
-(  * Test: Sign and verify a test capability) show newline
-() show newline
-(Existing Ed25519 keys remain functional. New signatures include both) show newline
-(algorithms.) show newline
-() show newline
-() show newline
-(Phase 2: PQ Certificate Chains \(Q-Day minus 2 years\)) show newline
-(----------------------------------------------------) show newline
-() show newline
-(Start issuing PQ-only certificates for NEW delegations:) show newline
-() show newline
-() show newline
-(    ;; When delegating capability) show newline
-(    \(cert-create) show newline
-(      \(issuer-key \(keystore-get-key 'ml-dsa-65\)\)  ; Use PQ key) show newline
-(      \(subject-key subject-mldsa-pubkey\)) show newline
-(      \(tag capability-tag\)) show newline
-(      \(signature-algorithm 'ml-dsa-65\)\)) show newline
-() show newline
-(Legacy certificates remain valid. Capability chains can mix:) show newline
-() show newline
-() show newline
-(    [Ed25519 cert] -> [Hybrid cert] -> [ML-DSA cert]) show newline
-() show newline
-(Each link verified independently. The chain gains quantum resistance as) show newline
-(PQ links are added.) show newline
-() show newline
-() show newline
-(Phase 3: Mandatory PQ \(Q-Day minus 1 year\)) show newline
-(------------------------------------------) show newline
-() show newline
-(Require at least ONE post-quantum signature in every capability chain:) show newline
-() show newline
-() show newline
-(    ;; Verification policy update) show newline
-(    \(define \(verify-cert-chain chain\)) show newline
-(      \(let \(\(has-pq? \(any \(lambda \(cert\)) show newline
-(                            \(memq \(cert-algorithm cert\)) show newline
-(                                  '\(ml-dsa-65 slh-dsa-shake-256s hybrid\)\)\)) show newline
-(                          chain\)\)\)) show newline
-(        \(unless has-pq?) show newline
-(          \(error "Capability chain requires post-quantum signature"\)\)\)\)) show newline
-() show newline
-(This forces migration of critical paths while maintaining backwards) show newline
-(compatibility for leaf nodes.) show newline
-() show newline
-(Action items:) show newline
-() show newline
-(  * Audit all capability chains: cyberspace-audit check-pq-coverage) show newline
-(  * Re-sign pure-Ed25519 chains with hybrid mode) show newline
-(  * Update delegation policies to prefer PQ recipients) show newline
-() show newline
-() show newline
-(Phase 4: Ed25519 Sunset \(Q-Day\)) show newline
-(-------------------------------) show newline
-() show newline
-(When quantum computers threaten Ed25519 \(estimated 2030-2035\):) show newline
-() show newline
-(  * Ed25519 verification disabled for NEW operations) show newline
-(  * Hybrid signatures verify ONLY the PQ component) show newline
-(  * Pure Ed25519 certificates rejected) show newline
-(  * Historical audit trail remains \(for forensics, not trust\)) show newline
-() show newline
-() show newline
-(    ;; Q-Day configuration) show newline
-(    \(keystore-set-verification-policy!) show newline
-(      '\(ml-dsa-65 slh-dsa-shake-256s\)  ; Only PQ algorithms trusted) show newline
-(      '\(ed25519\)\)                      ; Ed25519 rejected) show newline
-() show newline
-(Realms that failed to migrate become read-only. Their capabilities) show newline
-(cannot be verified for new operations, but historical records persist.) show newline
-() show newline
-() show newline
-(Phase 5: Pure PQ \(Q-Day + 1 year\)) show newline
-(---------------------------------) show newline
-() show newline
-(Complete transition to post-quantum-only:) show newline
-() show newline
-(  * Remove Ed25519 from keystore except archival keys) show newline
-(  * All new certificates use ML-DSA-65 or SLH-DSA) show newline
-(  * Hybrid mode deprecated) show newline
-(  * Ed25519 support removed from TCB in next major version) show newline
-() show newline
-(Cyberspace survives. The capability chain is quantum-resistant.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ALGORITHM SELECTION GUIDE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(ML-DSA-65 \(Default Choice\)) show newline
-(--------------------------) show newline
-() show newline
-(Use for:) show newline
-() show newline
-(  * Capability certificates \(frequent issuance\)) show newline
-(  * Agent delegation \(short-lived\)) show newline
-(  * Audit entries \(high volume\)) show newline
-(  * Any certificate with < 10 year lifetime) show newline
-() show newline
-(Properties:) show newline
-() show newline
-() show newline
-(  Metric      Value                          ) show newline
-(  Public key  1,952 bytes                    ) show newline
-(  Signature   3,309 bytes                    ) show newline
-(  Security    NIST Level 3 \(128-bit PQ\)      ) show newline
-(  Speed       Fast signing & verification    ) show newline
-(  Basis       Lattice problems \(Module-LWE\)  ) show newline
-() show newline
-() show newline
-(SLH-DSA-SHAKE-256s \(Conservative Choice\)) show newline
-(----------------------------------------) show newline
-() show newline
-(Use for:) show newline
-() show newline
-(  * Realm identity keys \(root of trust\)) show newline
-(  * Sealed releases \(archival\)) show newline
-(  * Long-term commitments \(> 10 years\)) show newline
-(  * Maximum security requirement) show newline
-() show newline
-(Properties:) show newline
-() show newline
-() show newline
-(  Metric      Value                               ) show newline
-(  Public key  64 bytes                            ) show newline
-(  Signature   29,792 bytes                        ) show newline
-(  Security    NIST Level 5 \(128-bit PQ\)           ) show newline
-(  Speed       Slow signing, fast verification     ) show newline
-(  Basis       SHAKE-256 hash only \(conservative\)  ) show newline
-() show newline
-(When in doubt, use ML-DSA-65. Only use SLH-DSA when you need maximum) show newline
-(conservatism or archival guarantees.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(OPERATIONAL PROCEDURES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Generate New Hybrid Keystore) show newline
-(----------------------------) show newline
-() show newline
-() show newline
-(    # Backup existing keystore) show newline
-(    cp -r ~/.cyberspace/vault ~/.cyberspace/vault.ed25519.backup) show newline
-(    # Generate hybrid keys \(Ed25519 + ML-DSA-65\)) show newline
-(    cyberspace-vault init-hybrid) show newline
-(    # Verify keys present) show newline
-(    cyberspace-vault list-keys) show newline
-(    # Expected output:) show newline
-(    #   realm-ed25519: ed25519:7f3a2b4c...) show newline
-(    #   realm-ml-dsa-65: ml-dsa-65:8a9b0c1d...) show newline
-(    #   mode: hybrid-sign) show newline
-() show newline
-() show newline
-(Migrate Existing Vault) show newline
-(----------------------) show newline
-() show newline
-() show newline
-(    # Add PQ key to existing vault) show newline
-(    cyberspace-vault add-pq-key --algorithm ml-dsa-65) show newline
-(    # Enable hybrid signing) show newline
-(    cyberspace-vault set-mode hybrid) show newline
-(    # Test hybrid signature) show newline
-(    echo 'test message' | cyberspace-vault sign --hybrid) show newline
-(    # Should produce signature with both Ed25519 and ML-DSA components) show newline
-() show newline
-() show newline
-(Re-sign Critical Certificates) show newline
-(-----------------------------) show newline
-() show newline
-() show newline
-(    # List pure-Ed25519 certificates) show newline
-(    cyberspace-cert list --algorithm ed25519 --critical-path) show newline
-(    # Re-sign with hybrid) show newline
-(    for cert in $\(cyberspace-cert list --algorithm ed25519 --format ids\); do) show newline
-(      cyberspace-cert resign --id $cert --algorithm hybrid) show newline
-(    done) show newline
-(    # Verify PQ coverage) show newline
-(    cyberspace-audit check-pq-coverage) show newline
-() show newline
-() show newline
-(Verify PQ Implementation) show newline
-(------------------------) show newline
-() show newline
-() show newline
-(    # Run TCB test suite) show newline
-(    cd ~/cyberspace/spki/tcb) show newline
-(    dune runtest) show newline
-(    # Expected output:) show newline
-(    #   test_tcb.exe: ✓ ALL TESTS PASSED) show newline
-(    #   test_signature.exe: ✓ ALL TESTS PASSED) show newline
-(    #   test_pq.exe: ✓ ALL TESTS PASSED) show newline
-(    #     - ML-DSA-65: keygen, sign, verify: OK) show newline
-(    #     - SLH-DSA: keygen, sign, verify: OK) show newline
-(    #     - Invalid signature rejection: OK) show newline
-() show newline
-() show newline
-(Monitor Migration Progress) show newline
-(--------------------------) show newline
-() show newline
-() show newline
-(    # Capability chain coverage report) show newline
-(    cyberspace-audit pq-coverage-report) show newline
-(    # Example output:) show newline
-(    #   Total capability chains: 1,247) show newline
-(    #   Pure Ed25519: 89 \(7.1%\) ⚠️) show newline
-(    #   Hybrid: 342 \(27.4%\)) show newline
-(    #   Pure PQ: 816 \(65.5%\) ✓) show newline
-(    #) show newline
-(    #   Action required: 89 chains need PQ signatures) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ROLLBACK STRATEGY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(If post-quantum implementation has issues:) show newline
-() show newline
-() show newline
-(Immediate Rollback) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    # Disable PQ signing \(keep Ed25519 only\)) show newline
-(    cyberspace-vault set-mode ed25519-only) show newline
-(    # This maintains compatibility but loses quantum resistance) show newline
-(    # Use only in emergency) show newline
-() show newline
-() show newline
-(Partial Rollback) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    # Keep hybrid mode but prefer Ed25519) show newline
-(    cyberspace-vault set-mode hybrid --prefer ed25519) show newline
-(    # Both signatures still created, but Ed25519 is primary for verification) show newline
-(    # Provides fallback while keeping PQ signatures for future) show newline
-() show newline
-(Rollback preserves existing PQ signatures. You can re-enable PQ) show newline
-(verification later without re-signing.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TESTING STRATEGY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Unit Tests) show newline
-(----------) show newline
-() show newline
-(TCB test suite \(test_pq.ml\) validates:) show newline
-() show newline
-(  * ML-DSA-65 keypair generation from system randomness) show newline
-(  * SLH-DSA keypair generation) show newline
-(  * Signature creation and verification) show newline
-(  * Invalid signature rejection) show newline
-(  * Backward compatibility with Ed25519) show newline
-() show newline
-() show newline
-(    # Run continuously during development) show newline
-(    cd ~/cyberspace/spki/tcb && dune runtest) show newline
-() show newline
-() show newline
-(Integration Tests) show newline
-(-----------------) show newline
-() show newline
-(Test capability delegation across algorithm boundaries:) show newline
-() show newline
-() show newline
-(    ;; Create mixed chain: Ed25519 -> Hybrid -> ML-DSA) show newline
-(    \(define chain) show newline
-(      \(list) show newline
-(        \(cert-create issuer-ed25519 subject-hybrid \(read-tag\)\)) show newline
-(        \(cert-create issuer-hybrid subject-mldsa \(read-tag\)\)\)\)) show newline
-(    ;; Verify chain validates) show newline
-(    \(verify-cert-chain chain\)) show newline
-() show newline
-() show newline
-(Interoperability Tests) show newline
-(----------------------) show newline
-() show newline
-(Test against other SPKI implementations:) show newline
-() show newline
-(  * Can legacy Ed25519-only verifiers handle hybrid certs? \(YES - they verify Ed25519 component\)) show newline
-(  * Can PQ-only verifiers handle hybrid certs? \(YES - they verify PQ component\)) show newline
-(  * Do certificate chains mix algorithms correctly? \(YES - each link verified independently\)) show newline
-() show newline
-() show newline
-(Performance Tests) show newline
-(-----------------) show newline
-() show newline
-(Measure signing/verification latency:) show newline
-() show newline
-() show newline
-(    ;; Benchmark signing operations) show newline
-(    \(time) show newline
-(      \(let loop \(\(i 0\)\)) show newline
-(        \(when \(< i 1000\)) show newline
-(          \(mldsa-sign test-message test-key\)) show newline
-(          \(loop \(+ i 1\)\)\)\)\)) show newline
-(    ;; Expected: ~0.5ms per ML-DSA signature on modern hardware) show newline
-(    ;; SLH-DSA: ~50ms per signature \(acceptable for infrequent operations\)) show newline
-() show newline
-() show newline
-(Stress Tests) show newline
-(------------) show newline
-() show newline
-(Verify scaling with large certificate chains:) show newline
-() show newline
-() show newline
-(    # Generate chain with 100 links, all PQ signatures) show newline
-(    cyberspace-test generate-chain --length 100 --algorithm ml-dsa-65) show newline
-(    # Verify chain validates in reasonable time) show newline
-(    # Expected: < 100ms for 100-link ML-DSA chain) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Harvest-Now-Forge-Later Defense) show newline
-(-------------------------------) show newline
-() show newline
-(Hybrid signatures defend against harvest attacks:) show newline
-() show newline
-(  * Attacker records Ed25519 signature today) show newline
-(  * Attacker breaks Ed25519 with quantum computer on Q-Day) show newline
-(  * Attacker CANNOT forge because ML-DSA signature still secure) show newline
-(  * Defense works even if Ed25519 is broken retroactively) show newline
-() show newline
-(This is why hybrid mode is critical during transition: it provides) show newline
-(quantum resistance even for signatures created before migration.) show newline
-() show newline
-() show newline
-(Algorithm Agility Risks) show newline
-(-----------------------) show newline
-() show newline
-(Supporting multiple algorithms increases attack surface:) show newline
-() show newline
-(  * More code paths = more bugs) show newline
-(  * Downgrade attacks if implementation allows algorithm negotiation) show newline
-(  * Version confusion if different nodes support different algorithms) show newline
-() show newline
-(Mitigations:) show newline
-() show newline
-(  * No algorithm negotiation: verifiers accept listed algorithms, signers choose based on policy) show newline
-(  * Explicit algorithm in certificate: \(signature-algorithm 'ml-dsa-65\)) show newline
-(  * Conservative verification: if ANY supported algorithm validates, accept) show newline
-() show newline
-() show newline
-(Key Management) show newline
-(--------------) show newline
-() show newline
-(PQ keys are larger than Ed25519:) show newline
-() show newline
-() show newline
-(  Key Type   Private Key Size  Backup Impact  ) show newline
-(  Ed25519    64 bytes          trivial        ) show newline
-(  ML-DSA-65  4,032 bytes       63x larger     ) show newline
-(  SLH-DSA    128 bytes         2x larger      ) show newline
-() show newline
-(Implications:) show newline
-() show newline
-(  * Paper backups harder \(4KB vs 64B seed\)) show newline
-(  * Hardware security modules may need firmware updates) show newline
-(  * Key splitting schemes need larger shares) show newline
-() show newline
-(Solution: Derive ML-DSA keys from 32-byte seed, store seed instead of) show newline
-(full key. This maintains small backup size.) show newline
-() show newline
-() show newline
-(Timing Side Channels) show newline
-(--------------------) show newline
-() show newline
-(Post-quantum algorithms are timing-sensitive:) show newline
-() show newline
-(  * Lattice operations \(ML-DSA\) use rejection sampling) show newline
-(  * Hash operations \(SLH-DSA\) are constant-time by construction) show newline
-(  * liboqs claims constant-time implementations) show newline
-() show newline
-(Testing: Profile signing operations for variance. Large variance) show newline
-(suggests timing leaks. ML-DSA rejection sampling should be bounded, not) show newline
-(unbounded.) show newline
-() show newline
-() show newline
-(Dependency Trust) show newline
-(----------------) show newline
-() show newline
-(TCB now depends on two crypto libraries:) show newline
-() show newline
-() show newline
-(  Library    LOC \(approx\)  Audit Status      Concerns         ) show newline
-(  libsodium  50K           Well-audited      Trusted          ) show newline
-(  liboqs     200K          Research-quality  Newer, evolving  ) show newline
-() show newline
-(Risk mitigation:) show newline
-() show newline
-(  * liboqs built WITHOUT OpenSSL \(no transitive dependency\)) show newline
-(  * Only use NIST-standardized algorithms \(ML-DSA, SLH-DSA\)) show newline
-(  * Pin liboqs version, audit before upgrades) show newline
-(  * Hybrid signatures provide defense-in-depth: even if liboqs has bug, Ed25519 component still validates during transition) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TIMELINE RECOMMENDATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Immediate \(2026\)) show newline
-(----------------) show newline
-() show newline
-(  * Enable hybrid signing for all new vaults) show newline
-(  * Add PQ keys to existing high-value vaults) show newline
-(  * Begin re-signing critical capability chains) show newline
-() show newline
-() show newline
-(Near-term \(2027\)) show newline
-(----------------) show newline
-() show newline
-(  * Require hybrid or pure-PQ for root realm keys) show newline
-(  * Mandate at least one PQ signature per capability chain) show newline
-(  * Deprecate pure-Ed25519 for new certificates) show newline
-() show newline
-() show newline
-(Medium-term \(2028-2030\)) show newline
-(-----------------------) show newline
-() show newline
-(  * Pure-PQ becomes default for new vaults) show newline
-(  * Ed25519 verification only for historical audit) show newline
-(  * Monitor NIST PQC standardization updates) show newline
-() show newline
-() show newline
-(Q-Day Response) show newline
-(--------------) show newline
-() show newline
-(  * If quantum threat emerges: immediately disable Ed25519 verification) show newline
-(  * Hybrid signatures fall back to PQ component only) show newline
-(  * Unmigrated vaults freeze \(read-only\)) show newline
-(  * Post-migration vaults continue operating) show newline
-() show newline
-(The migration MUST complete before Q-Day. Reacting after the break is) show newline
-(too late: attackers already harvested your signatures.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(VERIFICATION CHECKLIST) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Before declaring migration complete:) show newline
-() show newline
-() show newline
-(    ☐ TCB tests passing \(dune runtest\)) show newline
-(    ☐ Vault has hybrid or pure-PQ keys) show newline
-(    ☐ All critical capability chains have ≥1 PQ signature) show newline
-(    ☐ Signing operations succeed with PQ algorithms) show newline
-(    ☐ Verification accepts PQ signatures) show newline
-(    ☐ Backup includes PQ keys \(encrypted\)) show newline
-(    ☐ Audit trail shows PQ signature usage) show newline
-(    ☐ Interoperability tested with legacy verifiers) show newline
-(    ☐ Performance acceptable \(< 1ms for ML-DSA signing\)) show newline
-(    ☐ Rollback procedure tested and documented) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Memo-048: Post-Quantum Signatures \(theory and design\)) show newline
-(  * FIPS 204: Module-Lattice-Based Digital Signature Standard) show newline
-(  * FIPS 205: Stateless Hash-Based Digital Signature Standard) show newline
-(  * PQ-IMPLEMENTATION.md: TCB implementation details) show newline
-(  * liboqs documentation: https://github.com/open-quantum-safe/liboqs) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CONCLUSION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Post-quantum cryptography is not a future problem. It's a migration) show newline
-(problem happening now. Every Ed25519 signature created today is a) show newline
-(potential forgery after Q-Day.) show newline
-() show newline
-(The implementation is complete. The tools exist. The question is not) show newline
-('can we migrate' but 'will we migrate in time.') show newline
-() show newline
-(Harvest-now-forge-later is not theoretical. Adversaries are already) show newline
-(recording traffic. The clock is ticking.) show newline
-() show newline
-(Migrate before Q-Day. Not after.) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0059:) show ( ) show (Quantum) show ( ) show (Day) show ( ) show (Migration) show ( ) show (Plan) show  newline
+ newline
+(Date:) show ( ) show (January) show ( ) show (2026) show ( ) show (\(2026-01-24T00:00:00Z\)) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (TCB) show ( ) show (now) show ( ) show (has) show ( ) show (post-quantum) show ( ) show (signatures.) show ( ) show (ML-DSA-65) show ( ) show (and) show  newline
+(SLH-DSA-SHAKE-256s) show ( ) show (are) show ( ) show (implemented,) show ( ) show (tested,) show ( ) show (and) show ( ) show (deployed.) show ( ) show (This) show ( ) show (Memo) show  newline
+(specifies) show ( ) show (the) show ( ) show (operational) show ( ) show (migration) show ( ) show (plan:) show ( ) show (how) show ( ) show (to) show ( ) show (transition) show ( ) show (existing) show  newline
+(Ed25519) show ( ) show (keys,) show ( ) show (certificates,) show ( ) show (and) show ( ) show (vaults) show ( ) show (to) show ( ) show (quantum-resistant) show ( ) show (cryptography) show  newline
+(before) show ( ) show (Q-Day) show ( ) show (renders) show ( ) show (them) show ( ) show (forgeable.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(STATUS:) show ( ) show (IMPLEMENTATION) show ( ) show (COMPLETE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(As) show ( ) show (of) show ( ) show (2026-01-24,) show ( ) show (the) show ( ) show (SPKI) show ( ) show (TCB) show ( ) show (includes:) show  newline
+ newline
+(*) show ( ) show (ML-DSA-65) show ( ) show (\(FIPS) show ( ) show (204\):) show ( ) show (Lattice-based) show ( ) show (signatures,) show ( ) show (3.3KB) show ( ) show (signatures) show  newline
+(*) show ( ) show (SLH-DSA-SHAKE-256s) show ( ) show (\(FIPS) show ( ) show (205\):) show ( ) show (Hash-based) show ( ) show (signatures,) show ( ) show (29KB) show ( ) show (signatures) show  newline
+(*) show ( ) show (Hybrid) show ( ) show (signature) show ( ) show (support:) show ( ) show (Ed25519) show ( ) show (+) show ( ) show (PQ) show ( ) show (for) show ( ) show (transition) show ( ) show (period) show  newline
+(*) show ( ) show (liboqs) show ( ) show (integration:) show ( ) show (Built) show ( ) show (WITHOUT) show ( ) show (OpenSSL) show ( ) show (dependency) show  newline
+(*) show ( ) show (Comprehensive) show ( ) show (test) show ( ) show (suite:) show ( ) show (All) show ( ) show (tests) show ( ) show (passing) show  newline
+ newline
+(The) show ( ) show (theory) show ( ) show (is) show ( ) show (in) show ( ) show (Memo-048.) show ( ) show (This) show ( ) show (memo) show ( ) show (is) show ( ) show (about) show ( ) show (execution.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(THE) show ( ) show (MIGRATION) show ( ) show (PROBLEM) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Every) show ( ) show (existing) show ( ) show (Cyberspace) show ( ) show (installation) show ( ) show (has:) show  newline
+ newline
+(*) show ( ) show (Ed25519) show ( ) show (realm) show ( ) show (keys) show ( ) show (in) show ( ) show (~/.cyberspace/vault/keystore) show  newline
+(*) show ( ) show (Ed25519-signed) show ( ) show (capability) show ( ) show (certificates) show  newline
+(*) show ( ) show (Ed25519-signed) show ( ) show (audit) show ( ) show (trail) show ( ) show (entries) show  newline
+(*) show ( ) show (Ed25519-signed) show ( ) show (sealed) show ( ) show (releases) show  newline
+ newline
+(After) show ( ) show (Q-Day,) show ( ) show (all) show ( ) show (of) show ( ) show (these) show ( ) show (become) show ( ) show (forgeable.) show ( ) show (Migration) show ( ) show (is) show ( ) show (not) show ( ) show (optional.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MIGRATION) show ( ) show (PHASES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Phase) show ( ) show (1:) show ( ) show (Hybrid) show ( ) show (Keys) show ( ) show (\(Now) show ( ) show (-) show ( ) show (Q-Day) show ( ) show (minus) show ( ) show (3) show ( ) show (years\)) show  newline
+newpath margin ypos moveto margin 288 add ypos lineto stroke
+newline
+ newline
+(Generate) show ( ) show (hybrid) show ( ) show (keys) show ( ) show (that) show ( ) show (sign) show ( ) show (with) show ( ) show (BOTH) show ( ) show (Ed25519) show ( ) show (and) show ( ) show (post-quantum) show  newline
+(algorithms:) show  newline
+ newline
+ newline
+(;;) show ( ) show (In) show ( ) show (keystore) show ( ) show (initialization) show  newline
+(\(define) show ( ) show (\(generate-hybrid-keypair\)) show  newline
+(\(let) show ( ) show (\(\(ed25519-pair) show ( ) show (\(ed25519-keypair\)\)) show  newline
+(\(mldsa-pair) show ( ) show (\(mldsa-keypair\)\)\)) show  newline
+(\(keystore-add-key!) show ( ) show ('ed25519) show ( ) show (ed25519-pair\)) show  newline
+(\(keystore-add-key!) show ( ) show ('ml-dsa-65) show ( ) show (mldsa-pair\)) show  newline
+(\(keystore-set-mode!) show ( ) show ('hybrid-sign\)\)\)) show  newline
+ newline
+(Hybrid) show ( ) show (signatures) show ( ) show (verify) show ( ) show (if) show ( ) show (EITHER) show ( ) show (signature) show ( ) show (is) show ( ) show (valid) show ( ) show (during) show ( ) show (transition,) show  newline
+(but) show ( ) show (BOTH) show ( ) show (signatures) show ( ) show (are) show ( ) show (created.) show ( ) show (This) show ( ) show (allows:) show  newline
+ newline
+(*) show ( ) show (Legacy) show ( ) show (verifiers) show ( ) show (\(Ed25519-only\)) show ( ) show (still) show ( ) show (work) show  newline
+(*) show ( ) show (Future) show ( ) show (verifiers) show ( ) show (\(PQ-capable\)) show ( ) show (get) show ( ) show (quantum) show ( ) show (resistance) show  newline
+(*) show ( ) show (No) show ( ) show (flag) show ( ) show (day:) show ( ) show (gradual) show ( ) show (deployment) show  newline
+ newline
+(Action) show ( ) show (items:) show  newline
+ newline
+(*) show ( ) show (Run:) show ( ) show (cyberspace-vault) show ( ) show (upgrade-to-hybrid) show  newline
+(*) show ( ) show (Verify:) show ( ) show (cyberspace-vault) show ( ) show (list-keys) show ( ) show (shows) show ( ) show (both) show ( ) show (key) show ( ) show (types) show  newline
+(*) show ( ) show (Test:) show ( ) show (Sign) show ( ) show (and) show ( ) show (verify) show ( ) show (a) show ( ) show (test) show ( ) show (capability) show  newline
+ newline
+(Existing) show ( ) show (Ed25519) show ( ) show (keys) show ( ) show (remain) show ( ) show (functional.) show ( ) show (New) show ( ) show (signatures) show ( ) show (include) show ( ) show (both) show  newline
+(algorithms.) show  newline
+ newline
+ newline
+(Phase) show ( ) show (2:) show ( ) show (PQ) show ( ) show (Certificate) show ( ) show (Chains) show ( ) show (\(Q-Day) show ( ) show (minus) show ( ) show (2) show ( ) show (years\)) show  newline
+newpath margin ypos moveto margin 312 add ypos lineto stroke
+newline
+ newline
+(Start) show ( ) show (issuing) show ( ) show (PQ-only) show ( ) show (certificates) show ( ) show (for) show ( ) show (NEW) show ( ) show (delegations:) show  newline
+ newline
+ newline
+(;;) show ( ) show (When) show ( ) show (delegating) show ( ) show (capability) show  newline
+(\(cert-create) show  newline
+(\(issuer-key) show ( ) show (\(keystore-get-key) show ( ) show ('ml-dsa-65\)\)) show ( ) show (;) show ( ) show (Use) show ( ) show (PQ) show ( ) show (key) show  newline
+(\(subject-key) show ( ) show (subject-mldsa-pubkey\)) show  newline
+(\(tag) show ( ) show (capability-tag\)) show  newline
+(\(signature-algorithm) show ( ) show ('ml-dsa-65\)\)) show  newline
+ newline
+(Legacy) show ( ) show (certificates) show ( ) show (remain) show ( ) show (valid.) show ( ) show (Capability) show ( ) show (chains) show ( ) show (can) show ( ) show (mix:) show  newline
+ newline
+ newline
+([Ed25519) show ( ) show (cert]) show ( ) show (->) show ( ) show ([Hybrid) show ( ) show (cert]) show ( ) show (->) show ( ) show ([ML-DSA) show ( ) show (cert]) show  newline
+ newline
+(Each) show ( ) show (link) show ( ) show (verified) show ( ) show (independently.) show ( ) show (The) show ( ) show (chain) show ( ) show (gains) show ( ) show (quantum) show ( ) show (resistance) show ( ) show (as) show  newline
+(PQ) show ( ) show (links) show ( ) show (are) show ( ) show (added.) show  newline
+ newline
+ newline
+(Phase) show ( ) show (3:) show ( ) show (Mandatory) show ( ) show (PQ) show ( ) show (\(Q-Day) show ( ) show (minus) show ( ) show (1) show ( ) show (year\)) show  newline
+newpath margin ypos moveto margin 252 add ypos lineto stroke
+newline
+ newline
+(Require) show ( ) show (at) show ( ) show (least) show ( ) show (ONE) show ( ) show (post-quantum) show ( ) show (signature) show ( ) show (in) show ( ) show (every) show ( ) show (capability) show ( ) show (chain:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Verification) show ( ) show (policy) show ( ) show (update) show  newline
+(\(define) show ( ) show (\(verify-cert-chain) show ( ) show (chain\)) show  newline
+(\(let) show ( ) show (\(\(has-pq?) show ( ) show (\(any) show ( ) show (\(lambda) show ( ) show (\(cert\)) show  newline
+(\(memq) show ( ) show (\(cert-algorithm) show ( ) show (cert\)) show  newline
+('\(ml-dsa-65) show ( ) show (slh-dsa-shake-256s) show ( ) show (hybrid\)\)\)) show  newline
+(chain\)\)\)) show  newline
+(\(unless) show ( ) show (has-pq?) show  newline
+(\(error) show ( ) show ("Capability) show ( ) show (chain) show ( ) show (requires) show ( ) show (post-quantum) show ( ) show (signature"\)\)\)\)) show  newline
+ newline
+(This) show ( ) show (forces) show ( ) show (migration) show ( ) show (of) show ( ) show (critical) show ( ) show (paths) show ( ) show (while) show ( ) show (maintaining) show ( ) show (backwards) show  newline
+(compatibility) show ( ) show (for) show ( ) show (leaf) show ( ) show (nodes.) show  newline
+ newline
+(Action) show ( ) show (items:) show  newline
+ newline
+(*) show ( ) show (Audit) show ( ) show (all) show ( ) show (capability) show ( ) show (chains:) show ( ) show (cyberspace-audit) show ( ) show (check-pq-coverage) show  newline
+(*) show ( ) show (Re-sign) show ( ) show (pure-Ed25519) show ( ) show (chains) show ( ) show (with) show ( ) show (hybrid) show ( ) show (mode) show  newline
+(*) show ( ) show (Update) show ( ) show (delegation) show ( ) show (policies) show ( ) show (to) show ( ) show (prefer) show ( ) show (PQ) show ( ) show (recipients) show  newline
+ newline
+ newline
+(Phase) show ( ) show (4:) show ( ) show (Ed25519) show ( ) show (Sunset) show ( ) show (\(Q-Day\)) show  newline
+newpath margin ypos moveto margin 186 add ypos lineto stroke
+newline
+ newline
+(When) show ( ) show (quantum) show ( ) show (computers) show ( ) show (threaten) show ( ) show (Ed25519) show ( ) show (\(estimated) show ( ) show (2030-2035\):) show  newline
+ newline
+(*) show ( ) show (Ed25519) show ( ) show (verification) show ( ) show (disabled) show ( ) show (for) show ( ) show (NEW) show ( ) show (operations) show  newline
+(*) show ( ) show (Hybrid) show ( ) show (signatures) show ( ) show (verify) show ( ) show (ONLY) show ( ) show (the) show ( ) show (PQ) show ( ) show (component) show  newline
+(*) show ( ) show (Pure) show ( ) show (Ed25519) show ( ) show (certificates) show ( ) show (rejected) show  newline
+(*) show ( ) show (Historical) show ( ) show (audit) show ( ) show (trail) show ( ) show (remains) show ( ) show (\(for) show ( ) show (forensics,) show ( ) show (not) show ( ) show (trust\)) show  newline
+ newline
+ newline
+(;;) show ( ) show (Q-Day) show ( ) show (configuration) show  newline
+(\(keystore-set-verification-policy!) show  newline
+('\(ml-dsa-65) show ( ) show (slh-dsa-shake-256s\)) show ( ) show (;) show ( ) show (Only) show ( ) show (PQ) show ( ) show (algorithms) show ( ) show (trusted) show  newline
+('\(ed25519\)\)) show ( ) show (;) show ( ) show (Ed25519) show ( ) show (rejected) show  newline
+ newline
+(Realms) show ( ) show (that) show ( ) show (failed) show ( ) show (to) show ( ) show (migrate) show ( ) show (become) show ( ) show (read-only.) show ( ) show (Their) show ( ) show (capabilities) show  newline
+(cannot) show ( ) show (be) show ( ) show (verified) show ( ) show (for) show ( ) show (new) show ( ) show (operations,) show ( ) show (but) show ( ) show (historical) show ( ) show (records) show ( ) show (persist.) show  newline
+ newline
+ newline
+(Phase) show ( ) show (5:) show ( ) show (Pure) show ( ) show (PQ) show ( ) show (\(Q-Day) show ( ) show (+) show ( ) show (1) show ( ) show (year\)) show  newline
+newpath margin ypos moveto margin 198 add ypos lineto stroke
+newline
+ newline
+(Complete) show ( ) show (transition) show ( ) show (to) show ( ) show (post-quantum-only:) show  newline
+ newline
+(*) show ( ) show (Remove) show ( ) show (Ed25519) show ( ) show (from) show ( ) show (keystore) show ( ) show (except) show ( ) show (archival) show ( ) show (keys) show  newline
+(*) show ( ) show (All) show ( ) show (new) show ( ) show (certificates) show ( ) show (use) show ( ) show (ML-DSA-65) show ( ) show (or) show ( ) show (SLH-DSA) show  newline
+(*) show ( ) show (Hybrid) show ( ) show (mode) show ( ) show (deprecated) show  newline
+(*) show ( ) show (Ed25519) show ( ) show (support) show ( ) show (removed) show ( ) show (from) show ( ) show (TCB) show ( ) show (in) show ( ) show (next) show ( ) show (major) show ( ) show (version) show  newline
+ newline
+(Cyberspace) show ( ) show (survives.) show ( ) show (The) show ( ) show (capability) show ( ) show (chain) show ( ) show (is) show ( ) show (quantum-resistant.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ALGORITHM) show ( ) show (SELECTION) show ( ) show (GUIDE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(ML-DSA-65) show ( ) show (\(Default) show ( ) show (Choice\)) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+(Use) show ( ) show (for:) show  newline
+ newline
+(*) show ( ) show (Capability) show ( ) show (certificates) show ( ) show (\(frequent) show ( ) show (issuance\)) show  newline
+(*) show ( ) show (Agent) show ( ) show (delegation) show ( ) show (\(short-lived\)) show  newline
+(*) show ( ) show (Audit) show ( ) show (entries) show ( ) show (\(high) show ( ) show (volume\)) show  newline
+(*) show ( ) show (Any) show ( ) show (certificate) show ( ) show (with) show ( ) show (<) show ( ) show (10) show ( ) show (year) show ( ) show (lifetime) show  newline
+ newline
+(Properties:) show  newline
+ newline
+ newline
+(Metric) show ( ) show (Value) show  newline
+(Public) show ( ) show (key) show ( ) show (1,952) show ( ) show (bytes) show  newline
+(Signature) show ( ) show (3,309) show ( ) show (bytes) show  newline
+(Security) show ( ) show (NIST) show ( ) show (Level) show ( ) show (3) show ( ) show (\(128-bit) show ( ) show (PQ\)) show  newline
+(Speed) show ( ) show (Fast) show ( ) show (signing) show ( ) show (&) show ( ) show (verification) show  newline
+(Basis) show ( ) show (Lattice) show ( ) show (problems) show ( ) show (\(Module-LWE\)) show  newline
+ newline
+ newline
+(SLH-DSA-SHAKE-256s) show ( ) show (\(Conservative) show ( ) show (Choice\)) show  newline
+newpath margin ypos moveto margin 240 add ypos lineto stroke
+newline
+ newline
+(Use) show ( ) show (for:) show  newline
+ newline
+(*) show ( ) show (Realm) show ( ) show (identity) show ( ) show (keys) show ( ) show (\(root) show ( ) show (of) show ( ) show (trust\)) show  newline
+(*) show ( ) show (Sealed) show ( ) show (releases) show ( ) show (\(archival\)) show  newline
+(*) show ( ) show (Long-term) show ( ) show (commitments) show ( ) show (\(>) show ( ) show (10) show ( ) show (years\)) show  newline
+(*) show ( ) show (Maximum) show ( ) show (security) show ( ) show (requirement) show  newline
+ newline
+(Properties:) show  newline
+ newline
+ newline
+(Metric) show ( ) show (Value) show  newline
+(Public) show ( ) show (key) show ( ) show (64) show ( ) show (bytes) show  newline
+(Signature) show ( ) show (29,792) show ( ) show (bytes) show  newline
+(Security) show ( ) show (NIST) show ( ) show (Level) show ( ) show (5) show ( ) show (\(128-bit) show ( ) show (PQ\)) show  newline
+(Speed) show ( ) show (Slow) show ( ) show (signing,) show ( ) show (fast) show ( ) show (verification) show  newline
+(Basis) show ( ) show (SHAKE-256) show ( ) show (hash) show ( ) show (only) show ( ) show (\(conservative\)) show  newline
+ newline
+(When) show ( ) show (in) show ( ) show (doubt,) show ( ) show (use) show ( ) show (ML-DSA-65.) show ( ) show (Only) show ( ) show (use) show ( ) show (SLH-DSA) show ( ) show (when) show ( ) show (you) show ( ) show (need) show ( ) show (maximum) show  newline
+(conservatism) show ( ) show (or) show ( ) show (archival) show ( ) show (guarantees.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(OPERATIONAL) show ( ) show (PROCEDURES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Generate) show ( ) show (New) show ( ) show (Hybrid) show ( ) show (Keystore) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Backup) show ( ) show (existing) show ( ) show (keystore) show  newline
+(cp) show ( ) show (-r) show ( ) show (~/.cyberspace/vault) show ( ) show (~/.cyberspace/vault.ed25519.backup) show  newline
+(#) show ( ) show (Generate) show ( ) show (hybrid) show ( ) show (keys) show ( ) show (\(Ed25519) show ( ) show (+) show ( ) show (ML-DSA-65\)) show  newline
+(cyberspace-vault) show ( ) show (init-hybrid) show  newline
+(#) show ( ) show (Verify) show ( ) show (keys) show ( ) show (present) show  newline
+(cyberspace-vault) show ( ) show (list-keys) show  newline
+(#) show ( ) show (Expected) show ( ) show (output:) show  newline
+(#) show ( ) show (realm-ed25519:) show ( ) show (ed25519:7f3a2b4c...) show  newline
+(#) show ( ) show (realm-ml-dsa-65:) show ( ) show (ml-dsa-65:8a9b0c1d...) show  newline
+(#) show ( ) show (mode:) show ( ) show (hybrid-sign) show  newline
+ newline
+ newline
+(Migrate) show ( ) show (Existing) show ( ) show (Vault) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Add) show ( ) show (PQ) show ( ) show (key) show ( ) show (to) show ( ) show (existing) show ( ) show (vault) show  newline
+(cyberspace-vault) show ( ) show (add-pq-key) show ( ) show (--algorithm) show ( ) show (ml-dsa-65) show  newline
+(#) show ( ) show (Enable) show ( ) show (hybrid) show ( ) show (signing) show  newline
+(cyberspace-vault) show ( ) show (set-mode) show ( ) show (hybrid) show  newline
+(#) show ( ) show (Test) show ( ) show (hybrid) show ( ) show (signature) show  newline
+(echo) show ( ) show ('test) show ( ) show (message') show ( ) show (|) show ( ) show (cyberspace-vault) show ( ) show (sign) show ( ) show (--hybrid) show  newline
+(#) show ( ) show (Should) show ( ) show (produce) show ( ) show (signature) show ( ) show (with) show ( ) show (both) show ( ) show (Ed25519) show ( ) show (and) show ( ) show (ML-DSA) show ( ) show (components) show  newline
+ newline
+ newline
+(Re-sign) show ( ) show (Critical) show ( ) show (Certificates) show  newline
+newpath margin ypos moveto margin 174 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (List) show ( ) show (pure-Ed25519) show ( ) show (certificates) show  newline
+(cyberspace-cert) show ( ) show (list) show ( ) show (--algorithm) show ( ) show (ed25519) show ( ) show (--critical-path) show  newline
+(#) show ( ) show (Re-sign) show ( ) show (with) show ( ) show (hybrid) show  newline
+(for) show ( ) show (cert) show ( ) show (in) show ( ) show ($\(cyberspace-cert) show ( ) show (list) show ( ) show (--algorithm) show ( ) show (ed25519) show ( ) show (--format) show ( ) show (ids\);) show ( ) show (do) show  newline
+(cyberspace-cert) show ( ) show (resign) show ( ) show (--id) show ( ) show ($cert) show ( ) show (--algorithm) show ( ) show (hybrid) show  newline
+(done) show  newline
+(#) show ( ) show (Verify) show ( ) show (PQ) show ( ) show (coverage) show  newline
+(cyberspace-audit) show ( ) show (check-pq-coverage) show  newline
+ newline
+ newline
+(Verify) show ( ) show (PQ) show ( ) show (Implementation) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Run) show ( ) show (TCB) show ( ) show (test) show ( ) show (suite) show  newline
+(cd) show ( ) show (~/cyberspace/spki/tcb) show  newline
+(dune) show ( ) show (runtest) show  newline
+(#) show ( ) show (Expected) show ( ) show (output:) show  newline
+gsave
+margin 24 add ypos moveto (#) show
+margin 48 add ypos moveto (test_tcb.exe:) show
+margin 132 add ypos moveto () show
+margin 144 add ypos moveto (ALL) show
+margin 168 add ypos moveto (TESTS) show
+margin 204 add ypos moveto (PASSED) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (#) show
+margin 48 add ypos moveto (test_signature.exe:) show
+margin 168 add ypos moveto () show
+margin 180 add ypos moveto (ALL) show
+margin 204 add ypos moveto (TESTS) show
+margin 240 add ypos moveto (PASSED) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (#) show
+margin 48 add ypos moveto (test_pq.exe:) show
+margin 126 add ypos moveto () show
+margin 138 add ypos moveto (ALL) show
+margin 162 add ypos moveto (TESTS) show
+margin 198 add ypos moveto (PASSED) show
+grestore
+newline
+(#) show ( ) show (-) show ( ) show (ML-DSA-65:) show ( ) show (keygen,) show ( ) show (sign,) show ( ) show (verify:) show ( ) show (OK) show  newline
+(#) show ( ) show (-) show ( ) show (SLH-DSA:) show ( ) show (keygen,) show ( ) show (sign,) show ( ) show (verify:) show ( ) show (OK) show  newline
+(#) show ( ) show (-) show ( ) show (Invalid) show ( ) show (signature) show ( ) show (rejection:) show ( ) show (OK) show  newline
+ newline
+ newline
+(Monitor) show ( ) show (Migration) show ( ) show (Progress) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Capability) show ( ) show (chain) show ( ) show (coverage) show ( ) show (report) show  newline
+(cyberspace-audit) show ( ) show (pq-coverage-report) show  newline
+(#) show ( ) show (Example) show ( ) show (output:) show  newline
+(#) show ( ) show (Total) show ( ) show (capability) show ( ) show (chains:) show ( ) show (1,247) show  newline
+gsave
+margin 24 add ypos moveto (#) show
+margin 48 add ypos moveto (Pure) show
+margin 78 add ypos moveto (Ed25519:) show
+margin 132 add ypos moveto (89) show
+margin 150 add ypos moveto (\(7.1%\)) show
+margin 192 add ypos moveto () show
+grestore
+newline
+(#) show ( ) show (Hybrid:) show ( ) show (342) show ( ) show (\(27.4%\)) show  newline
+gsave
+margin 24 add ypos moveto (#) show
+margin 48 add ypos moveto (Pure) show
+margin 78 add ypos moveto (PQ:) show
+margin 102 add ypos moveto (816) show
+margin 126 add ypos moveto (\(65.5%\)) show
+margin 174 add ypos moveto () show
+grestore
+newline
+(#) show  newline
+(#) show ( ) show (Action) show ( ) show (required:) show ( ) show (89) show ( ) show (chains) show ( ) show (need) show ( ) show (PQ) show ( ) show (signatures) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ROLLBACK) show ( ) show (STRATEGY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(If) show ( ) show (post-quantum) show ( ) show (implementation) show ( ) show (has) show ( ) show (issues:) show  newline
+ newline
+ newline
+(Immediate) show ( ) show (Rollback) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Disable) show ( ) show (PQ) show ( ) show (signing) show ( ) show (\(keep) show ( ) show (Ed25519) show ( ) show (only\)) show  newline
+(cyberspace-vault) show ( ) show (set-mode) show ( ) show (ed25519-only) show  newline
+(#) show ( ) show (This) show ( ) show (maintains) show ( ) show (compatibility) show ( ) show (but) show ( ) show (loses) show ( ) show (quantum) show ( ) show (resistance) show  newline
+(#) show ( ) show (Use) show ( ) show (only) show ( ) show (in) show ( ) show (emergency) show  newline
+ newline
+ newline
+(Partial) show ( ) show (Rollback) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Keep) show ( ) show (hybrid) show ( ) show (mode) show ( ) show (but) show ( ) show (prefer) show ( ) show (Ed25519) show  newline
+(cyberspace-vault) show ( ) show (set-mode) show ( ) show (hybrid) show ( ) show (--prefer) show ( ) show (ed25519) show  newline
+(#) show ( ) show (Both) show ( ) show (signatures) show ( ) show (still) show ( ) show (created,) show ( ) show (but) show ( ) show (Ed25519) show ( ) show (is) show ( ) show (primary) show ( ) show (for) show ( ) show (verification) show  newline
+(#) show ( ) show (Provides) show ( ) show (fallback) show ( ) show (while) show ( ) show (keeping) show ( ) show (PQ) show ( ) show (signatures) show ( ) show (for) show ( ) show (future) show  newline
+ newline
+(Rollback) show ( ) show (preserves) show ( ) show (existing) show ( ) show (PQ) show ( ) show (signatures.) show ( ) show (You) show ( ) show (can) show ( ) show (re-enable) show ( ) show (PQ) show  newline
+(verification) show ( ) show (later) show ( ) show (without) show ( ) show (re-signing.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TESTING) show ( ) show (STRATEGY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Unit) show ( ) show (Tests) show  newline
+newpath margin ypos moveto margin 60 add ypos lineto stroke
+newline
+ newline
+(TCB) show ( ) show (test) show ( ) show (suite) show ( ) show (\(test_pq.ml\)) show ( ) show (validates:) show  newline
+ newline
+(*) show ( ) show (ML-DSA-65) show ( ) show (keypair) show ( ) show (generation) show ( ) show (from) show ( ) show (system) show ( ) show (randomness) show  newline
+(*) show ( ) show (SLH-DSA) show ( ) show (keypair) show ( ) show (generation) show  newline
+(*) show ( ) show (Signature) show ( ) show (creation) show ( ) show (and) show ( ) show (verification) show  newline
+(*) show ( ) show (Invalid) show ( ) show (signature) show ( ) show (rejection) show  newline
+(*) show ( ) show (Backward) show ( ) show (compatibility) show ( ) show (with) show ( ) show (Ed25519) show  newline
+ newline
+ newline
+(#) show ( ) show (Run) show ( ) show (continuously) show ( ) show (during) show ( ) show (development) show  newline
+(cd) show ( ) show (~/cyberspace/spki/tcb) show ( ) show (&&) show ( ) show (dune) show ( ) show (runtest) show  newline
+ newline
+ newline
+(Integration) show ( ) show (Tests) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(Test) show ( ) show (capability) show ( ) show (delegation) show ( ) show (across) show ( ) show (algorithm) show ( ) show (boundaries:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Create) show ( ) show (mixed) show ( ) show (chain:) show ( ) show (Ed25519) show ( ) show (->) show ( ) show (Hybrid) show ( ) show (->) show ( ) show (ML-DSA) show  newline
+(\(define) show ( ) show (chain) show  newline
+(\(list) show  newline
+(\(cert-create) show ( ) show (issuer-ed25519) show ( ) show (subject-hybrid) show ( ) show (\(read-tag\)\)) show  newline
+(\(cert-create) show ( ) show (issuer-hybrid) show ( ) show (subject-mldsa) show ( ) show (\(read-tag\)\)\)\)) show  newline
+(;;) show ( ) show (Verify) show ( ) show (chain) show ( ) show (validates) show  newline
+(\(verify-cert-chain) show ( ) show (chain\)) show  newline
+ newline
+ newline
+(Interoperability) show ( ) show (Tests) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(Test) show ( ) show (against) show ( ) show (other) show ( ) show (SPKI) show ( ) show (implementations:) show  newline
+ newline
+(*) show ( ) show (Can) show ( ) show (legacy) show ( ) show (Ed25519-only) show ( ) show (verifiers) show ( ) show (handle) show ( ) show (hybrid) show ( ) show (certs?) show ( ) show (\(YES) show ( ) show (-) show ( ) show (they) show ( ) show (verify) show ( ) show (Ed25519) show ( ) show (component\)) show  newline
+(*) show ( ) show (Can) show ( ) show (PQ-only) show ( ) show (verifiers) show ( ) show (handle) show ( ) show (hybrid) show ( ) show (certs?) show ( ) show (\(YES) show ( ) show (-) show ( ) show (they) show ( ) show (verify) show ( ) show (PQ) show ( ) show (component\)) show  newline
+(*) show ( ) show (Do) show ( ) show (certificate) show ( ) show (chains) show ( ) show (mix) show ( ) show (algorithms) show ( ) show (correctly?) show ( ) show (\(YES) show ( ) show (-) show ( ) show (each) show ( ) show (link) show ( ) show (verified) show ( ) show (independently\)) show  newline
+ newline
+ newline
+(Performance) show ( ) show (Tests) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(Measure) show ( ) show (signing/verification) show ( ) show (latency:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Benchmark) show ( ) show (signing) show ( ) show (operations) show  newline
+(\(time) show  newline
+(\(let) show ( ) show (loop) show ( ) show (\(\(i) show ( ) show (0\)\)) show  newline
+(\(when) show ( ) show (\(<) show ( ) show (i) show ( ) show (1000\)) show  newline
+(\(mldsa-sign) show ( ) show (test-message) show ( ) show (test-key\)) show  newline
+(\(loop) show ( ) show (\(+) show ( ) show (i) show ( ) show (1\)\)\)\)\)) show  newline
+(;;) show ( ) show (Expected:) show ( ) show (~0.5ms) show ( ) show (per) show ( ) show (ML-DSA) show ( ) show (signature) show ( ) show (on) show ( ) show (modern) show ( ) show (hardware) show  newline
+(;;) show ( ) show (SLH-DSA:) show ( ) show (~50ms) show ( ) show (per) show ( ) show (signature) show ( ) show (\(acceptable) show ( ) show (for) show ( ) show (infrequent) show ( ) show (operations\)) show  newline
+ newline
+ newline
+(Stress) show ( ) show (Tests) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Verify) show ( ) show (scaling) show ( ) show (with) show ( ) show (large) show ( ) show (certificate) show ( ) show (chains:) show  newline
+ newline
+ newline
+(#) show ( ) show (Generate) show ( ) show (chain) show ( ) show (with) show ( ) show (100) show ( ) show (links,) show ( ) show (all) show ( ) show (PQ) show ( ) show (signatures) show  newline
+(cyberspace-test) show ( ) show (generate-chain) show ( ) show (--length) show ( ) show (100) show ( ) show (--algorithm) show ( ) show (ml-dsa-65) show  newline
+(#) show ( ) show (Verify) show ( ) show (chain) show ( ) show (validates) show ( ) show (in) show ( ) show (reasonable) show ( ) show (time) show  newline
+(#) show ( ) show (Expected:) show ( ) show (<) show ( ) show (100ms) show ( ) show (for) show ( ) show (100-link) show ( ) show (ML-DSA) show ( ) show (chain) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Harvest-Now-Forge-Later) show ( ) show (Defense) show  newline
+newpath margin ypos moveto margin 186 add ypos lineto stroke
+newline
+ newline
+(Hybrid) show ( ) show (signatures) show ( ) show (defend) show ( ) show (against) show ( ) show (harvest) show ( ) show (attacks:) show  newline
+ newline
+(*) show ( ) show (Attacker) show ( ) show (records) show ( ) show (Ed25519) show ( ) show (signature) show ( ) show (today) show  newline
+(*) show ( ) show (Attacker) show ( ) show (breaks) show ( ) show (Ed25519) show ( ) show (with) show ( ) show (quantum) show ( ) show (computer) show ( ) show (on) show ( ) show (Q-Day) show  newline
+(*) show ( ) show (Attacker) show ( ) show (CANNOT) show ( ) show (forge) show ( ) show (because) show ( ) show (ML-DSA) show ( ) show (signature) show ( ) show (still) show ( ) show (secure) show  newline
+(*) show ( ) show (Defense) show ( ) show (works) show ( ) show (even) show ( ) show (if) show ( ) show (Ed25519) show ( ) show (is) show ( ) show (broken) show ( ) show (retroactively) show  newline
+ newline
+(This) show ( ) show (is) show ( ) show (why) show ( ) show (hybrid) show ( ) show (mode) show ( ) show (is) show ( ) show (critical) show ( ) show (during) show ( ) show (transition:) show ( ) show (it) show ( ) show (provides) show  newline
+(quantum) show ( ) show (resistance) show ( ) show (even) show ( ) show (for) show ( ) show (signatures) show ( ) show (created) show ( ) show (before) show ( ) show (migration.) show  newline
+ newline
+ newline
+(Algorithm) show ( ) show (Agility) show ( ) show (Risks) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(Supporting) show ( ) show (multiple) show ( ) show (algorithms) show ( ) show (increases) show ( ) show (attack) show ( ) show (surface:) show  newline
+ newline
+(*) show ( ) show (More) show ( ) show (code) show ( ) show (paths) show ( ) show (=) show ( ) show (more) show ( ) show (bugs) show  newline
+(*) show ( ) show (Downgrade) show ( ) show (attacks) show ( ) show (if) show ( ) show (implementation) show ( ) show (allows) show ( ) show (algorithm) show ( ) show (negotiation) show  newline
+(*) show ( ) show (Version) show ( ) show (confusion) show ( ) show (if) show ( ) show (different) show ( ) show (nodes) show ( ) show (support) show ( ) show (different) show ( ) show (algorithms) show  newline
+ newline
+(Mitigations:) show  newline
+ newline
+(*) show ( ) show (No) show ( ) show (algorithm) show ( ) show (negotiation:) show ( ) show (verifiers) show ( ) show (accept) show ( ) show (listed) show ( ) show (algorithms,) show ( ) show (signers) show ( ) show (choose) show ( ) show (based) show ( ) show (on) show ( ) show (policy) show  newline
+(*) show ( ) show (Explicit) show ( ) show (algorithm) show ( ) show (in) show ( ) show (certificate:) show ( ) show (\(signature-algorithm) show ( ) show ('ml-dsa-65\)) show  newline
+(*) show ( ) show (Conservative) show ( ) show (verification:) show ( ) show (if) show ( ) show (ANY) show ( ) show (supported) show ( ) show (algorithm) show ( ) show (validates,) show ( ) show (accept) show  newline
+ newline
+ newline
+(Key) show ( ) show (Management) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(PQ) show ( ) show (keys) show ( ) show (are) show ( ) show (larger) show ( ) show (than) show ( ) show (Ed25519:) show  newline
+ newline
+ newline
+(Key) show ( ) show (Type) show ( ) show (Private) show ( ) show (Key) show ( ) show (Size) show ( ) show (Backup) show ( ) show (Impact) show  newline
+(Ed25519) show ( ) show (64) show ( ) show (bytes) show ( ) show (trivial) show  newline
+(ML-DSA-65) show ( ) show (4,032) show ( ) show (bytes) show ( ) show (63x) show ( ) show (larger) show  newline
+(SLH-DSA) show ( ) show (128) show ( ) show (bytes) show ( ) show (2x) show ( ) show (larger) show  newline
+ newline
+(Implications:) show  newline
+ newline
+(*) show ( ) show (Paper) show ( ) show (backups) show ( ) show (harder) show ( ) show (\(4KB) show ( ) show (vs) show ( ) show (64B) show ( ) show (seed\)) show  newline
+(*) show ( ) show (Hardware) show ( ) show (security) show ( ) show (modules) show ( ) show (may) show ( ) show (need) show ( ) show (firmware) show ( ) show (updates) show  newline
+(*) show ( ) show (Key) show ( ) show (splitting) show ( ) show (schemes) show ( ) show (need) show ( ) show (larger) show ( ) show (shares) show  newline
+ newline
+(Solution:) show ( ) show (Derive) show ( ) show (ML-DSA) show ( ) show (keys) show ( ) show (from) show ( ) show (32-byte) show ( ) show (seed,) show ( ) show (store) show ( ) show (seed) show ( ) show (instead) show ( ) show (of) show  newline
+(full) show ( ) show (key.) show ( ) show (This) show ( ) show (maintains) show ( ) show (small) show ( ) show (backup) show ( ) show (size.) show  newline
+ newline
+ newline
+(Timing) show ( ) show (Side) show ( ) show (Channels) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(Post-quantum) show ( ) show (algorithms) show ( ) show (are) show ( ) show (timing-sensitive:) show  newline
+ newline
+(*) show ( ) show (Lattice) show ( ) show (operations) show ( ) show (\(ML-DSA\)) show ( ) show (use) show ( ) show (rejection) show ( ) show (sampling) show  newline
+(*) show ( ) show (Hash) show ( ) show (operations) show ( ) show (\(SLH-DSA\)) show ( ) show (are) show ( ) show (constant-time) show ( ) show (by) show ( ) show (construction) show  newline
+(*) show ( ) show (liboqs) show ( ) show (claims) show ( ) show (constant-time) show ( ) show (implementations) show  newline
+ newline
+(Testing:) show ( ) show (Profile) show ( ) show (signing) show ( ) show (operations) show ( ) show (for) show ( ) show (variance.) show ( ) show (Large) show ( ) show (variance) show  newline
+(suggests) show ( ) show (timing) show ( ) show (leaks.) show ( ) show (ML-DSA) show ( ) show (rejection) show ( ) show (sampling) show ( ) show (should) show ( ) show (be) show ( ) show (bounded,) show ( ) show (not) show  newline
+(unbounded.) show  newline
+ newline
+ newline
+(Dependency) show ( ) show (Trust) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(TCB) show ( ) show (now) show ( ) show (depends) show ( ) show (on) show ( ) show (two) show ( ) show (crypto) show ( ) show (libraries:) show  newline
+ newline
+ newline
+(Library) show ( ) show (LOC) show ( ) show (\(approx\)) show ( ) show (Audit) show ( ) show (Status) show ( ) show (Concerns) show  newline
+(libsodium) show ( ) show (50K) show ( ) show (Well-audited) show ( ) show (Trusted) show  newline
+(liboqs) show ( ) show (200K) show ( ) show (Research-quality) show ( ) show (Newer,) show ( ) show (evolving) show  newline
+ newline
+(Risk) show ( ) show (mitigation:) show  newline
+ newline
+(*) show ( ) show (liboqs) show ( ) show (built) show ( ) show (WITHOUT) show ( ) show (OpenSSL) show ( ) show (\(no) show ( ) show (transitive) show ( ) show (dependency\)) show  newline
+(*) show ( ) show (Only) show ( ) show (use) show ( ) show (NIST-standardized) show ( ) show (algorithms) show ( ) show (\(ML-DSA,) show ( ) show (SLH-DSA\)) show  newline
+(*) show ( ) show (Pin) show ( ) show (liboqs) show ( ) show (version,) show ( ) show (audit) show ( ) show (before) show ( ) show (upgrades) show  newline
+(*) show ( ) show (Hybrid) show ( ) show (signatures) show ( ) show (provide) show ( ) show (defense-in-depth:) show ( ) show (even) show ( ) show (if) show ( ) show (liboqs) show ( ) show (has) show ( ) show (bug,) show ( ) show (Ed25519) show ( ) show (component) show ( ) show (still) show ( ) show (validates) show ( ) show (during) show ( ) show (transition) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TIMELINE) show ( ) show (RECOMMENDATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Immediate) show ( ) show (\(2026\)) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Enable) show ( ) show (hybrid) show ( ) show (signing) show ( ) show (for) show ( ) show (all) show ( ) show (new) show ( ) show (vaults) show  newline
+(*) show ( ) show (Add) show ( ) show (PQ) show ( ) show (keys) show ( ) show (to) show ( ) show (existing) show ( ) show (high-value) show ( ) show (vaults) show  newline
+(*) show ( ) show (Begin) show ( ) show (re-signing) show ( ) show (critical) show ( ) show (capability) show ( ) show (chains) show  newline
+ newline
+ newline
+(Near-term) show ( ) show (\(2027\)) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Require) show ( ) show (hybrid) show ( ) show (or) show ( ) show (pure-PQ) show ( ) show (for) show ( ) show (root) show ( ) show (realm) show ( ) show (keys) show  newline
+(*) show ( ) show (Mandate) show ( ) show (at) show ( ) show (least) show ( ) show (one) show ( ) show (PQ) show ( ) show (signature) show ( ) show (per) show ( ) show (capability) show ( ) show (chain) show  newline
+(*) show ( ) show (Deprecate) show ( ) show (pure-Ed25519) show ( ) show (for) show ( ) show (new) show ( ) show (certificates) show  newline
+ newline
+ newline
+(Medium-term) show ( ) show (\(2028-2030\)) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Pure-PQ) show ( ) show (becomes) show ( ) show (default) show ( ) show (for) show ( ) show (new) show ( ) show (vaults) show  newline
+(*) show ( ) show (Ed25519) show ( ) show (verification) show ( ) show (only) show ( ) show (for) show ( ) show (historical) show ( ) show (audit) show  newline
+(*) show ( ) show (Monitor) show ( ) show (NIST) show ( ) show (PQC) show ( ) show (standardization) show ( ) show (updates) show  newline
+ newline
+ newline
+(Q-Day) show ( ) show (Response) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (If) show ( ) show (quantum) show ( ) show (threat) show ( ) show (emerges:) show ( ) show (immediately) show ( ) show (disable) show ( ) show (Ed25519) show ( ) show (verification) show  newline
+(*) show ( ) show (Hybrid) show ( ) show (signatures) show ( ) show (fall) show ( ) show (back) show ( ) show (to) show ( ) show (PQ) show ( ) show (component) show ( ) show (only) show  newline
+(*) show ( ) show (Unmigrated) show ( ) show (vaults) show ( ) show (freeze) show ( ) show (\(read-only\)) show  newline
+(*) show ( ) show (Post-migration) show ( ) show (vaults) show ( ) show (continue) show ( ) show (operating) show  newline
+ newline
+(The) show ( ) show (migration) show ( ) show (MUST) show ( ) show (complete) show ( ) show (before) show ( ) show (Q-Day.) show ( ) show (Reacting) show ( ) show (after) show ( ) show (the) show ( ) show (break) show ( ) show (is) show  newline
+(too) show ( ) show (late:) show ( ) show (attackers) show ( ) show (already) show ( ) show (harvested) show ( ) show (your) show ( ) show (signatures.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(VERIFICATION) show ( ) show (CHECKLIST) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Before) show ( ) show (declaring) show ( ) show (migration) show ( ) show (complete:) show  newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (TCB) show
+margin 60 add ypos moveto (tests) show
+margin 96 add ypos moveto (passing) show
+margin 144 add ypos moveto (\(dune) show
+margin 180 add ypos moveto (runtest\)) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Vault) show
+margin 72 add ypos moveto (has) show
+margin 96 add ypos moveto (hybrid) show
+margin 138 add ypos moveto (or) show
+margin 156 add ypos moveto (pure-PQ) show
+margin 204 add ypos moveto (keys) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (All) show
+margin 60 add ypos moveto (critical) show
+margin 114 add ypos moveto (capability) show
+margin 180 add ypos moveto (chains) show
+margin 222 add ypos moveto (have) show
+margin 252 add ypos moveto (1) show
+margin 270 add ypos moveto (PQ) show
+margin 288 add ypos moveto (signature) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Signing) show
+margin 84 add ypos moveto (operations) show
+margin 150 add ypos moveto (succeed) show
+margin 198 add ypos moveto (with) show
+margin 228 add ypos moveto (PQ) show
+margin 246 add ypos moveto (algorithms) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Verification) show
+margin 114 add ypos moveto (accepts) show
+margin 162 add ypos moveto (PQ) show
+margin 180 add ypos moveto (signatures) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Backup) show
+margin 78 add ypos moveto (includes) show
+margin 132 add ypos moveto (PQ) show
+margin 150 add ypos moveto (keys) show
+margin 180 add ypos moveto (\(encrypted\)) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Audit) show
+margin 72 add ypos moveto (trail) show
+margin 108 add ypos moveto (shows) show
+margin 144 add ypos moveto (PQ) show
+margin 162 add ypos moveto (signature) show
+margin 222 add ypos moveto (usage) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Interoperability) show
+margin 138 add ypos moveto (tested) show
+margin 180 add ypos moveto (with) show
+margin 210 add ypos moveto (legacy) show
+margin 252 add ypos moveto (verifiers) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Performance) show
+margin 108 add ypos moveto (acceptable) show
+margin 174 add ypos moveto (\(<) show
+margin 192 add ypos moveto (1ms) show
+margin 216 add ypos moveto (for) show
+margin 240 add ypos moveto (ML-DSA) show
+margin 282 add ypos moveto (signing\)) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Rollback) show
+margin 90 add ypos moveto (procedure) show
+margin 150 add ypos moveto (tested) show
+margin 192 add ypos moveto (and) show
+margin 216 add ypos moveto (documented) show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Memo-048:) show ( ) show (Post-Quantum) show ( ) show (Signatures) show ( ) show (\(theory) show ( ) show (and) show ( ) show (design\)) show  newline
+(*) show ( ) show (FIPS) show ( ) show (204:) show ( ) show (Module-Lattice-Based) show ( ) show (Digital) show ( ) show (Signature) show ( ) show (Standard) show  newline
+(*) show ( ) show (FIPS) show ( ) show (205:) show ( ) show (Stateless) show ( ) show (Hash-Based) show ( ) show (Digital) show ( ) show (Signature) show ( ) show (Standard) show  newline
+(*) show ( ) show (PQ-IMPLEMENTATION.md:) show ( ) show (TCB) show ( ) show (implementation) show ( ) show (details) show  newline
+(*) show ( ) show (liboqs) show ( ) show (documentation:) show ( ) show (https://github.com/open-quantum-safe/liboqs) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CONCLUSION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Post-quantum) show ( ) show (cryptography) show ( ) show (is) show ( ) show (not) show ( ) show (a) show ( ) show (future) show ( ) show (problem.) show ( ) show (It's) show ( ) show (a) show ( ) show (migration) show  newline
+(problem) show ( ) show (happening) show ( ) show (now.) show ( ) show (Every) show ( ) show (Ed25519) show ( ) show (signature) show ( ) show (created) show ( ) show (today) show ( ) show (is) show ( ) show (a) show  newline
+(potential) show ( ) show (forgery) show ( ) show (after) show ( ) show (Q-Day.) show  newline
+ newline
+(The) show ( ) show (implementation) show ( ) show (is) show ( ) show (complete.) show ( ) show (The) show ( ) show (tools) show ( ) show (exist.) show ( ) show (The) show ( ) show (question) show ( ) show (is) show ( ) show (not) show  newline
+('can) show ( ) show (we) show ( ) show (migrate') show ( ) show (but) show ( ) show ('will) show ( ) show (we) show ( ) show (migrate) show ( ) show (in) show ( ) show (time.') show  newline
+ newline
+(Harvest-now-forge-later) show ( ) show (is) show ( ) show (not) show ( ) show (theoretical.) show ( ) show (Adversaries) show ( ) show (are) show ( ) show (already) show  newline
+(recording) show ( ) show (traffic.) show ( ) show (The) show ( ) show (clock) show ( ) show (is) show ( ) show (ticking.) show  newline
+ newline
+(Migrate) show ( ) show (before) show ( ) show (Q-Day.) show ( ) show (Not) show ( ) show (after.) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

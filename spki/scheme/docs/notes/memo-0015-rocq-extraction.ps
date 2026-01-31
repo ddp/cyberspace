@@ -15,275 +15,1593 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0015: Rocq Verification of the Authorization TCB) show newline
-() show newline
-(Date: January 2026 \(2026-01-22T05:17:00Z\)) show newline
-(Author: Derrell Piper <ddp@eludom.net>) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(ABSTRACT) show newline
-() show newline
-(This memo specifies the formal verification approach for the SPKI) show newline
-(authorization Trusted Computing Base using the Rocq proof assistant. We) show newline
-(prove authorization correctness, not cryptographic hardness - libsodium) show newline
-(handles the latter. The extraction pipeline generates OCaml code that is) show newline
-(called from Scheme via FFI.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(The Prime Directive \(Memo-0001\):) show newline
-() show newline
-() show newline
-(    "If it's in the TCB, it's in OCaml. Otherwise it's in Chicken Scheme.") show newline
-() show newline
-(But even OCaml can have bugs. The TCB handles signature chain) show newline
-(verification and authorization decisions. A single bug breaks) show newline
-(everything.) show newline
-() show newline
-(Rocq provides:) show newline
-() show newline
-(  * Machine-checked proofs: Theorems verified by computer) show newline
-(  * Extraction: Generate OCaml from proofs) show newline
-(  * Correctness by construction: Implementation matches specification) show newline
-() show newline
-(We prove the authorization logic correct; we trust libsodium for) show newline
-(cryptographic primitives.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ARCHITECTURE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    ┌───────────────────────────────────────────────────────────┐) show newline
-(    │                      CYBERSPACE TCB                       │) show newline
-(    │                                                           │) show newline
-(    │  ┌─────────────────────────────────────────────────────┐  │) show newline
-(    │  │              SpkiTcb.v \(Rocq Proofs\)                 │  │) show newline
-(    │  │                                                     │  │) show newline
-(    │  │  Types: principal, tag, cert, auth_request          │  │) show newline
-(    │  │  Algorithms: tag_intersect, verify_chain, authorize │  │) show newline
-(    │  │  Theorems: authorize_requester_match, etc.          │  │) show newline
-(    │  └──────────────────────┬──────────────────────────────┘  │) show newline
-(    │                         │ Extraction                      │) show newline
-(    │  ┌──────────────────────v──────────────────────────────┐  │) show newline
-(    │  │         spki_tcb_extracted.ml \(generated\)           │  │) show newline
-(    │  └──────────────────────┬──────────────────────────────┘  │) show newline
-(    │                         │ Bridge                          │) show newline
-(    │  ┌──────────────────────v──────────────────────────────┐  │) show newline
-(    │  │              spki_tcb.ml + tcb_stubs.c              │  │) show newline
-(    │  │         \(bytes conversion, libsodium FFI\)           │  │) show newline
-(    │  └──────────────────────┬──────────────────────────────┘  │) show newline
-(    │                         │                                 │) show newline
-(    │                  ┌──────v──────┐                          │) show newline
-(    │                  │  libsodium  │                          │) show newline
-(    │                  │  \(trusted\)  │                          │) show newline
-(    │                  └─────────────┘                          │) show newline
-(    └───────────────────────────────────────────────────────────┘) show newline
-() show newline
-(The extraction pipeline: SpkiTcb.v → spki_tcb_extracted.ml → OCaml) show newline
-(library → Scheme FFI.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(WHAT WE PROVE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Fully Proven Theorems) show newline
-(---------------------) show newline
-() show newline
-(Security-critical theorems with complete proofs \(no admits\):) show newline
-() show newline
-() show newline
-(  Theorem                    Property                                                ) show newline
-(  principal_equal_refl       Reflexivity: p = p                                      ) show newline
-(  principal_equal_sym        Symmetry: p = q → q = p                               ) show newline
-(  principal_equal_trans      Transitivity: p = q ∧ q = r → p = r                 ) show newline
-(  authorize_requester_match  If authorized, requester is named by leaf cert          ) show newline
-(  authorize_complete         All preconditions satisfied → authorization succeeds  ) show newline
-() show newline
-(The authorize_requester_match theorem is the key security property: it) show newline
-(guarantees that authorization only succeeds when the requester is) show newline
-(actually named in the certificate chain.) show newline
-() show newline
-() show newline
-(Partially Proven Theorems) show newline
-(-------------------------) show newline
-() show newline
-() show newline
-(  Theorem                    Proven Cases                         Admitted Cases                     ) show newline
-(  tag_intersect_idemp        TagAll, TagSet, TagPrefix, TagRange  TagThreshold                       ) show newline
-(  tag_intersect_subset_left  Most combinations                    TagPrefix recursive, TagThreshold  ) show newline
-() show newline
-(The admitted cases stem from design limitations documented below.) show newline
-() show newline
-() show newline
-(Partially Proven: tag_intersect_comm) show newline
-(------------------------------------) show newline
-() show newline
-() show newline
-(  Case          Status                                    ) show newline
-(  TagAll        Proven                                    ) show newline
-(  TagSet        Proven \(via filter_intersect_comm lemma\)  ) show newline
-(  TagRange      Proven                                    ) show newline
-(  TagPrefix     Admitted \(recursive structure\)            ) show newline
-(  TagThreshold  Admitted \(Cartesian product ordering\)     ) show newline
-() show newline
-(The TagSet case required proving that filter intersection produces the) show newline
-(same elements regardless of operand order, then applying) show newline
-(canonicalize_strings to ensure structural equality.) show newline
-() show newline
-() show newline
-(Admitted Theorems) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(  Theorem                  Reason                                  ) show newline
-(  verify_chain_sound       Complex induction over chain structure  ) show newline
-(  verify_chain_attenuates  Depends on verify_chain_sound           ) show newline
-() show newline
-(These are design debt, not security holes. The algorithms are correct;) show newline
-(the proofs are incomplete.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(WHAT WE ASSUME) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Cryptographic operations are axiomatized - we trust libsodium:) show newline
-() show newline
-() show newline
-(    Axiom sha512 : bytes -> bytes.) show newline
-(    Axiom ed25519_verify : bytes -> bytes -> bytes -> bool.) show newline
-() show newline
-(Trust assumptions:) show newline
-() show newline
-(  * libsodium correctness: Ed25519, SHA-512 implementations) show newline
-(  * OCaml runtime: Extraction target executes correctly) show newline
-(  * Hardware: CPU executes instructions correctly) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(DESIGN LIMITATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(TagSet Canonical Ordering) show newline
-(-------------------------) show newline
-() show newline
-(Tag intersection commutativity requires canonical representation:) show newline
-() show newline
-() show newline
-(    \(tag_intersect \(TagSet ["read" "write"]\) \(TagSet ["write" "read"]\)\)) show newline
-(    ;; Result order depends on input order without canonicalization) show newline
-() show newline
-(Solution implemented: sort and deduplicate TagSet contents. The) show newline
-(canonicalize_canonical lemma bridges structural and semantic equality.) show newline
-() show newline
-() show newline
-(TagThreshold Cartesian Product) show newline
-(------------------------------) show newline
-() show newline
-(Intersection of thresholds produces Cartesian product of subtags:) show newline
-() show newline
-() show newline
-(    \(tag_intersect \(TagThreshold 2 [A B C]\) \(TagThreshold 2 [A B C]\)\)) show newline
-(    ;; Produces 9 subtags: [A∩A, A∩B, A∩C, B∩A, B∩B, ...]) show newline
-() show newline
-(This is semantically correct but not structurally idempotent. Options:) show newline
-() show newline
-(  * Require disjoint subtags) show newline
-(  * Normalize after intersection) show newline
-(  * Accept semantic rather than structural idempotence) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(EXTRACTION PIPELINE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Build and extract:) show newline
-() show newline
-() show newline
-(    cd tcb/coq) show newline
-(    coqc SpkiTcb.v              # Type-check proofs, extract OCaml) show newline
-(    dune build                   # Compile extracted + bridge code) show newline
-() show newline
-(The extraction directive:) show newline
-() show newline
-() show newline
-(    Extraction Language OCaml.) show newline
-(    Extraction "spki_tcb_extracted.ml") show newline
-(      authorize verify_chain tag_intersect principal_equal ...) show newline
-() show newline
-(The bridge module \(spki_tcb.ml\) converts between Rocq's int list) show newline
-(representation and OCaml's native bytes, calling libsodium for) show newline
-(cryptographic operations.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TEST COVERAGE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(  Suite               Tests  Coverage                                    ) show newline
-(  test_extracted.ml   16     Unit tests: principals, tags, chains        ) show newline
-(  test_properties.ml  11     Property-based: QCheck random testing       ) show newline
-(  test_tcb.exe        62     Full TCB: crypto, cookies, audit, FIPS-181  ) show newline
-() show newline
-(All tests pass. The property-based tests validate Rocq theorems at) show newline
-(runtime:) show newline
-() show newline
-() show newline
-(  Property                                        Generator Constraints             ) show newline
-(  principal_equal reflexive/symmetric/transitive  Random principals                 ) show newline
-(  tag_intersect commutative                       Non-threshold tags only           ) show newline
-(  tag_intersect idempotent                        Non-threshold, non-empty TagSets  ) show newline
-(  tag_intersect TagAll identity                   All tag types                     ) show newline
-(  tag_subset reflexive                            Non-threshold tags only           ) show newline
-(  TagRange subset containment                     Random ranges                     ) show newline
-() show newline
-(TagThreshold is excluded from commutativity/idempotence tests due to) show newline
-(documented structural limitations \(Cartesian product ordering\).) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(FUTURE WORK) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Complete tag_intersect_comm for TagPrefix \(recursive induction\)) show newline
-(  * Prove verify_chain_sound with custom induction principle) show newline
-(  * Consider CompCert or Fiat-Crypto for deeper verification) show newline
-() show newline
-(Current proof coverage is sufficient for beta. The admitted theorems are) show newline
-(proof obligations, not security vulnerabilities.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  [Rocq, 2024] The Rocq Proof Assistant. https://coq.inria.fr/) show newline
-(  [SPKI, 1999] RFC 2693: SPKI Certificate Theory) show newline
-(  [Memo-045, 2026] Security Architecture) show newline
-(  [libsodium, 2024] https://libsodium.org/) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0015:) show ( ) show (Rocq) show ( ) show (Verification) show ( ) show (of) show ( ) show (the) show ( ) show (Authorization) show ( ) show (TCB) show  newline
+ newline
+(Date:) show ( ) show (January) show ( ) show (2026) show ( ) show (\(2026-01-22T05:17:00Z\)) show  newline
+(Author:) show ( ) show (Derrell) show ( ) show (Piper) show ( ) show (<ddp@eludom.net>) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(ABSTRACT) show  newline
+ newline
+(This) show ( ) show (memo) show ( ) show (specifies) show ( ) show (the) show ( ) show (formal) show ( ) show (verification) show ( ) show (approach) show ( ) show (for) show ( ) show (the) show ( ) show (SPKI) show  newline
+(authorization) show ( ) show (Trusted) show ( ) show (Computing) show ( ) show (Base) show ( ) show (using) show ( ) show (the) show ( ) show (Rocq) show ( ) show (proof) show ( ) show (assistant.) show ( ) show (We) show  newline
+(prove) show ( ) show (authorization) show ( ) show (correctness,) show ( ) show (not) show ( ) show (cryptographic) show ( ) show (hardness) show ( ) show (-) show ( ) show (libsodium) show  newline
+(handles) show ( ) show (the) show ( ) show (latter.) show ( ) show (The) show ( ) show (extraction) show ( ) show (pipeline) show ( ) show (generates) show ( ) show (OCaml) show ( ) show (code) show ( ) show (that) show ( ) show (is) show  newline
+(called) show ( ) show (from) show ( ) show (Scheme) show ( ) show (via) show ( ) show (FFI.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (Prime) show ( ) show (Directive) show ( ) show (\(Memo-0001\):) show  newline
+ newline
+ newline
+("If) show ( ) show (it's) show ( ) show (in) show ( ) show (the) show ( ) show (TCB,) show ( ) show (it's) show ( ) show (in) show ( ) show (OCaml.) show ( ) show (Otherwise) show ( ) show (it's) show ( ) show (in) show ( ) show (Chicken) show ( ) show (Scheme.") show  newline
+ newline
+(But) show ( ) show (even) show ( ) show (OCaml) show ( ) show (can) show ( ) show (have) show ( ) show (bugs.) show ( ) show (The) show ( ) show (TCB) show ( ) show (handles) show ( ) show (signature) show ( ) show (chain) show  newline
+(verification) show ( ) show (and) show ( ) show (authorization) show ( ) show (decisions.) show ( ) show (A) show ( ) show (single) show ( ) show (bug) show ( ) show (breaks) show  newline
+(everything.) show  newline
+ newline
+(Rocq) show ( ) show (provides:) show  newline
+ newline
+(*) show ( ) show (Machine-checked) show ( ) show (proofs:) show ( ) show (Theorems) show ( ) show (verified) show ( ) show (by) show ( ) show (computer) show  newline
+(*) show ( ) show (Extraction:) show ( ) show (Generate) show ( ) show (OCaml) show ( ) show (from) show ( ) show (proofs) show  newline
+(*) show ( ) show (Correctness) show ( ) show (by) show ( ) show (construction:) show ( ) show (Implementation) show ( ) show (matches) show ( ) show (specification) show  newline
+ newline
+(We) show ( ) show (prove) show ( ) show (the) show ( ) show (authorization) show ( ) show (logic) show ( ) show (correct;) show ( ) show (we) show ( ) show (trust) show ( ) show (libsodium) show ( ) show (for) show  newline
+(cryptographic) show ( ) show (primitives.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ARCHITECTURE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+% box char 250c at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2500 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2500 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2500 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2500 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add 3 add ypos lineto stroke
+% box char 2500 at col 62
+newpath margin 375 add 3 sub ypos moveto margin 375 add 3 add ypos lineto stroke
+% box char 2500 at col 63
+newpath margin 381 add 3 sub ypos moveto margin 381 add 3 add ypos lineto stroke
+% box char 2510 at col 64
+newpath margin 387 add 3 sub ypos moveto margin 387 add ypos lineto stroke
+newpath margin 387 add ypos moveto margin 387 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 162 add ypos moveto (CYBERSPACE) show
+margin 228 add ypos moveto (TCB) show
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 250c at col 7
+newpath margin 45 add ypos moveto margin 45 add 3 add ypos lineto stroke
+newpath margin 45 add ypos moveto margin 45 add ypos 6 sub lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2500 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2500 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2500 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2510 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add ypos lineto stroke
+newpath margin 369 add ypos moveto margin 369 add ypos 6 sub lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 7
+newpath margin 45 add ypos 6 sub moveto margin 45 add ypos 6 add lineto stroke
+margin 132 add ypos moveto (SpkiTcb.v) show
+margin 192 add ypos moveto (\(Rocq) show
+margin 228 add ypos moveto (Proofs\)) show
+% box char 2502 at col 62
+newpath margin 375 add ypos 6 sub moveto margin 375 add ypos 6 add lineto stroke
+% box char 2502 at col 65
+newpath margin 393 add ypos 6 sub moveto margin 393 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 7
+newpath margin 45 add ypos 6 sub moveto margin 45 add ypos 6 add lineto stroke
+% box char 2502 at col 61
+newpath margin 369 add ypos 6 sub moveto margin 369 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 7
+newpath margin 45 add ypos 6 sub moveto margin 45 add ypos 6 add lineto stroke
+margin 60 add ypos moveto (Types:) show
+margin 102 add ypos moveto (principal,) show
+margin 168 add ypos moveto (tag,) show
+margin 198 add ypos moveto (cert,) show
+margin 234 add ypos moveto (auth_request) show
+% box char 2502 at col 61
+newpath margin 369 add ypos 6 sub moveto margin 369 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 7
+newpath margin 45 add ypos 6 sub moveto margin 45 add ypos 6 add lineto stroke
+margin 60 add ypos moveto (Algorithms:) show
+margin 132 add ypos moveto (tag_intersect,) show
+margin 222 add ypos moveto (verify_chain,) show
+margin 306 add ypos moveto (authorize) show
+% box char 2502 at col 61
+newpath margin 369 add ypos 6 sub moveto margin 369 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 7
+newpath margin 45 add ypos 6 sub moveto margin 45 add ypos 6 add lineto stroke
+margin 60 add ypos moveto (Theorems:) show
+margin 120 add ypos moveto (authorize_requester_match,) show
+margin 282 add ypos moveto (etc.) show
+% box char 2502 at col 61
+newpath margin 369 add ypos 6 sub moveto margin 369 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2514 at col 7
+newpath margin 45 add ypos moveto margin 45 add 3 add ypos lineto stroke
+newpath margin 45 add ypos 6 add moveto margin 45 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 252c at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+newpath margin 183 add ypos moveto margin 183 add ypos 6 sub lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2500 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2500 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2500 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2518 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add ypos lineto stroke
+newpath margin 369 add ypos 6 add moveto margin 369 add ypos lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 30
+newpath margin 183 add ypos 6 sub moveto margin 183 add ypos 6 add lineto stroke
+margin 192 add ypos moveto (Extraction) show
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 250c at col 7
+newpath margin 45 add ypos moveto margin 45 add 3 add ypos lineto stroke
+newpath margin 45 add ypos moveto margin 45 add ypos 6 sub lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+margin 180 add ypos moveto (v) show
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2500 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2500 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2500 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2510 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add ypos lineto stroke
+newpath margin 369 add ypos moveto margin 369 add ypos 6 sub lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 7
+newpath margin 45 add ypos 6 sub moveto margin 45 add ypos 6 add lineto stroke
+margin 102 add ypos moveto (spki_tcb_extracted.ml) show
+margin 234 add ypos moveto (\(generated\)) show
+% box char 2502 at col 61
+newpath margin 369 add ypos 6 sub moveto margin 369 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2514 at col 7
+newpath margin 45 add ypos moveto margin 45 add 3 add ypos lineto stroke
+newpath margin 45 add ypos 6 add moveto margin 45 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 252c at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+newpath margin 183 add ypos moveto margin 183 add ypos 6 sub lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2500 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2500 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2500 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2518 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add ypos lineto stroke
+newpath margin 369 add ypos 6 add moveto margin 369 add ypos lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 30
+newpath margin 183 add ypos 6 sub moveto margin 183 add ypos 6 add lineto stroke
+margin 192 add ypos moveto (Bridge) show
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 250c at col 7
+newpath margin 45 add ypos moveto margin 45 add 3 add ypos lineto stroke
+newpath margin 45 add ypos moveto margin 45 add ypos 6 sub lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+margin 180 add ypos moveto (v) show
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2500 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2500 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2500 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2510 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add ypos lineto stroke
+newpath margin 369 add ypos moveto margin 369 add ypos 6 sub lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 7
+newpath margin 45 add ypos 6 sub moveto margin 45 add ypos 6 add lineto stroke
+margin 132 add ypos moveto (spki_tcb.ml) show
+margin 204 add ypos moveto (+) show
+margin 216 add ypos moveto (tcb_stubs.c) show
+% box char 2502 at col 61
+newpath margin 369 add ypos 6 sub moveto margin 369 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 7
+newpath margin 45 add ypos 6 sub moveto margin 45 add ypos 6 add lineto stroke
+margin 102 add ypos moveto (\(bytes) show
+margin 144 add ypos moveto (conversion,) show
+margin 216 add ypos moveto (libsodium) show
+margin 276 add ypos moveto (FFI\)) show
+% box char 2502 at col 61
+newpath margin 369 add ypos 6 sub moveto margin 369 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2514 at col 7
+newpath margin 45 add ypos moveto margin 45 add 3 add ypos lineto stroke
+newpath margin 45 add ypos 6 add moveto margin 45 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 252c at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+newpath margin 183 add ypos moveto margin 183 add ypos 6 sub lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2500 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2500 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2500 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2518 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add ypos lineto stroke
+newpath margin 369 add ypos 6 add moveto margin 369 add ypos lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 30
+newpath margin 183 add ypos 6 sub moveto margin 183 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 250c at col 23
+newpath margin 141 add ypos moveto margin 141 add 3 add ypos lineto stroke
+newpath margin 141 add ypos moveto margin 141 add ypos 6 sub lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+margin 180 add ypos moveto (v) show
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2510 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add ypos lineto stroke
+newpath margin 225 add ypos moveto margin 225 add ypos 6 sub lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 23
+newpath margin 141 add ypos 6 sub moveto margin 141 add ypos 6 add lineto stroke
+margin 156 add ypos moveto (libsodium) show
+% box char 2502 at col 37
+newpath margin 225 add ypos 6 sub moveto margin 225 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2502 at col 23
+newpath margin 141 add ypos 6 sub moveto margin 141 add ypos 6 add lineto stroke
+margin 156 add ypos moveto (\(trusted\)) show
+% box char 2502 at col 37
+newpath margin 225 add ypos 6 sub moveto margin 225 add ypos 6 add lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+% box char 2514 at col 23
+newpath margin 141 add ypos moveto margin 141 add 3 add ypos lineto stroke
+newpath margin 141 add ypos 6 add moveto margin 141 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2518 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add ypos lineto stroke
+newpath margin 225 add ypos 6 add moveto margin 225 add ypos lineto stroke
+% box char 2502 at col 64
+newpath margin 387 add ypos 6 sub moveto margin 387 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2500 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add 3 add ypos lineto stroke
+% box char 2500 at col 59
+newpath margin 357 add 3 sub ypos moveto margin 357 add 3 add ypos lineto stroke
+% box char 2500 at col 60
+newpath margin 363 add 3 sub ypos moveto margin 363 add 3 add ypos lineto stroke
+% box char 2500 at col 61
+newpath margin 369 add 3 sub ypos moveto margin 369 add 3 add ypos lineto stroke
+% box char 2500 at col 62
+newpath margin 375 add 3 sub ypos moveto margin 375 add 3 add ypos lineto stroke
+% box char 2500 at col 63
+newpath margin 381 add 3 sub ypos moveto margin 381 add 3 add ypos lineto stroke
+% box char 2518 at col 64
+newpath margin 387 add 3 sub ypos moveto margin 387 add ypos lineto stroke
+newpath margin 387 add ypos 6 add moveto margin 387 add ypos lineto stroke
+grestore
+newline
+ newline
+gsave
+margin 0 add ypos moveto (The) show
+margin 24 add ypos moveto (extraction) show
+margin 90 add ypos moveto (pipeline:) show
+margin 150 add ypos moveto (SpkiTcb.v) show
+% box char 2192 at col 35
+newpath margin 213 add 3 sub ypos 2 add moveto margin 213 add 3 add ypos lineto margin 213 add 3 sub ypos 2 sub lineto closepath fill
+margin 222 add ypos moveto (spki_tcb_extracted.ml) show
+% box char 2192 at col 59
+newpath margin 357 add 3 sub ypos 2 add moveto margin 357 add 3 add ypos lineto margin 357 add 3 sub ypos 2 sub lineto closepath fill
+margin 366 add ypos moveto (OCaml) show
+grestore
+newline
+gsave
+margin 0 add ypos moveto (library) show
+% box char 2192 at col 8
+newpath margin 51 add 3 sub ypos 2 add moveto margin 51 add 3 add ypos lineto margin 51 add 3 sub ypos 2 sub lineto closepath fill
+margin 60 add ypos moveto (Scheme) show
+margin 102 add ypos moveto (FFI.) show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(WHAT) show ( ) show (WE) show ( ) show (PROVE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Fully) show ( ) show (Proven) show ( ) show (Theorems) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(Security-critical) show ( ) show (theorems) show ( ) show (with) show ( ) show (complete) show ( ) show (proofs) show ( ) show (\(no) show ( ) show (admits\):) show  newline
+ newline
+ newline
+(Theorem) show ( ) show (Property) show  newline
+(principal_equal_refl) show ( ) show (Reflexivity:) show ( ) show (p) show ( ) show (=) show ( ) show (p) show  newline
+gsave
+margin 12 add ypos moveto (principal_equal_sym) show
+margin 174 add ypos moveto (Symmetry:) show
+margin 234 add ypos moveto (p) show
+margin 246 add ypos moveto (=) show
+margin 258 add ypos moveto (q) show
+% box char 2192 at col 45
+newpath margin 273 add 3 sub ypos 2 add moveto margin 273 add 3 add ypos lineto margin 273 add 3 sub ypos 2 sub lineto closepath fill
+margin 282 add ypos moveto (q) show
+margin 294 add ypos moveto (=) show
+margin 306 add ypos moveto (p) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (principal_equal_trans) show
+margin 174 add ypos moveto (Transitivity:) show
+margin 258 add ypos moveto (p) show
+margin 270 add ypos moveto (=) show
+margin 282 add ypos moveto (q) show
+margin 294 add ypos moveto () show
+margin 306 add ypos moveto (q) show
+margin 318 add ypos moveto (=) show
+margin 330 add ypos moveto (r) show
+% box char 2192 at col 57
+newpath margin 345 add 3 sub ypos 2 add moveto margin 345 add 3 add ypos lineto margin 345 add 3 sub ypos 2 sub lineto closepath fill
+margin 354 add ypos moveto (p) show
+margin 366 add ypos moveto (=) show
+margin 378 add ypos moveto (r) show
+grestore
+newline
+(authorize_requester_match) show ( ) show (If) show ( ) show (authorized,) show ( ) show (requester) show ( ) show (is) show ( ) show (named) show ( ) show (by) show ( ) show (leaf) show ( ) show (cert) show  newline
+gsave
+margin 12 add ypos moveto (authorize_complete) show
+margin 174 add ypos moveto (All) show
+margin 198 add ypos moveto (preconditions) show
+margin 282 add ypos moveto (satisfied) show
+% box char 2192 at col 57
+newpath margin 345 add 3 sub ypos 2 add moveto margin 345 add 3 add ypos lineto margin 345 add 3 sub ypos 2 sub lineto closepath fill
+margin 354 add ypos moveto (authorization) show
+margin 438 add ypos moveto (succeeds) show
+grestore
+newline
+ newline
+(The) show ( ) show (authorize_requester_match) show ( ) show (theorem) show ( ) show (is) show ( ) show (the) show ( ) show (key) show ( ) show (security) show ( ) show (property:) show ( ) show (it) show  newline
+(guarantees) show ( ) show (that) show ( ) show (authorization) show ( ) show (only) show ( ) show (succeeds) show ( ) show (when) show ( ) show (the) show ( ) show (requester) show ( ) show (is) show  newline
+(actually) show ( ) show (named) show ( ) show (in) show ( ) show (the) show ( ) show (certificate) show ( ) show (chain.) show  newline
+ newline
+ newline
+(Partially) show ( ) show (Proven) show ( ) show (Theorems) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+ newline
+(Theorem) show ( ) show (Proven) show ( ) show (Cases) show ( ) show (Admitted) show ( ) show (Cases) show  newline
+(tag_intersect_idemp) show ( ) show (TagAll,) show ( ) show (TagSet,) show ( ) show (TagPrefix,) show ( ) show (TagRange) show ( ) show (TagThreshold) show  newline
+(tag_intersect_subset_left) show ( ) show (Most) show ( ) show (combinations) show ( ) show (TagPrefix) show ( ) show (recursive,) show ( ) show (TagThreshold) show  newline
+ newline
+(The) show ( ) show (admitted) show ( ) show (cases) show ( ) show (stem) show ( ) show (from) show ( ) show (design) show ( ) show (limitations) show ( ) show (documented) show ( ) show (below.) show  newline
+ newline
+ newline
+(Partially) show ( ) show (Proven:) show ( ) show (tag_intersect_comm) show  newline
+newpath margin ypos moveto margin 216 add ypos lineto stroke
+newline
+ newline
+ newline
+(Case) show ( ) show (Status) show  newline
+(TagAll) show ( ) show (Proven) show  newline
+(TagSet) show ( ) show (Proven) show ( ) show (\(via) show ( ) show (filter_intersect_comm) show ( ) show (lemma\)) show  newline
+(TagRange) show ( ) show (Proven) show  newline
+(TagPrefix) show ( ) show (Admitted) show ( ) show (\(recursive) show ( ) show (structure\)) show  newline
+(TagThreshold) show ( ) show (Admitted) show ( ) show (\(Cartesian) show ( ) show (product) show ( ) show (ordering\)) show  newline
+ newline
+(The) show ( ) show (TagSet) show ( ) show (case) show ( ) show (required) show ( ) show (proving) show ( ) show (that) show ( ) show (filter) show ( ) show (intersection) show ( ) show (produces) show ( ) show (the) show  newline
+(same) show ( ) show (elements) show ( ) show (regardless) show ( ) show (of) show ( ) show (operand) show ( ) show (order,) show ( ) show (then) show ( ) show (applying) show  newline
+(canonicalize_strings) show ( ) show (to) show ( ) show (ensure) show ( ) show (structural) show ( ) show (equality.) show  newline
+ newline
+ newline
+(Admitted) show ( ) show (Theorems) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(Theorem) show ( ) show (Reason) show  newline
+(verify_chain_sound) show ( ) show (Complex) show ( ) show (induction) show ( ) show (over) show ( ) show (chain) show ( ) show (structure) show  newline
+(verify_chain_attenuates) show ( ) show (Depends) show ( ) show (on) show ( ) show (verify_chain_sound) show  newline
+ newline
+(These) show ( ) show (are) show ( ) show (design) show ( ) show (debt,) show ( ) show (not) show ( ) show (security) show ( ) show (holes.) show ( ) show (The) show ( ) show (algorithms) show ( ) show (are) show ( ) show (correct;) show  newline
+(the) show ( ) show (proofs) show ( ) show (are) show ( ) show (incomplete.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(WHAT) show ( ) show (WE) show ( ) show (ASSUME) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Cryptographic) show ( ) show (operations) show ( ) show (are) show ( ) show (axiomatized) show ( ) show (-) show ( ) show (we) show ( ) show (trust) show ( ) show (libsodium:) show  newline
+ newline
+ newline
+(Axiom) show ( ) show (sha512) show ( ) show (:) show ( ) show (bytes) show ( ) show (->) show ( ) show (bytes.) show  newline
+(Axiom) show ( ) show (ed25519_verify) show ( ) show (:) show ( ) show (bytes) show ( ) show (->) show ( ) show (bytes) show ( ) show (->) show ( ) show (bytes) show ( ) show (->) show ( ) show (bool.) show  newline
+ newline
+(Trust) show ( ) show (assumptions:) show  newline
+ newline
+(*) show ( ) show (libsodium) show ( ) show (correctness:) show ( ) show (Ed25519,) show ( ) show (SHA-512) show ( ) show (implementations) show  newline
+(*) show ( ) show (OCaml) show ( ) show (runtime:) show ( ) show (Extraction) show ( ) show (target) show ( ) show (executes) show ( ) show (correctly) show  newline
+(*) show ( ) show (Hardware:) show ( ) show (CPU) show ( ) show (executes) show ( ) show (instructions) show ( ) show (correctly) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(DESIGN) show ( ) show (LIMITATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(TagSet) show ( ) show (Canonical) show ( ) show (Ordering) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+(Tag) show ( ) show (intersection) show ( ) show (commutativity) show ( ) show (requires) show ( ) show (canonical) show ( ) show (representation:) show  newline
+ newline
+ newline
+(\(tag_intersect) show ( ) show (\(TagSet) show ( ) show (["read") show ( ) show ("write"]\)) show ( ) show (\(TagSet) show ( ) show (["write") show ( ) show ("read"]\)\)) show  newline
+(;;) show ( ) show (Result) show ( ) show (order) show ( ) show (depends) show ( ) show (on) show ( ) show (input) show ( ) show (order) show ( ) show (without) show ( ) show (canonicalization) show  newline
+ newline
+(Solution) show ( ) show (implemented:) show ( ) show (sort) show ( ) show (and) show ( ) show (deduplicate) show ( ) show (TagSet) show ( ) show (contents.) show ( ) show (The) show  newline
+(canonicalize_canonical) show ( ) show (lemma) show ( ) show (bridges) show ( ) show (structural) show ( ) show (and) show ( ) show (semantic) show ( ) show (equality.) show  newline
+ newline
+ newline
+(TagThreshold) show ( ) show (Cartesian) show ( ) show (Product) show  newline
+newpath margin ypos moveto margin 180 add ypos lineto stroke
+newline
+ newline
+(Intersection) show ( ) show (of) show ( ) show (thresholds) show ( ) show (produces) show ( ) show (Cartesian) show ( ) show (product) show ( ) show (of) show ( ) show (subtags:) show  newline
+ newline
+ newline
+(\(tag_intersect) show ( ) show (\(TagThreshold) show ( ) show (2) show ( ) show ([A) show ( ) show (B) show ( ) show (C]\)) show ( ) show (\(TagThreshold) show ( ) show (2) show ( ) show ([A) show ( ) show (B) show ( ) show (C]\)\)) show  newline
+gsave
+margin 24 add ypos moveto (;;) show
+margin 42 add ypos moveto (Produces) show
+margin 96 add ypos moveto (9) show
+margin 108 add ypos moveto (subtags:) show
+margin 162 add ypos moveto ([AA,) show
+margin 198 add ypos moveto (AB,) show
+margin 228 add ypos moveto (AC,) show
+margin 258 add ypos moveto (BA,) show
+margin 288 add ypos moveto (BB,) show
+margin 318 add ypos moveto (...]) show
+grestore
+newline
+ newline
+(This) show ( ) show (is) show ( ) show (semantically) show ( ) show (correct) show ( ) show (but) show ( ) show (not) show ( ) show (structurally) show ( ) show (idempotent.) show ( ) show (Options:) show  newline
+ newline
+(*) show ( ) show (Require) show ( ) show (disjoint) show ( ) show (subtags) show  newline
+(*) show ( ) show (Normalize) show ( ) show (after) show ( ) show (intersection) show  newline
+(*) show ( ) show (Accept) show ( ) show (semantic) show ( ) show (rather) show ( ) show (than) show ( ) show (structural) show ( ) show (idempotence) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(EXTRACTION) show ( ) show (PIPELINE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Build) show ( ) show (and) show ( ) show (extract:) show  newline
+ newline
+ newline
+(cd) show ( ) show (tcb/coq) show  newline
+(coqc) show ( ) show (SpkiTcb.v) show ( ) show (#) show ( ) show (Type-check) show ( ) show (proofs,) show ( ) show (extract) show ( ) show (OCaml) show  newline
+(dune) show ( ) show (build) show ( ) show (#) show ( ) show (Compile) show ( ) show (extracted) show ( ) show (+) show ( ) show (bridge) show ( ) show (code) show  newline
+ newline
+(The) show ( ) show (extraction) show ( ) show (directive:) show  newline
+ newline
+ newline
+(Extraction) show ( ) show (Language) show ( ) show (OCaml.) show  newline
+(Extraction) show ( ) show ("spki_tcb_extracted.ml") show  newline
+(authorize) show ( ) show (verify_chain) show ( ) show (tag_intersect) show ( ) show (principal_equal) show ( ) show (...) show  newline
+ newline
+(The) show ( ) show (bridge) show ( ) show (module) show ( ) show (\(spki_tcb.ml\)) show ( ) show (converts) show ( ) show (between) show ( ) show (Rocq's) show ( ) show (int) show ( ) show (list) show  newline
+(representation) show ( ) show (and) show ( ) show (OCaml's) show ( ) show (native) show ( ) show (bytes,) show ( ) show (calling) show ( ) show (libsodium) show ( ) show (for) show  newline
+(cryptographic) show ( ) show (operations.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TEST) show ( ) show (COVERAGE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Suite) show ( ) show (Tests) show ( ) show (Coverage) show  newline
+(test_extracted.ml) show ( ) show (16) show ( ) show (Unit) show ( ) show (tests:) show ( ) show (principals,) show ( ) show (tags,) show ( ) show (chains) show  newline
+(test_properties.ml) show ( ) show (11) show ( ) show (Property-based:) show ( ) show (QCheck) show ( ) show (random) show ( ) show (testing) show  newline
+(test_tcb.exe) show ( ) show (62) show ( ) show (Full) show ( ) show (TCB:) show ( ) show (crypto,) show ( ) show (cookies,) show ( ) show (audit,) show ( ) show (FIPS-181) show  newline
+ newline
+(All) show ( ) show (tests) show ( ) show (pass.) show ( ) show (The) show ( ) show (property-based) show ( ) show (tests) show ( ) show (validate) show ( ) show (Rocq) show ( ) show (theorems) show ( ) show (at) show  newline
+(runtime:) show  newline
+ newline
+ newline
+(Property) show ( ) show (Generator) show ( ) show (Constraints) show  newline
+(principal_equal) show ( ) show (reflexive/symmetric/transitive) show ( ) show (Random) show ( ) show (principals) show  newline
+(tag_intersect) show ( ) show (commutative) show ( ) show (Non-threshold) show ( ) show (tags) show ( ) show (only) show  newline
+(tag_intersect) show ( ) show (idempotent) show ( ) show (Non-threshold,) show ( ) show (non-empty) show ( ) show (TagSets) show  newline
+(tag_intersect) show ( ) show (TagAll) show ( ) show (identity) show ( ) show (All) show ( ) show (tag) show ( ) show (types) show  newline
+(tag_subset) show ( ) show (reflexive) show ( ) show (Non-threshold) show ( ) show (tags) show ( ) show (only) show  newline
+(TagRange) show ( ) show (subset) show ( ) show (containment) show ( ) show (Random) show ( ) show (ranges) show  newline
+ newline
+(TagThreshold) show ( ) show (is) show ( ) show (excluded) show ( ) show (from) show ( ) show (commutativity/idempotence) show ( ) show (tests) show ( ) show (due) show ( ) show (to) show  newline
+(documented) show ( ) show (structural) show ( ) show (limitations) show ( ) show (\(Cartesian) show ( ) show (product) show ( ) show (ordering\).) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(FUTURE) show ( ) show (WORK) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Complete) show ( ) show (tag_intersect_comm) show ( ) show (for) show ( ) show (TagPrefix) show ( ) show (\(recursive) show ( ) show (induction\)) show  newline
+(*) show ( ) show (Prove) show ( ) show (verify_chain_sound) show ( ) show (with) show ( ) show (custom) show ( ) show (induction) show ( ) show (principle) show  newline
+(*) show ( ) show (Consider) show ( ) show (CompCert) show ( ) show (or) show ( ) show (Fiat-Crypto) show ( ) show (for) show ( ) show (deeper) show ( ) show (verification) show  newline
+ newline
+(Current) show ( ) show (proof) show ( ) show (coverage) show ( ) show (is) show ( ) show (sufficient) show ( ) show (for) show ( ) show (beta.) show ( ) show (The) show ( ) show (admitted) show ( ) show (theorems) show ( ) show (are) show  newline
+(proof) show ( ) show (obligations,) show ( ) show (not) show ( ) show (security) show ( ) show (vulnerabilities.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+([Rocq,) show ( ) show (2024]) show ( ) show (The) show ( ) show (Rocq) show ( ) show (Proof) show ( ) show (Assistant.) show ( ) show (https://coq.inria.fr/) show  newline
+([SPKI,) show ( ) show (1999]) show ( ) show (RFC) show ( ) show (2693:) show ( ) show (SPKI) show ( ) show (Certificate) show ( ) show (Theory) show  newline
+([Memo-045,) show ( ) show (2026]) show ( ) show (Security) show ( ) show (Architecture) show  newline
+([libsodium,) show ( ) show (2024]) show ( ) show (https://libsodium.org/) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

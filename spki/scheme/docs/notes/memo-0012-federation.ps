@@ -15,503 +15,1010 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0012: Federation Protocol) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies the Federation Protocol for the Library of) show newline
-(Cyberspace: a peer-to-peer synchronization system enabling loose) show newline
-(confederacies of friends to share and preserve cryptographically sealed) show newline
-(artifacts without central authority.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(E PLURIBUS UNUM) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Out of many, one.) show newline
-() show newline
-() show newline
-(        ┌─────────┐         ┌─────────┐         ┌─────────┐) show newline
-(        │  Alice  │◄───────►│   Bob   │◄───────►│  Carol  │) show newline
-(        │  Vault  │         │  Vault  │         │  Vault  │) show newline
-(        └────┬────┘         └────┬────┘         └────┬────┘) show newline
-(             │                   │                   │) show newline
-(             │    ┌──────────────┴──────────────┐    │) show newline
-(             │    │                             │    │) show newline
-(             └────►    No Central Authority    ◄────┘) show newline
-(                  │                             │) show newline
-(                  │   Just keys, seals, trust   │) show newline
-(                  │                             │) show newline
-(                  └─────────────────────────────┘) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Centralized systems fail:) show newline
-() show newline
-(  * Single point of failure: Server goes down, everyone stops) show newline
-(  * Censorship: Authority can deny access) show newline
-(  * Trust concentration: Must trust operator) show newline
-(  * Survival: Company folds, data lost) show newline
-() show newline
-(These failures are not bugs but features of centralized design; the only) show newline
-(remedy is architectural, not operational.) show newline
-() show newline
-(Federation provides:) show newline
-() show newline
-(  * Decentralized - No master server) show newline
-(  * Resilient - Survives node failures) show newline
-(  * Autonomous - Each peer controls own data) show newline
-(  * Cryptographic - Trust through math, not authority) show newline
-(  * Eventual consistency - Convergence without coordination) show newline
-() show newline
-(Federation trades coordination complexity for availability and autonomy,) show newline
-(accepting that nodes may temporarily disagree in exchange for never) show newline
-(being unable to operate.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(FEDERATION MODEL) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Peer Relationships) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    Peer: A vault instance with identity \(SPKI principal\)) show newline
-(    Relationships:) show newline
-(      - Publisher:  I push releases to you) show newline
-(      - Subscriber: I pull releases from you) show newline
-(      - Peer:       Bidirectional sync) show newline
-() show newline
-() show newline
-(Trust Model) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    \(federation-trust) show newline
-(      \(peer alice-pubkey) show newline
-(        \(role publisher\)) show newline
-(        \(trust-level verified\)     ; Signature verified) show newline
-(        \(sync-policy automatic\)\)) show newline
-(      \(peer bob-pubkey) show newline
-(        \(role subscriber\)) show newline
-(        \(trust-level known\)        ; Key known, not verified) show newline
-(        \(sync-policy manual\)\)\)) show newline
-() show newline
-(Trust levels: - unknown: Never seen, reject - known: Key registered,) show newline
-(manual approval - verified: Signature chain verified via Simple Public) show newline
-(Key Infrastructure \(SPKI\) - trusted: Full automatic sync) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PROTOCOL OPERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Peer Discovery) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    \(federation-discover\)) show newline
-(    ;; Returns: List of known peers and their status) show newline
-() show newline
-(Discovery mechanisms:) show newline
-() show newline
-(  * Explicit configuration: Known peer list) show newline
-(  * Git remotes: Extract from repository) show newline
-(  * Directory service: Optional, not required) show newline
-(  * mDNS/Bonjour: Local network discovery via cyberspace.tcp) show newline
-() show newline
-() show newline
-(mDNS Service Discovery) show newline
-(----------------------) show newline
-() show newline
-(Cyberspace nodes announce themselves via mDNS using the cyberspace.tcp) show newline
-(service type:) show newline
-() show newline
-() show newline
-(    ;; Announce this node) show newline
-(    \(announce-presence 'starlight\)) show newline
-(    ;; Registers: starlight.cyberspace.tcp.local. port 7654) show newline
-(    ;; Discover peers) show newline
-(    \(discover-peers\)) show newline
-(    ;; Scans for cyberspace.tcp services on local network) show newline
-() show newline
-(Platform support: - macOS: dns-sd -R for registration, dns-sd -B for) show newline
-(browsing - Linux: avahi-publish for registration, avahi-browse for) show newline
-(browsing) show newline
-() show newline
-() show newline
-(Peer Registration) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    \(federation-register peer-uri) show newline
-(      #!key public-key trust-level\)) show newline
-() show newline
-(Registers a new peer with: - URI \(git remote, HTTP endpoint, filesystem) show newline
-(path\) - Public key for verification - Initial trust level) show newline
-() show newline
-() show newline
-(Release Announcement) show newline
-(--------------------) show newline
-() show newline
-() show newline
-(    \(federation-announce version) show newline
-(      #!key peers message\)) show newline
-() show newline
-(Pushes release notification to peers:) show newline
-() show newline
-(  * Create signed announcement) show newline
-(  * Send to specified peers \(or all\)) show newline
-(  * Peers verify signature) show newline
-(  * Peers decide whether to pull) show newline
-() show newline
-() show newline
-(Release Request) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(federation-request version peer) show newline
-(      #!key verify-key\)) show newline
-() show newline
-(Pulls specific release from peer:) show newline
-() show newline
-(  * Request release metadata) show newline
-(  * Verify signature) show newline
-(  * Download archive) show newline
-(  * Verify integrity) show newline
-(  * Record in audit trail) show newline
-() show newline
-() show newline
-(Synchronization) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(federation-sync peer) show newline
-(      #!key direction verify-key\)) show newline
-() show newline
-(Bidirectional sync \(from Memo-0002\):) show newline
-() show newline
-(  * Exchange release lists) show newline
-(  * Identify missing releases) show newline
-(  * Push/pull as configured) show newline
-(  * Verify all signatures) show newline
-(  * Update audit trails) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MESSAGE FORMAT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Announcement Message) show newline
-(--------------------) show newline
-() show newline
-() show newline
-(    \(federation-message) show newline
-(      \(type announcement\)) show newline
-(      \(from #${alice-pubkey}\)) show newline
-(      \(timestamp 1767685100\)) show newline
-(      \(payload) show newline
-(        \(release "2.0.0"\)) show newline
-(        \(hash "sha512:..."\)) show newline
-(        \(archive-size 1048576\)) show newline
-(        \(notes "Major release"\)\)) show newline
-(      \(signature #${ed25519-sig}\)\)) show newline
-() show newline
-() show newline
-(Request Message) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(federation-message) show newline
-(      \(type request\)) show newline
-(      \(from #${bob-pubkey}\)) show newline
-(      \(timestamp 1767685200\)) show newline
-(      \(payload) show newline
-(        \(release "2.0.0"\)) show newline
-(        \(format cryptographic\)\)) show newline
-(      \(signature #${ed25519-sig}\)\)) show newline
-() show newline
-() show newline
-(Response Message) show newline
-(----------------) show newline
-() show newline
-() show newline
-(    \(federation-message) show newline
-(      \(type response\)) show newline
-(      \(from #${alice-pubkey}\)) show newline
-(      \(in-reply-to "sha512:request-hash"\)) show newline
-(      \(timestamp 1767685300\)) show newline
-(      \(payload) show newline
-(        \(release "2.0.0"\)) show newline
-(        \(archive-uri "/releases/vault-2.0.0.archive"\)) show newline
-(        \(hash "sha512:..."\)) show newline
-(        \(signature "ed25519:..."\)\)) show newline
-(      \(signature #${ed25519-sig}\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(TRANSPORT BINDINGS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Git Transport) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    Origin: git@github.com:alice/vault.git) show newline
-(    Mechanism: Tags + release assets) show newline
-(    Announce: git push origin v2.0.0) show newline
-(    Request:  git fetch origin --tags) show newline
-(    Sync:     git fetch origin && git push origin) show newline
-() show newline
-() show newline
-(HTTP Transport) show newline
-(--------------) show newline
-() show newline
-() show newline
-(    Endpoint: https://alice.example.com/federation) show newline
-(    Announce: POST /federation/announce) show newline
-(    Request:  GET /federation/releases/2.0.0) show newline
-(    Sync:     POST /federation/sync) show newline
-() show newline
-() show newline
-(Filesystem Transport) show newline
-(--------------------) show newline
-() show newline
-() show newline
-(    Path: /shared/federation/alice) show newline
-(    Announce: Copy to /shared/federation/alice/announce/) show newline
-(    Request:  Read from /shared/federation/alice/releases/) show newline
-(    Sync:     rsync --update) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CONFLICT RESOLUTION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Version Conflicts) show newline
-(-----------------) show newline
-() show newline
-(Same version, different content:) show newline
-() show newline
-() show newline
-(    \(federation-conflict) show newline
-(      \(version "2.0.0"\)) show newline
-(      \(local-hash "sha512:abc..."\)) show newline
-(      \(remote-hash "sha512:def..."\)) show newline
-(      \(resolution reject\)\)  ; Or: prefer-local, prefer-remote, rename) show newline
-() show newline
-(Default: Reject conflicts, require human decision.) show newline
-() show newline
-() show newline
-(Resolution Strategies) show newline
-(---------------------) show newline
-() show newline
-(  * Reject: Stop sync, alert human) show newline
-(  * Prefer-local: Keep local version) show newline
-(  * Prefer-remote: Take remote version) show newline
-(  * Rename: Keep both as 2.0.0-local, 2.0.0-remote) show newline
-(  * Merge: If content mergeable \(future\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CONSISTENCY MODEL) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Eventual Consistency) show newline
-(--------------------) show newline
-() show newline
-(  * No global ordering required) show newline
-(  * Each peer has local view) show newline
-(  * Convergence through sync) show newline
-(  * Conflicts resolved locally) show newline
-() show newline
-() show newline
-(Causal Ordering) show newline
-(---------------) show newline
-() show newline
-(Within a peer's releases: - Version numbers are monotonic - Audit trail) show newline
-(provides causality - Hash chains prevent reordering) show newline
-() show newline
-() show newline
-(No Coordination) show newline
-(---------------) show newline
-() show newline
-(  * No consensus protocol required) show newline
-(  * No distributed lock) show newline
-(  * No leader election) show newline
-(  * Each peer autonomous) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Threat Model) show newline
-(------------) show newline
-() show newline
-(Protected: - Unauthenticated release injection \(signature verification\)) show newline
-(- Content tampering \(hash verification\) - Impersonation \(SPKI principal) show newline
-(binding\) - Replay attacks \(timestamps, sequence numbers\)) show newline
-() show newline
-(Not protected: - Denial of service \(rate limiting helps\) - Privacy of) show newline
-(release metadata \(encrypted transport helps\) - Sybil attacks \(trust) show newline
-(management helps\)) show newline
-() show newline
-() show newline
-(Trust Verification) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    \(define \(verify-peer-message msg peer-key\)) show newline
-(      \(and \(verify-signature msg peer-key\)) show newline
-(           \(verify-timestamp msg \(current-seconds\)\)) show newline
-(           \(verify-not-replayed msg\)\)\)) show newline
-() show newline
-() show newline
-(Rate Limiting) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    \(federation-config) show newline
-(      \(rate-limit) show newline
-(        \(announcements-per-hour 10\)) show newline
-(        \(requests-per-minute 60\)) show newline
-(        \(sync-interval-minimum 300\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(GOSSIP PROTOCOL \(FUTURE\)) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(For larger networks:) show newline
-() show newline
-() show newline
-(    Alice announces to Bob and Carol) show newline
-(    Bob announces to Dave and Eve) show newline
-(    Eve announces to Frank) show newline
-(    Result: Epidemic spread without central broadcast) show newline
-() show newline
-(Properties: - Logarithmic propagation time - Resilient to node failures) show newline
-(- No single bottleneck) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(BOOTSTRAP PROCEDURE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(New Peer Joining) show newline
-(----------------) show newline
-() show newline
-(  * Generate keypair) show newline
-(  * Register with known peer) show newline
-(  * Exchange public keys \(out-of-band verification\)) show newline
-(  * Initial sync to get current releases) show newline
-(  * Begin participating in federation) show newline
-() show newline
-() show newline
-(Network Partitions) show newline
-(------------------) show newline
-() show newline
-(  * Partitions heal automatically on reconnection) show newline
-(  * Conflicting releases detected and flagged) show newline
-(  * Audit trails show partition history) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CONFIGURATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    \(federation-config) show newline
-(      ;; Identity) show newline
-(      \(identity my-private-key\)) show newline
-(      ;; Peers) show newline
-(      \(peers) show newline
-(        \(peer "alice" uri: "git@github.com:alice/vault.git") show newline
-(                      key: alice-pubkey) show newline
-(                      trust: verified\)) show newline
-(        \(peer "bob"   uri: "/shared/bob-vault") show newline
-(                      key: bob-pubkey) show newline
-(                      trust: known\)\)) show newline
-(      ;; Policies) show newline
-(      \(auto-sync #t\)) show newline
-(      \(sync-interval 3600\)  ; seconds) show newline
-(      \(verify-before-accept #t\)) show newline
-(      ;; Security) show newline
-(      \(require-signature #t\)) show newline
-(      \(trust-on-first-use #f\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION STATUS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Implemented \(Memo-007\)) show newline
-(----------------------) show newline
-() show newline
-(  * seal-publish: Push to single remote - seal-subscribe: Pull from single remote - seal-synchronize: Bidirectional with single peer) show newline
-(  * Transport: git, HTTP, filesystem) show newline
-() show newline
-() show newline
-(Proposed \(This Memo\)) show newline
-(--------------------) show newline
-() show newline
-(  * Multi-peer management) show newline
-(  * Trust levels and policies) show newline
-(  * Announcement protocol) show newline
-(  * Gossip propagation) show newline
-(  * Conflict resolution UI) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Birman, K. \(2007\). The Promise, and Limitations, of Gossip Protocols.) show newline
-(  * Demers, A., et al. \(1987\). Epidemic Algorithms for Replicated Database Maintenance.) show newline
-(  * Shapiro, M., et al. \(2011\). Conflict-Free Replicated Data Types.) show newline
-(  * Memo-007: Replication Layer) show newline
-(  * Memo-003: SPKI Authorization) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-06) show newline
-(  * Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0012:) show ( ) show (Federation) show ( ) show (Protocol) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (the) show ( ) show (Federation) show ( ) show (Protocol) show ( ) show (for) show ( ) show (the) show ( ) show (Library) show ( ) show (of) show  newline
+(Cyberspace:) show ( ) show (a) show ( ) show (peer-to-peer) show ( ) show (synchronization) show ( ) show (system) show ( ) show (enabling) show ( ) show (loose) show  newline
+(confederacies) show ( ) show (of) show ( ) show (friends) show ( ) show (to) show ( ) show (share) show ( ) show (and) show ( ) show (preserve) show ( ) show (cryptographically) show ( ) show (sealed) show  newline
+(artifacts) show ( ) show (without) show ( ) show (central) show ( ) show (authority.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(E) show ( ) show (PLURIBUS) show ( ) show (UNUM) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Out) show ( ) show (of) show ( ) show (many,) show ( ) show (one.) show  newline
+ newline
+ newline
+gsave
+% box char 250c at col 8
+newpath margin 51 add ypos moveto margin 51 add 3 add ypos lineto stroke
+newpath margin 51 add ypos moveto margin 51 add ypos 6 sub lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2510 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add ypos lineto stroke
+newpath margin 111 add ypos moveto margin 111 add ypos 6 sub lineto stroke
+% box char 250c at col 28
+newpath margin 171 add ypos moveto margin 171 add 3 add ypos lineto stroke
+newpath margin 171 add ypos moveto margin 171 add ypos 6 sub lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2510 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add ypos lineto stroke
+newpath margin 231 add ypos moveto margin 231 add ypos 6 sub lineto stroke
+% box char 250c at col 48
+newpath margin 291 add ypos moveto margin 291 add 3 add ypos lineto stroke
+newpath margin 291 add ypos moveto margin 291 add ypos 6 sub lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2500 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2510 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add ypos lineto stroke
+newpath margin 351 add ypos moveto margin 351 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+margin 66 add ypos moveto (Alice) show
+% box char 2502 at col 18
+newpath margin 111 add ypos 6 sub moveto margin 111 add ypos 6 add lineto stroke
+% box char 25c4 at col 19
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 25ba at col 27
+newpath margin 165 add 3 sub ypos 2 add moveto margin 165 add 3 add ypos lineto margin 165 add 3 sub ypos 2 sub lineto closepath fill
+% box char 2502 at col 28
+newpath margin 171 add ypos 6 sub moveto margin 171 add ypos 6 add lineto stroke
+margin 192 add ypos moveto (Bob) show
+% box char 2502 at col 38
+newpath margin 231 add ypos 6 sub moveto margin 231 add ypos 6 add lineto stroke
+% box char 25c4 at col 39
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 25ba at col 47
+newpath margin 285 add 3 sub ypos 2 add moveto margin 285 add 3 add ypos lineto margin 285 add 3 sub ypos 2 sub lineto closepath fill
+% box char 2502 at col 48
+newpath margin 291 add ypos 6 sub moveto margin 291 add ypos 6 add lineto stroke
+margin 306 add ypos moveto (Carol) show
+% box char 2502 at col 58
+newpath margin 351 add ypos 6 sub moveto margin 351 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 8
+newpath margin 51 add ypos 6 sub moveto margin 51 add ypos 6 add lineto stroke
+margin 66 add ypos moveto (Vault) show
+% box char 2502 at col 18
+newpath margin 111 add ypos 6 sub moveto margin 111 add ypos 6 add lineto stroke
+% box char 2502 at col 28
+newpath margin 171 add ypos 6 sub moveto margin 171 add ypos 6 add lineto stroke
+margin 186 add ypos moveto (Vault) show
+% box char 2502 at col 38
+newpath margin 231 add ypos 6 sub moveto margin 231 add ypos 6 add lineto stroke
+% box char 2502 at col 48
+newpath margin 291 add ypos 6 sub moveto margin 291 add ypos 6 add lineto stroke
+margin 306 add ypos moveto (Vault) show
+% box char 2502 at col 58
+newpath margin 351 add ypos 6 sub moveto margin 351 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 8
+newpath margin 51 add ypos moveto margin 51 add 3 add ypos lineto stroke
+newpath margin 51 add ypos 6 add moveto margin 51 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 252c at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+newpath margin 81 add ypos moveto margin 81 add ypos 6 sub lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2518 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add ypos lineto stroke
+newpath margin 111 add ypos 6 add moveto margin 111 add ypos lineto stroke
+% box char 2514 at col 28
+newpath margin 171 add ypos moveto margin 171 add 3 add ypos lineto stroke
+newpath margin 171 add ypos 6 add moveto margin 171 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 252c at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+newpath margin 201 add ypos moveto margin 201 add ypos 6 sub lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2518 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add ypos lineto stroke
+newpath margin 231 add ypos 6 add moveto margin 231 add ypos lineto stroke
+% box char 2514 at col 48
+newpath margin 291 add ypos moveto margin 291 add 3 add ypos lineto stroke
+newpath margin 291 add ypos 6 add moveto margin 291 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 252c at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add 3 add ypos lineto stroke
+newpath margin 321 add ypos moveto margin 321 add ypos 6 sub lineto stroke
+% box char 2500 at col 54
+newpath margin 327 add 3 sub ypos moveto margin 327 add 3 add ypos lineto stroke
+% box char 2500 at col 55
+newpath margin 333 add 3 sub ypos moveto margin 333 add 3 add ypos lineto stroke
+% box char 2500 at col 56
+newpath margin 339 add 3 sub ypos moveto margin 339 add 3 add ypos lineto stroke
+% box char 2500 at col 57
+newpath margin 345 add 3 sub ypos moveto margin 345 add 3 add ypos lineto stroke
+% box char 2518 at col 58
+newpath margin 351 add 3 sub ypos moveto margin 351 add ypos lineto stroke
+newpath margin 351 add ypos 6 add moveto margin 351 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 13
+newpath margin 81 add ypos 6 sub moveto margin 81 add ypos 6 add lineto stroke
+% box char 2502 at col 33
+newpath margin 201 add ypos 6 sub moveto margin 201 add ypos 6 add lineto stroke
+% box char 2502 at col 53
+newpath margin 321 add ypos 6 sub moveto margin 321 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 13
+newpath margin 81 add ypos 6 sub moveto margin 81 add ypos 6 add lineto stroke
+% box char 250c at col 18
+newpath margin 111 add ypos moveto margin 111 add 3 add ypos lineto stroke
+newpath margin 111 add ypos moveto margin 111 add ypos 6 sub lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2534 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+newpath margin 201 add ypos 6 add moveto margin 201 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2510 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add ypos lineto stroke
+newpath margin 291 add ypos moveto margin 291 add ypos 6 sub lineto stroke
+% box char 2502 at col 53
+newpath margin 321 add ypos 6 sub moveto margin 321 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 13
+newpath margin 81 add ypos 6 sub moveto margin 81 add ypos 6 add lineto stroke
+% box char 2502 at col 18
+newpath margin 111 add ypos 6 sub moveto margin 111 add ypos 6 add lineto stroke
+% box char 2502 at col 48
+newpath margin 291 add ypos 6 sub moveto margin 291 add ypos 6 add lineto stroke
+% box char 2502 at col 53
+newpath margin 321 add ypos 6 sub moveto margin 321 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 13
+newpath margin 81 add ypos moveto margin 81 add 3 add ypos lineto stroke
+newpath margin 81 add ypos 6 add moveto margin 81 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 25ba at col 18
+newpath margin 111 add 3 sub ypos 2 add moveto margin 111 add 3 add ypos lineto margin 111 add 3 sub ypos 2 sub lineto closepath fill
+margin 138 add ypos moveto (No) show
+margin 156 add ypos moveto (Central) show
+margin 204 add ypos moveto (Authority) show
+% box char 25c4 at col 47
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2518 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add ypos lineto stroke
+newpath margin 315 add ypos 6 add moveto margin 315 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 18
+newpath margin 111 add ypos 6 sub moveto margin 111 add ypos 6 add lineto stroke
+% box char 2502 at col 48
+newpath margin 291 add ypos 6 sub moveto margin 291 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 18
+newpath margin 111 add ypos 6 sub moveto margin 111 add ypos 6 add lineto stroke
+margin 132 add ypos moveto (Just) show
+margin 162 add ypos moveto (keys,) show
+margin 198 add ypos moveto (seals,) show
+margin 240 add ypos moveto (trust) show
+% box char 2502 at col 48
+newpath margin 291 add ypos 6 sub moveto margin 291 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 18
+newpath margin 111 add ypos 6 sub moveto margin 111 add ypos 6 add lineto stroke
+% box char 2502 at col 48
+newpath margin 291 add ypos 6 sub moveto margin 291 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 18
+newpath margin 111 add ypos moveto margin 111 add 3 add ypos lineto stroke
+newpath margin 111 add ypos 6 add moveto margin 111 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2518 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add ypos lineto stroke
+newpath margin 291 add ypos 6 add moveto margin 291 add ypos lineto stroke
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Centralized) show ( ) show (systems) show ( ) show (fail:) show  newline
+ newline
+(*) show ( ) show (Single) show ( ) show (point) show ( ) show (of) show ( ) show (failure:) show ( ) show (Server) show ( ) show (goes) show ( ) show (down,) show ( ) show (everyone) show ( ) show (stops) show  newline
+(*) show ( ) show (Censorship:) show ( ) show (Authority) show ( ) show (can) show ( ) show (deny) show ( ) show (access) show  newline
+(*) show ( ) show (Trust) show ( ) show (concentration:) show ( ) show (Must) show ( ) show (trust) show ( ) show (operator) show  newline
+(*) show ( ) show (Survival:) show ( ) show (Company) show ( ) show (folds,) show ( ) show (data) show ( ) show (lost) show  newline
+ newline
+(These) show ( ) show (failures) show ( ) show (are) show ( ) show (not) show ( ) show (bugs) show ( ) show (but) show ( ) show (features) show ( ) show (of) show ( ) show (centralized) show ( ) show (design;) show ( ) show (the) show ( ) show (only) show  newline
+(remedy) show ( ) show (is) show ( ) show (architectural,) show ( ) show (not) show ( ) show (operational.) show  newline
+ newline
+(Federation) show ( ) show (provides:) show  newline
+ newline
+(*) show ( ) show (Decentralized) show ( ) show (-) show ( ) show (No) show ( ) show (master) show ( ) show (server) show  newline
+(*) show ( ) show (Resilient) show ( ) show (-) show ( ) show (Survives) show ( ) show (node) show ( ) show (failures) show  newline
+(*) show ( ) show (Autonomous) show ( ) show (-) show ( ) show (Each) show ( ) show (peer) show ( ) show (controls) show ( ) show (own) show ( ) show (data) show  newline
+(*) show ( ) show (Cryptographic) show ( ) show (-) show ( ) show (Trust) show ( ) show (through) show ( ) show (math,) show ( ) show (not) show ( ) show (authority) show  newline
+(*) show ( ) show (Eventual) show ( ) show (consistency) show ( ) show (-) show ( ) show (Convergence) show ( ) show (without) show ( ) show (coordination) show  newline
+ newline
+(Federation) show ( ) show (trades) show ( ) show (coordination) show ( ) show (complexity) show ( ) show (for) show ( ) show (availability) show ( ) show (and) show ( ) show (autonomy,) show  newline
+(accepting) show ( ) show (that) show ( ) show (nodes) show ( ) show (may) show ( ) show (temporarily) show ( ) show (disagree) show ( ) show (in) show ( ) show (exchange) show ( ) show (for) show ( ) show (never) show  newline
+(being) show ( ) show (unable) show ( ) show (to) show ( ) show (operate.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(FEDERATION) show ( ) show (MODEL) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Peer) show ( ) show (Relationships) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(Peer:) show ( ) show (A) show ( ) show (vault) show ( ) show (instance) show ( ) show (with) show ( ) show (identity) show ( ) show (\(SPKI) show ( ) show (principal\)) show  newline
+(Relationships:) show  newline
+(-) show ( ) show (Publisher:) show ( ) show (I) show ( ) show (push) show ( ) show (releases) show ( ) show (to) show ( ) show (you) show  newline
+(-) show ( ) show (Subscriber:) show ( ) show (I) show ( ) show (pull) show ( ) show (releases) show ( ) show (from) show ( ) show (you) show  newline
+(-) show ( ) show (Peer:) show ( ) show (Bidirectional) show ( ) show (sync) show  newline
+ newline
+ newline
+(Trust) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-trust) show  newline
+(\(peer) show ( ) show (alice-pubkey) show  newline
+(\(role) show ( ) show (publisher\)) show  newline
+(\(trust-level) show ( ) show (verified\)) show ( ) show (;) show ( ) show (Signature) show ( ) show (verified) show  newline
+(\(sync-policy) show ( ) show (automatic\)\)) show  newline
+(\(peer) show ( ) show (bob-pubkey) show  newline
+(\(role) show ( ) show (subscriber\)) show  newline
+(\(trust-level) show ( ) show (known\)) show ( ) show (;) show ( ) show (Key) show ( ) show (known,) show ( ) show (not) show ( ) show (verified) show  newline
+(\(sync-policy) show ( ) show (manual\)\)\)) show  newline
+ newline
+(Trust) show ( ) show (levels:) show ( ) show (-) show ( ) show (unknown:) show ( ) show (Never) show ( ) show (seen,) show ( ) show (reject) show ( ) show (-) show ( ) show (known:) show ( ) show (Key) show ( ) show (registered,) show  newline
+(manual) show ( ) show (approval) show ( ) show (-) show ( ) show (verified:) show ( ) show (Signature) show ( ) show (chain) show ( ) show (verified) show ( ) show (via) show ( ) show (Simple) show ( ) show (Public) show  newline
+(Key) show ( ) show (Infrastructure) show ( ) show (\(SPKI\)) show ( ) show (-) show ( ) show (trusted:) show ( ) show (Full) show ( ) show (automatic) show ( ) show (sync) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PROTOCOL) show ( ) show (OPERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Peer) show ( ) show (Discovery) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-discover\)) show  newline
+(;;) show ( ) show (Returns:) show ( ) show (List) show ( ) show (of) show ( ) show (known) show ( ) show (peers) show ( ) show (and) show ( ) show (their) show ( ) show (status) show  newline
+ newline
+(Discovery) show ( ) show (mechanisms:) show  newline
+ newline
+(*) show ( ) show (Explicit) show ( ) show (configuration:) show ( ) show (Known) show ( ) show (peer) show ( ) show (list) show  newline
+(*) show ( ) show (Git) show ( ) show (remotes:) show ( ) show (Extract) show ( ) show (from) show ( ) show (repository) show  newline
+(*) show ( ) show (Directory) show ( ) show (service:) show ( ) show (Optional,) show ( ) show (not) show ( ) show (required) show  newline
+(*) show ( ) show (mDNS/Bonjour:) show ( ) show (Local) show ( ) show (network) show ( ) show (discovery) show ( ) show (via) show ( ) show (cyberspace.tcp) show  newline
+ newline
+ newline
+(mDNS) show ( ) show (Service) show ( ) show (Discovery) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(Cyberspace) show ( ) show (nodes) show ( ) show (announce) show ( ) show (themselves) show ( ) show (via) show ( ) show (mDNS) show ( ) show (using) show ( ) show (the) show ( ) show (cyberspace.tcp) show  newline
+(service) show ( ) show (type:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Announce) show ( ) show (this) show ( ) show (node) show  newline
+(\(announce-presence) show ( ) show ('starlight\)) show  newline
+(;;) show ( ) show (Registers:) show ( ) show (starlight.cyberspace.tcp.local.) show ( ) show (port) show ( ) show (7654) show  newline
+(;;) show ( ) show (Discover) show ( ) show (peers) show  newline
+(\(discover-peers\)) show  newline
+(;;) show ( ) show (Scans) show ( ) show (for) show ( ) show (cyberspace.tcp) show ( ) show (services) show ( ) show (on) show ( ) show (local) show ( ) show (network) show  newline
+ newline
+(Platform) show ( ) show (support:) show ( ) show (-) show ( ) show (macOS:) show ( ) show (dns-sd) show ( ) show (-R) show ( ) show (for) show ( ) show (registration,) show ( ) show (dns-sd) show ( ) show (-B) show ( ) show (for) show  newline
+(browsing) show ( ) show (-) show ( ) show (Linux:) show ( ) show (avahi-publish) show ( ) show (for) show ( ) show (registration,) show ( ) show (avahi-browse) show ( ) show (for) show  newline
+(browsing) show  newline
+ newline
+ newline
+(Peer) show ( ) show (Registration) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-register) show ( ) show (peer-uri) show  newline
+(#!key) show ( ) show (public-key) show ( ) show (trust-level\)) show  newline
+ newline
+(Registers) show ( ) show (a) show ( ) show (new) show ( ) show (peer) show ( ) show (with:) show ( ) show (-) show ( ) show (URI) show ( ) show (\(git) show ( ) show (remote,) show ( ) show (HTTP) show ( ) show (endpoint,) show ( ) show (filesystem) show  newline
+(path\)) show ( ) show (-) show ( ) show (Public) show ( ) show (key) show ( ) show (for) show ( ) show (verification) show ( ) show (-) show ( ) show (Initial) show ( ) show (trust) show ( ) show (level) show  newline
+ newline
+ newline
+(Release) show ( ) show (Announcement) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-announce) show ( ) show (version) show  newline
+(#!key) show ( ) show (peers) show ( ) show (message\)) show  newline
+ newline
+(Pushes) show ( ) show (release) show ( ) show (notification) show ( ) show (to) show ( ) show (peers:) show  newline
+ newline
+(*) show ( ) show (Create) show ( ) show (signed) show ( ) show (announcement) show  newline
+(*) show ( ) show (Send) show ( ) show (to) show ( ) show (specified) show ( ) show (peers) show ( ) show (\(or) show ( ) show (all\)) show  newline
+(*) show ( ) show (Peers) show ( ) show (verify) show ( ) show (signature) show  newline
+(*) show ( ) show (Peers) show ( ) show (decide) show ( ) show (whether) show ( ) show (to) show ( ) show (pull) show  newline
+ newline
+ newline
+(Release) show ( ) show (Request) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-request) show ( ) show (version) show ( ) show (peer) show  newline
+(#!key) show ( ) show (verify-key\)) show  newline
+ newline
+(Pulls) show ( ) show (specific) show ( ) show (release) show ( ) show (from) show ( ) show (peer:) show  newline
+ newline
+(*) show ( ) show (Request) show ( ) show (release) show ( ) show (metadata) show  newline
+(*) show ( ) show (Verify) show ( ) show (signature) show  newline
+(*) show ( ) show (Download) show ( ) show (archive) show  newline
+(*) show ( ) show (Verify) show ( ) show (integrity) show  newline
+(*) show ( ) show (Record) show ( ) show (in) show ( ) show (audit) show ( ) show (trail) show  newline
+ newline
+ newline
+(Synchronization) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-sync) show ( ) show (peer) show  newline
+(#!key) show ( ) show (direction) show ( ) show (verify-key\)) show  newline
+ newline
+(Bidirectional) show ( ) show (sync) show ( ) show (\(from) show ( ) show (Memo-0002\):) show  newline
+ newline
+(*) show ( ) show (Exchange) show ( ) show (release) show ( ) show (lists) show  newline
+(*) show ( ) show (Identify) show ( ) show (missing) show ( ) show (releases) show  newline
+(*) show ( ) show (Push/pull) show ( ) show (as) show ( ) show (configured) show  newline
+(*) show ( ) show (Verify) show ( ) show (all) show ( ) show (signatures) show  newline
+(*) show ( ) show (Update) show ( ) show (audit) show ( ) show (trails) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MESSAGE) show ( ) show (FORMAT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Announcement) show ( ) show (Message) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-message) show  newline
+(\(type) show ( ) show (announcement\)) show  newline
+(\(from) show ( ) show (#${alice-pubkey}\)) show  newline
+(\(timestamp) show ( ) show (1767685100\)) show  newline
+(\(payload) show  newline
+(\(release) show ( ) show ("2.0.0"\)) show  newline
+(\(hash) show ( ) show ("sha512:..."\)) show  newline
+(\(archive-size) show ( ) show (1048576\)) show  newline
+(\(notes) show ( ) show ("Major) show ( ) show (release"\)\)) show  newline
+(\(signature) show ( ) show (#${ed25519-sig}\)\)) show  newline
+ newline
+ newline
+(Request) show ( ) show (Message) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-message) show  newline
+(\(type) show ( ) show (request\)) show  newline
+(\(from) show ( ) show (#${bob-pubkey}\)) show  newline
+(\(timestamp) show ( ) show (1767685200\)) show  newline
+(\(payload) show  newline
+(\(release) show ( ) show ("2.0.0"\)) show  newline
+(\(format) show ( ) show (cryptographic\)\)) show  newline
+(\(signature) show ( ) show (#${ed25519-sig}\)\)) show  newline
+ newline
+ newline
+(Response) show ( ) show (Message) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-message) show  newline
+(\(type) show ( ) show (response\)) show  newline
+(\(from) show ( ) show (#${alice-pubkey}\)) show  newline
+(\(in-reply-to) show ( ) show ("sha512:request-hash"\)) show  newline
+(\(timestamp) show ( ) show (1767685300\)) show  newline
+(\(payload) show  newline
+(\(release) show ( ) show ("2.0.0"\)) show  newline
+(\(archive-uri) show ( ) show ("/releases/vault-2.0.0.archive"\)) show  newline
+(\(hash) show ( ) show ("sha512:..."\)) show  newline
+(\(signature) show ( ) show ("ed25519:..."\)\)) show  newline
+(\(signature) show ( ) show (#${ed25519-sig}\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(TRANSPORT) show ( ) show (BINDINGS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Git) show ( ) show (Transport) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(Origin:) show ( ) show (git@github.com:alice/vault.git) show  newline
+(Mechanism:) show ( ) show (Tags) show ( ) show (+) show ( ) show (release) show ( ) show (assets) show  newline
+(Announce:) show ( ) show (git) show ( ) show (push) show ( ) show (origin) show ( ) show (v2.0.0) show  newline
+(Request:) show ( ) show (git) show ( ) show (fetch) show ( ) show (origin) show ( ) show (--tags) show  newline
+(Sync:) show ( ) show (git) show ( ) show (fetch) show ( ) show (origin) show ( ) show (&&) show ( ) show (git) show ( ) show (push) show ( ) show (origin) show  newline
+ newline
+ newline
+(HTTP) show ( ) show (Transport) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+ newline
+(Endpoint:) show ( ) show (https://alice.example.com/federation) show  newline
+(Announce:) show ( ) show (POST) show ( ) show (/federation/announce) show  newline
+(Request:) show ( ) show (GET) show ( ) show (/federation/releases/2.0.0) show  newline
+(Sync:) show ( ) show (POST) show ( ) show (/federation/sync) show  newline
+ newline
+ newline
+(Filesystem) show ( ) show (Transport) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+ newline
+(Path:) show ( ) show (/shared/federation/alice) show  newline
+(Announce:) show ( ) show (Copy) show ( ) show (to) show ( ) show (/shared/federation/alice/announce/) show  newline
+(Request:) show ( ) show (Read) show ( ) show (from) show ( ) show (/shared/federation/alice/releases/) show  newline
+(Sync:) show ( ) show (rsync) show ( ) show (--update) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CONFLICT) show ( ) show (RESOLUTION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Version) show ( ) show (Conflicts) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+(Same) show ( ) show (version,) show ( ) show (different) show ( ) show (content:) show  newline
+ newline
+ newline
+(\(federation-conflict) show  newline
+(\(version) show ( ) show ("2.0.0"\)) show  newline
+(\(local-hash) show ( ) show ("sha512:abc..."\)) show  newline
+(\(remote-hash) show ( ) show ("sha512:def..."\)) show  newline
+(\(resolution) show ( ) show (reject\)\)) show ( ) show (;) show ( ) show (Or:) show ( ) show (prefer-local,) show ( ) show (prefer-remote,) show ( ) show (rename) show  newline
+ newline
+(Default:) show ( ) show (Reject) show ( ) show (conflicts,) show ( ) show (require) show ( ) show (human) show ( ) show (decision.) show  newline
+ newline
+ newline
+(Resolution) show ( ) show (Strategies) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Reject:) show ( ) show (Stop) show ( ) show (sync,) show ( ) show (alert) show ( ) show (human) show  newline
+(*) show ( ) show (Prefer-local:) show ( ) show (Keep) show ( ) show (local) show ( ) show (version) show  newline
+(*) show ( ) show (Prefer-remote:) show ( ) show (Take) show ( ) show (remote) show ( ) show (version) show  newline
+(*) show ( ) show (Rename:) show ( ) show (Keep) show ( ) show (both) show ( ) show (as) show ( ) show (2.0.0-local,) show ( ) show (2.0.0-remote) show  newline
+(*) show ( ) show (Merge:) show ( ) show (If) show ( ) show (content) show ( ) show (mergeable) show ( ) show (\(future\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CONSISTENCY) show ( ) show (MODEL) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Eventual) show ( ) show (Consistency) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (No) show ( ) show (global) show ( ) show (ordering) show ( ) show (required) show  newline
+(*) show ( ) show (Each) show ( ) show (peer) show ( ) show (has) show ( ) show (local) show ( ) show (view) show  newline
+(*) show ( ) show (Convergence) show ( ) show (through) show ( ) show (sync) show  newline
+(*) show ( ) show (Conflicts) show ( ) show (resolved) show ( ) show (locally) show  newline
+ newline
+ newline
+(Causal) show ( ) show (Ordering) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(Within) show ( ) show (a) show ( ) show (peer's) show ( ) show (releases:) show ( ) show (-) show ( ) show (Version) show ( ) show (numbers) show ( ) show (are) show ( ) show (monotonic) show ( ) show (-) show ( ) show (Audit) show ( ) show (trail) show  newline
+(provides) show ( ) show (causality) show ( ) show (-) show ( ) show (Hash) show ( ) show (chains) show ( ) show (prevent) show ( ) show (reordering) show  newline
+ newline
+ newline
+(No) show ( ) show (Coordination) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (No) show ( ) show (consensus) show ( ) show (protocol) show ( ) show (required) show  newline
+(*) show ( ) show (No) show ( ) show (distributed) show ( ) show (lock) show  newline
+(*) show ( ) show (No) show ( ) show (leader) show ( ) show (election) show  newline
+(*) show ( ) show (Each) show ( ) show (peer) show ( ) show (autonomous) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Threat) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Protected:) show ( ) show (-) show ( ) show (Unauthenticated) show ( ) show (release) show ( ) show (injection) show ( ) show (\(signature) show ( ) show (verification\)) show  newline
+(-) show ( ) show (Content) show ( ) show (tampering) show ( ) show (\(hash) show ( ) show (verification\)) show ( ) show (-) show ( ) show (Impersonation) show ( ) show (\(SPKI) show ( ) show (principal) show  newline
+(binding\)) show ( ) show (-) show ( ) show (Replay) show ( ) show (attacks) show ( ) show (\(timestamps,) show ( ) show (sequence) show ( ) show (numbers\)) show  newline
+ newline
+(Not) show ( ) show (protected:) show ( ) show (-) show ( ) show (Denial) show ( ) show (of) show ( ) show (service) show ( ) show (\(rate) show ( ) show (limiting) show ( ) show (helps\)) show ( ) show (-) show ( ) show (Privacy) show ( ) show (of) show  newline
+(release) show ( ) show (metadata) show ( ) show (\(encrypted) show ( ) show (transport) show ( ) show (helps\)) show ( ) show (-) show ( ) show (Sybil) show ( ) show (attacks) show ( ) show (\(trust) show  newline
+(management) show ( ) show (helps\)) show  newline
+ newline
+ newline
+(Trust) show ( ) show (Verification) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(verify-peer-message) show ( ) show (msg) show ( ) show (peer-key\)) show  newline
+(\(and) show ( ) show (\(verify-signature) show ( ) show (msg) show ( ) show (peer-key\)) show  newline
+(\(verify-timestamp) show ( ) show (msg) show ( ) show (\(current-seconds\)\)) show  newline
+(\(verify-not-replayed) show ( ) show (msg\)\)\)) show  newline
+ newline
+ newline
+(Rate) show ( ) show (Limiting) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-config) show  newline
+(\(rate-limit) show  newline
+(\(announcements-per-hour) show ( ) show (10\)) show  newline
+(\(requests-per-minute) show ( ) show (60\)) show  newline
+(\(sync-interval-minimum) show ( ) show (300\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(GOSSIP) show ( ) show (PROTOCOL) show ( ) show (\(FUTURE\)) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (larger) show ( ) show (networks:) show  newline
+ newline
+ newline
+(Alice) show ( ) show (announces) show ( ) show (to) show ( ) show (Bob) show ( ) show (and) show ( ) show (Carol) show  newline
+(Bob) show ( ) show (announces) show ( ) show (to) show ( ) show (Dave) show ( ) show (and) show ( ) show (Eve) show  newline
+(Eve) show ( ) show (announces) show ( ) show (to) show ( ) show (Frank) show  newline
+(Result:) show ( ) show (Epidemic) show ( ) show (spread) show ( ) show (without) show ( ) show (central) show ( ) show (broadcast) show  newline
+ newline
+(Properties:) show ( ) show (-) show ( ) show (Logarithmic) show ( ) show (propagation) show ( ) show (time) show ( ) show (-) show ( ) show (Resilient) show ( ) show (to) show ( ) show (node) show ( ) show (failures) show  newline
+(-) show ( ) show (No) show ( ) show (single) show ( ) show (bottleneck) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(BOOTSTRAP) show ( ) show (PROCEDURE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(New) show ( ) show (Peer) show ( ) show (Joining) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Generate) show ( ) show (keypair) show  newline
+(*) show ( ) show (Register) show ( ) show (with) show ( ) show (known) show ( ) show (peer) show  newline
+(*) show ( ) show (Exchange) show ( ) show (public) show ( ) show (keys) show ( ) show (\(out-of-band) show ( ) show (verification\)) show  newline
+(*) show ( ) show (Initial) show ( ) show (sync) show ( ) show (to) show ( ) show (get) show ( ) show (current) show ( ) show (releases) show  newline
+(*) show ( ) show (Begin) show ( ) show (participating) show ( ) show (in) show ( ) show (federation) show  newline
+ newline
+ newline
+(Network) show ( ) show (Partitions) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Partitions) show ( ) show (heal) show ( ) show (automatically) show ( ) show (on) show ( ) show (reconnection) show  newline
+(*) show ( ) show (Conflicting) show ( ) show (releases) show ( ) show (detected) show ( ) show (and) show ( ) show (flagged) show  newline
+(*) show ( ) show (Audit) show ( ) show (trails) show ( ) show (show) show ( ) show (partition) show ( ) show (history) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CONFIGURATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(federation-config) show  newline
+(;;) show ( ) show (Identity) show  newline
+(\(identity) show ( ) show (my-private-key\)) show  newline
+(;;) show ( ) show (Peers) show  newline
+(\(peers) show  newline
+(\(peer) show ( ) show ("alice") show ( ) show (uri:) show ( ) show ("git@github.com:alice/vault.git") show  newline
+(key:) show ( ) show (alice-pubkey) show  newline
+(trust:) show ( ) show (verified\)) show  newline
+(\(peer) show ( ) show ("bob") show ( ) show (uri:) show ( ) show ("/shared/bob-vault") show  newline
+(key:) show ( ) show (bob-pubkey) show  newline
+(trust:) show ( ) show (known\)\)) show  newline
+(;;) show ( ) show (Policies) show  newline
+(\(auto-sync) show ( ) show (#t\)) show  newline
+(\(sync-interval) show ( ) show (3600\)) show ( ) show (;) show ( ) show (seconds) show  newline
+(\(verify-before-accept) show ( ) show (#t\)) show  newline
+(;;) show ( ) show (Security) show  newline
+(\(require-signature) show ( ) show (#t\)) show  newline
+(\(trust-on-first-use) show ( ) show (#f\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show ( ) show (STATUS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Implemented) show ( ) show (\(Memo-007\)) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (seal-publish:) show ( ) show (Push) show ( ) show (to) show ( ) show (single) show ( ) show (remote) show ( ) show (-) show ( ) show (seal-subscribe:) show ( ) show (Pull) show ( ) show (from) show ( ) show (single) show ( ) show (remote) show ( ) show (-) show ( ) show (seal-synchronize:) show ( ) show (Bidirectional) show ( ) show (with) show ( ) show (single) show ( ) show (peer) show  newline
+(*) show ( ) show (Transport:) show ( ) show (git,) show ( ) show (HTTP,) show ( ) show (filesystem) show  newline
+ newline
+ newline
+(Proposed) show ( ) show (\(This) show ( ) show (Memo\)) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Multi-peer) show ( ) show (management) show  newline
+(*) show ( ) show (Trust) show ( ) show (levels) show ( ) show (and) show ( ) show (policies) show  newline
+(*) show ( ) show (Announcement) show ( ) show (protocol) show  newline
+(*) show ( ) show (Gossip) show ( ) show (propagation) show  newline
+(*) show ( ) show (Conflict) show ( ) show (resolution) show ( ) show (UI) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Birman,) show ( ) show (K.) show ( ) show (\(2007\).) show ( ) show (The) show ( ) show (Promise,) show ( ) show (and) show ( ) show (Limitations,) show ( ) show (of) show ( ) show (Gossip) show ( ) show (Protocols.) show  newline
+(*) show ( ) show (Demers,) show ( ) show (A.,) show ( ) show (et) show ( ) show (al.) show ( ) show (\(1987\).) show ( ) show (Epidemic) show ( ) show (Algorithms) show ( ) show (for) show ( ) show (Replicated) show ( ) show (Database) show ( ) show (Maintenance.) show  newline
+(*) show ( ) show (Shapiro,) show ( ) show (M.,) show ( ) show (et) show ( ) show (al.) show ( ) show (\(2011\).) show ( ) show (Conflict-Free) show ( ) show (Replicated) show ( ) show (Data) show ( ) show (Types.) show  newline
+(*) show ( ) show (Memo-007:) show ( ) show (Replication) show ( ) show (Layer) show  newline
+(*) show ( ) show (Memo-003:) show ( ) show (SPKI) show ( ) show (Authorization) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-06) show  newline
+(*) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

@@ -15,299 +15,457 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0013: Byzantine Consensus) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies Byzantine fault-tolerant consensus for Cyberspace) show newline
-(federation, enabling agreement among distributed vaults even when some) show newline
-(participants are faulty or malicious. N nodes tolerate up to f failures) show newline
-(where N ≥ 3f + 1.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Federation \(Memo-010\) assumes honest peers. Reality differs:) show newline
-() show newline
-(  * Crash failures: Nodes go offline) show newline
-(  * Byzantine failures: Nodes lie, equivocate, or attack) show newline
-(  * Network partitions: Messages delayed or lost) show newline
-(  * Sybil attacks: Fake identities flood the network) show newline
-() show newline
-(These failure modes require protocols that assume the worst about) show newline
-(participants rather than hoping for the best.) show newline
-() show newline
-(Byzantine consensus provides:) show newline
-() show newline
-(  * Safety: Honest nodes agree on same value) show newline
-(  * Liveness: System makes progress despite failures) show newline
-(  * Fault tolerance: Survives f failures with 3f+1 nodes) show newline
-() show newline
-(The 3f+1 bound is fundamental: fewer nodes cannot distinguish a slow) show newline
-(honest node from a fast malicious one.) show newline
-() show newline
-(From Lamport, Shostak, and Pease \(1982\):) show newline
-() show newline
-() show newline
-(    "The Byzantine Generals Problem: reaching agreement in the presence of traitors.") show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SPECIFICATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(System Model) show newline
-(------------) show newline
-() show newline
-() show newline
-(    Nodes:        N = 3f + 1 \(tolerates f Byzantine faults\)) show newline
-(    Network:      Asynchronous with eventual delivery) show newline
-(    Cryptography: Ed25519 signatures \(authenticated channels\)) show newline
-() show newline
-() show newline
-(Consensus Properties) show newline
-(--------------------) show newline
-() show newline
-(Agreement: If honest node i decides v, honest node j decides v.) show newline
-() show newline
-(Validity: If all honest nodes propose v, decision is v.) show newline
-() show newline
-(Termination: All honest nodes eventually decide.) show newline
-() show newline
-() show newline
-(Protocol: Practical Byzantine Fault Tolerance \(PBFT\)) show newline
-(----------------------------------------------------) show newline
-() show newline
-() show newline
-(    Phase 1: PRE-PREPARE) show newline
-(      Primary broadcasts ⟨PRE-PREPARE, v, n, sig⟩) show newline
-(    Phase 2: PREPARE) show newline
-(      On valid PRE-PREPARE, broadcast ⟨PREPARE, v, n, sig⟩) show newline
-(      Collect 2f PREPARE messages) show newline
-(    Phase 3: COMMIT) show newline
-(      On 2f+1 PREPARE, broadcast ⟨COMMIT, v, n, sig⟩) show newline
-(      Collect 2f+1 COMMIT messages) show newline
-(    Decision:) show newline
-(      On 2f+1 COMMIT, decide v) show newline
-() show newline
-() show newline
-(Message Formats) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(consensus-message) show newline
-(      \(type pre-prepare\)) show newline
-(      \(view 0\)) show newline
-(      \(sequence 42\)) show newline
-(      \(value-hash "sha512:..."\)) show newline
-(      \(from #${primary-pubkey}\)) show newline
-(      \(signature #${ed25519-sig}\)\)) show newline
-(    \(consensus-message) show newline
-(      \(type prepare\)) show newline
-(      \(view 0\)) show newline
-(      \(sequence 42\)) show newline
-(      \(value-hash "sha512:..."\)) show newline
-(      \(from #${replica-pubkey}\)) show newline
-(      \(signature #${ed25519-sig}\)\)) show newline
-(    \(consensus-message) show newline
-(      \(type commit\)) show newline
-(      \(view 0\)) show newline
-(      \(sequence 42\)) show newline
-(      \(from #${replica-pubkey}\)) show newline
-(      \(signature #${ed25519-sig}\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(VIEW CHANGE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(When primary fails or is Byzantine:) show newline
-() show newline
-() show newline
-(    1. Replica timeout on PRE-PREPARE) show newline
-(    2. Broadcast ⟨VIEW-CHANGE, v+1, prepared-proofs⟩) show newline
-(    3. New primary collects 2f+1 VIEW-CHANGE) show newline
-(    4. New primary broadcasts ⟨NEW-VIEW, v+1, proofs⟩) show newline
-(    5. Resume protocol in new view) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(APPLICATION TO CYBERSPACE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Federation Ordering) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    \(consensus-propose) show newline
-(      \(action release-publish\)) show newline
-(      \(version "2.0.0"\)) show newline
-(      \(proposer #${alice-key}\)\)) show newline
-(    ;; After consensus:) show newline
-(    \(consensus-decided) show newline
-(      \(sequence 42\)) show newline
-(      \(action release-publish\)) show newline
-(      \(version "2.0.0"\)) show newline
-(      \(decided-by \(quorum ...\)\)\)) show newline
-() show newline
-() show newline
-(Threshold Governance Integration) show newline
-(--------------------------------) show newline
-() show newline
-(Combine with Memo-008: - Consensus on what to do - Threshold signatures) show newline
-(on authorization) show newline
-() show newline
-() show newline
-(    \(governance-decision) show newline
-(      \(consensus-sequence 42\)) show newline
-(      \(action deploy-production\)) show newline
-(      \(threshold-met 3-of-5\)) show newline
-(      \(signers \(alice carol dave\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(OPTIMIZATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Speculation) show newline
-(-----------) show newline
-() show newline
-(Execute optimistically before commit:) show newline
-() show newline
-() show newline
-(    Tentative execution after 2f+1 PREPARE) show newline
-(    Rollback if COMMIT fails) show newline
-() show newline
-() show newline
-(Batching) show newline
-(--------) show newline
-() show newline
-(Amortize consensus over multiple operations:) show newline
-() show newline
-() show newline
-(    \(consensus-batch) show newline
-(      \(sequence 42\)) show newline
-(      \(operations) show newline
-(        \(release-publish "2.0.0"\)) show newline
-(        \(release-publish "2.0.1"\)) show newline
-(        \(config-update ...\)\)\)) show newline
-() show newline
-() show newline
-(Fast Path) show newline
-(---------) show newline
-() show newline
-(When all replicas agree initially:) show newline
-() show newline
-() show newline
-(    Skip PREPARE phase) show newline
-(    Direct to COMMIT with 3f+1 matching responses) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Threat Model) show newline
-(------------) show newline
-() show newline
-(Tolerates: - f Byzantine nodes \(arbitrary behavior\) - Network delays and) show newline
-(reordering - Message loss \(with retransmission\)) show newline
-() show newline
-(Requires: - N ≥ 3f + 1 total nodes - Authenticated channels) show newline
-(\(signatures\) - Eventual message delivery) show newline
-() show newline
-() show newline
-(Attack Resistance) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(  Attack              Mitigation                       ) show newline
-(  Equivocation        Signatures prove inconsistency   ) show newline
-(  Replay              Sequence numbers, view numbers   ) show newline
-(  Denial of service   View change, rate limiting       ) show newline
-(  Sybil               SPKI admission control           ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(COMPLEXITY) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(  Metric                     Value                      ) show newline
-(  Message complexity         O\(N²\) per decision        ) show newline
-(  Communication rounds       3 \(normal case\)            ) show newline
-(  Cryptographic operations   O\(N\) signatures/verifies   ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION NOTES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(State Machine) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    \(define-record-type <pbft-state>) show newline
-(      \(make-pbft-state view sequence log prepared committed\)) show newline
-(      pbft-state?) show newline
-(      \(view pbft-view\)) show newline
-(      \(sequence pbft-sequence\)) show newline
-(      \(log pbft-log\)              ; sequence → messages) show newline
-(      \(prepared pbft-prepared\)    ; sequence → value) show newline
-(      \(committed pbft-committed\)\) ; sequence → value) show newline
-() show newline
-() show newline
-(Dependencies) show newline
-(------------) show newline
-() show newline
-(  * crypto-ffi) show newline
-(  * Ed25519 signatures - audit) show newline
-(  * Decision logging) show newline
-(  * Network transport \(TCP, QUIC\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Lamport, L., Shostak, R., & Pease, M. \(1982\). The Byzantine Generals Problem.) show newline
-(  * Castro, M., & Liskov, B. \(1999\). Practical Byzantine Fault Tolerance.) show newline
-(  * Yin, M., et al. \(2019\). HotStuff: BFT Consensus with Linearity and Responsiveness.) show newline
-(  * Memo-008: Threshold Signature Governance) show newline
-(  * Memo-010: Federation Protocol) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-06) show newline
-(  * Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0013:) show ( ) show (Byzantine) show ( ) show (Consensus) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (Byzantine) show ( ) show (fault-tolerant) show ( ) show (consensus) show ( ) show (for) show ( ) show (Cyberspace) show  newline
+(federation,) show ( ) show (enabling) show ( ) show (agreement) show ( ) show (among) show ( ) show (distributed) show ( ) show (vaults) show ( ) show (even) show ( ) show (when) show ( ) show (some) show  newline
+(participants) show ( ) show (are) show ( ) show (faulty) show ( ) show (or) show ( ) show (malicious.) show ( ) show (N) show ( ) show (nodes) show ( ) show (tolerate) show ( ) show (up) show ( ) show (to) show ( ) show (f) show ( ) show (failures) show  newline
+gsave
+margin 0 add ypos moveto (where) show
+margin 36 add ypos moveto (N) show
+margin 48 add ypos moveto () show
+margin 60 add ypos moveto (3f) show
+margin 78 add ypos moveto (+) show
+margin 90 add ypos moveto (1.) show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Federation) show ( ) show (\(Memo-010\)) show ( ) show (assumes) show ( ) show (honest) show ( ) show (peers.) show ( ) show (Reality) show ( ) show (differs:) show  newline
+ newline
+(*) show ( ) show (Crash) show ( ) show (failures:) show ( ) show (Nodes) show ( ) show (go) show ( ) show (offline) show  newline
+(*) show ( ) show (Byzantine) show ( ) show (failures:) show ( ) show (Nodes) show ( ) show (lie,) show ( ) show (equivocate,) show ( ) show (or) show ( ) show (attack) show  newline
+(*) show ( ) show (Network) show ( ) show (partitions:) show ( ) show (Messages) show ( ) show (delayed) show ( ) show (or) show ( ) show (lost) show  newline
+(*) show ( ) show (Sybil) show ( ) show (attacks:) show ( ) show (Fake) show ( ) show (identities) show ( ) show (flood) show ( ) show (the) show ( ) show (network) show  newline
+ newline
+(These) show ( ) show (failure) show ( ) show (modes) show ( ) show (require) show ( ) show (protocols) show ( ) show (that) show ( ) show (assume) show ( ) show (the) show ( ) show (worst) show ( ) show (about) show  newline
+(participants) show ( ) show (rather) show ( ) show (than) show ( ) show (hoping) show ( ) show (for) show ( ) show (the) show ( ) show (best.) show  newline
+ newline
+(Byzantine) show ( ) show (consensus) show ( ) show (provides:) show  newline
+ newline
+(*) show ( ) show (Safety:) show ( ) show (Honest) show ( ) show (nodes) show ( ) show (agree) show ( ) show (on) show ( ) show (same) show ( ) show (value) show  newline
+(*) show ( ) show (Liveness:) show ( ) show (System) show ( ) show (makes) show ( ) show (progress) show ( ) show (despite) show ( ) show (failures) show  newline
+(*) show ( ) show (Fault) show ( ) show (tolerance:) show ( ) show (Survives) show ( ) show (f) show ( ) show (failures) show ( ) show (with) show ( ) show (3f+1) show ( ) show (nodes) show  newline
+ newline
+(The) show ( ) show (3f+1) show ( ) show (bound) show ( ) show (is) show ( ) show (fundamental:) show ( ) show (fewer) show ( ) show (nodes) show ( ) show (cannot) show ( ) show (distinguish) show ( ) show (a) show ( ) show (slow) show  newline
+(honest) show ( ) show (node) show ( ) show (from) show ( ) show (a) show ( ) show (fast) show ( ) show (malicious) show ( ) show (one.) show  newline
+ newline
+(From) show ( ) show (Lamport,) show ( ) show (Shostak,) show ( ) show (and) show ( ) show (Pease) show ( ) show (\(1982\):) show  newline
+ newline
+ newline
+("The) show ( ) show (Byzantine) show ( ) show (Generals) show ( ) show (Problem:) show ( ) show (reaching) show ( ) show (agreement) show ( ) show (in) show ( ) show (the) show ( ) show (presence) show ( ) show (of) show ( ) show (traitors.") show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SPECIFICATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(System) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+ newline
+(Nodes:) show ( ) show (N) show ( ) show (=) show ( ) show (3f) show ( ) show (+) show ( ) show (1) show ( ) show (\(tolerates) show ( ) show (f) show ( ) show (Byzantine) show ( ) show (faults\)) show  newline
+(Network:) show ( ) show (Asynchronous) show ( ) show (with) show ( ) show (eventual) show ( ) show (delivery) show  newline
+(Cryptography:) show ( ) show (Ed25519) show ( ) show (signatures) show ( ) show (\(authenticated) show ( ) show (channels\)) show  newline
+ newline
+ newline
+(Consensus) show ( ) show (Properties) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(Agreement:) show ( ) show (If) show ( ) show (honest) show ( ) show (node) show ( ) show (i) show ( ) show (decides) show ( ) show (v,) show ( ) show (honest) show ( ) show (node) show ( ) show (j) show ( ) show (decides) show ( ) show (v.) show  newline
+ newline
+(Validity:) show ( ) show (If) show ( ) show (all) show ( ) show (honest) show ( ) show (nodes) show ( ) show (propose) show ( ) show (v,) show ( ) show (decision) show ( ) show (is) show ( ) show (v.) show  newline
+ newline
+(Termination:) show ( ) show (All) show ( ) show (honest) show ( ) show (nodes) show ( ) show (eventually) show ( ) show (decide.) show  newline
+ newline
+ newline
+(Protocol:) show ( ) show (Practical) show ( ) show (Byzantine) show ( ) show (Fault) show ( ) show (Tolerance) show ( ) show (\(PBFT\)) show  newline
+newpath margin ypos moveto margin 312 add ypos lineto stroke
+newline
+ newline
+ newline
+(Phase) show ( ) show (1:) show ( ) show (PRE-PREPARE) show  newline
+gsave
+margin 36 add ypos moveto (Primary) show
+margin 84 add ypos moveto (broadcasts) show
+margin 150 add ypos moveto (PRE-PREPARE,) show
+margin 234 add ypos moveto (v,) show
+margin 252 add ypos moveto (n,) show
+margin 270 add ypos moveto (sig) show
+grestore
+newline
+(Phase) show ( ) show (2:) show ( ) show (PREPARE) show  newline
+gsave
+margin 36 add ypos moveto (On) show
+margin 54 add ypos moveto (valid) show
+margin 90 add ypos moveto (PRE-PREPARE,) show
+margin 168 add ypos moveto (broadcast) show
+margin 228 add ypos moveto (PREPARE,) show
+margin 288 add ypos moveto (v,) show
+margin 306 add ypos moveto (n,) show
+margin 324 add ypos moveto (sig) show
+grestore
+newline
+(Collect) show ( ) show (2f) show ( ) show (PREPARE) show ( ) show (messages) show  newline
+(Phase) show ( ) show (3:) show ( ) show (COMMIT) show  newline
+gsave
+margin 36 add ypos moveto (On) show
+margin 54 add ypos moveto (2f+1) show
+margin 84 add ypos moveto (PREPARE,) show
+margin 138 add ypos moveto (broadcast) show
+margin 198 add ypos moveto (COMMIT,) show
+margin 252 add ypos moveto (v,) show
+margin 270 add ypos moveto (n,) show
+margin 288 add ypos moveto (sig) show
+grestore
+newline
+(Collect) show ( ) show (2f+1) show ( ) show (COMMIT) show ( ) show (messages) show  newline
+(Decision:) show  newline
+(On) show ( ) show (2f+1) show ( ) show (COMMIT,) show ( ) show (decide) show ( ) show (v) show  newline
+ newline
+ newline
+(Message) show ( ) show (Formats) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(consensus-message) show  newline
+(\(type) show ( ) show (pre-prepare\)) show  newline
+(\(view) show ( ) show (0\)) show  newline
+(\(sequence) show ( ) show (42\)) show  newline
+(\(value-hash) show ( ) show ("sha512:..."\)) show  newline
+(\(from) show ( ) show (#${primary-pubkey}\)) show  newline
+(\(signature) show ( ) show (#${ed25519-sig}\)\)) show  newline
+(\(consensus-message) show  newline
+(\(type) show ( ) show (prepare\)) show  newline
+(\(view) show ( ) show (0\)) show  newline
+(\(sequence) show ( ) show (42\)) show  newline
+(\(value-hash) show ( ) show ("sha512:..."\)) show  newline
+(\(from) show ( ) show (#${replica-pubkey}\)) show  newline
+(\(signature) show ( ) show (#${ed25519-sig}\)\)) show  newline
+(\(consensus-message) show  newline
+(\(type) show ( ) show (commit\)) show  newline
+(\(view) show ( ) show (0\)) show  newline
+(\(sequence) show ( ) show (42\)) show  newline
+(\(from) show ( ) show (#${replica-pubkey}\)) show  newline
+(\(signature) show ( ) show (#${ed25519-sig}\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(VIEW) show ( ) show (CHANGE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(When) show ( ) show (primary) show ( ) show (fails) show ( ) show (or) show ( ) show (is) show ( ) show (Byzantine:) show  newline
+ newline
+ newline
+(1.) show ( ) show (Replica) show ( ) show (timeout) show ( ) show (on) show ( ) show (PRE-PREPARE) show  newline
+gsave
+margin 24 add ypos moveto (2.) show
+margin 42 add ypos moveto (Broadcast) show
+margin 102 add ypos moveto (VIEW-CHANGE,) show
+margin 186 add ypos moveto (v+1,) show
+margin 216 add ypos moveto (prepared-proofs) show
+grestore
+newline
+(3.) show ( ) show (New) show ( ) show (primary) show ( ) show (collects) show ( ) show (2f+1) show ( ) show (VIEW-CHANGE) show  newline
+gsave
+margin 24 add ypos moveto (4.) show
+margin 42 add ypos moveto (New) show
+margin 66 add ypos moveto (primary) show
+margin 114 add ypos moveto (broadcasts) show
+margin 180 add ypos moveto (NEW-VIEW,) show
+margin 246 add ypos moveto (v+1,) show
+margin 276 add ypos moveto (proofs) show
+grestore
+newline
+(5.) show ( ) show (Resume) show ( ) show (protocol) show ( ) show (in) show ( ) show (new) show ( ) show (view) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(APPLICATION) show ( ) show (TO) show ( ) show (CYBERSPACE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Federation) show ( ) show (Ordering) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(consensus-propose) show  newline
+(\(action) show ( ) show (release-publish\)) show  newline
+(\(version) show ( ) show ("2.0.0"\)) show  newline
+(\(proposer) show ( ) show (#${alice-key}\)\)) show  newline
+(;;) show ( ) show (After) show ( ) show (consensus:) show  newline
+(\(consensus-decided) show  newline
+(\(sequence) show ( ) show (42\)) show  newline
+(\(action) show ( ) show (release-publish\)) show  newline
+(\(version) show ( ) show ("2.0.0"\)) show  newline
+(\(decided-by) show ( ) show (\(quorum) show ( ) show (...\)\)\)) show  newline
+ newline
+ newline
+(Threshold) show ( ) show (Governance) show ( ) show (Integration) show  newline
+newpath margin ypos moveto margin 192 add ypos lineto stroke
+newline
+ newline
+(Combine) show ( ) show (with) show ( ) show (Memo-008:) show ( ) show (-) show ( ) show (Consensus) show ( ) show (on) show ( ) show (what) show ( ) show (to) show ( ) show (do) show ( ) show (-) show ( ) show (Threshold) show ( ) show (signatures) show  newline
+(on) show ( ) show (authorization) show  newline
+ newline
+ newline
+(\(governance-decision) show  newline
+(\(consensus-sequence) show ( ) show (42\)) show  newline
+(\(action) show ( ) show (deploy-production\)) show  newline
+(\(threshold-met) show ( ) show (3-of-5\)) show  newline
+(\(signers) show ( ) show (\(alice) show ( ) show (carol) show ( ) show (dave\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(OPTIMIZATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Speculation) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+(Execute) show ( ) show (optimistically) show ( ) show (before) show ( ) show (commit:) show  newline
+ newline
+ newline
+(Tentative) show ( ) show (execution) show ( ) show (after) show ( ) show (2f+1) show ( ) show (PREPARE) show  newline
+(Rollback) show ( ) show (if) show ( ) show (COMMIT) show ( ) show (fails) show  newline
+ newline
+ newline
+(Batching) show  newline
+newpath margin ypos moveto margin 48 add ypos lineto stroke
+newline
+ newline
+(Amortize) show ( ) show (consensus) show ( ) show (over) show ( ) show (multiple) show ( ) show (operations:) show  newline
+ newline
+ newline
+(\(consensus-batch) show  newline
+(\(sequence) show ( ) show (42\)) show  newline
+(\(operations) show  newline
+(\(release-publish) show ( ) show ("2.0.0"\)) show  newline
+(\(release-publish) show ( ) show ("2.0.1"\)) show  newline
+(\(config-update) show ( ) show (...\)\)\)) show  newline
+ newline
+ newline
+(Fast) show ( ) show (Path) show  newline
+newpath margin ypos moveto margin 54 add ypos lineto stroke
+newline
+ newline
+(When) show ( ) show (all) show ( ) show (replicas) show ( ) show (agree) show ( ) show (initially:) show  newline
+ newline
+ newline
+(Skip) show ( ) show (PREPARE) show ( ) show (phase) show  newline
+(Direct) show ( ) show (to) show ( ) show (COMMIT) show ( ) show (with) show ( ) show (3f+1) show ( ) show (matching) show ( ) show (responses) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Threat) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(Tolerates:) show ( ) show (-) show ( ) show (f) show ( ) show (Byzantine) show ( ) show (nodes) show ( ) show (\(arbitrary) show ( ) show (behavior\)) show ( ) show (-) show ( ) show (Network) show ( ) show (delays) show ( ) show (and) show  newline
+(reordering) show ( ) show (-) show ( ) show (Message) show ( ) show (loss) show ( ) show (\(with) show ( ) show (retransmission\)) show  newline
+ newline
+gsave
+margin 0 add ypos moveto (Requires:) show
+margin 60 add ypos moveto (-) show
+margin 72 add ypos moveto (N) show
+margin 84 add ypos moveto () show
+margin 96 add ypos moveto (3f) show
+margin 114 add ypos moveto (+) show
+margin 126 add ypos moveto (1) show
+margin 138 add ypos moveto (total) show
+margin 174 add ypos moveto (nodes) show
+margin 210 add ypos moveto (-) show
+margin 222 add ypos moveto (Authenticated) show
+margin 306 add ypos moveto (channels) show
+grestore
+newline
+(\(signatures\)) show ( ) show (-) show ( ) show (Eventual) show ( ) show (message) show ( ) show (delivery) show  newline
+ newline
+ newline
+(Attack) show ( ) show (Resistance) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(Attack) show ( ) show (Mitigation) show  newline
+(Equivocation) show ( ) show (Signatures) show ( ) show (prove) show ( ) show (inconsistency) show  newline
+(Replay) show ( ) show (Sequence) show ( ) show (numbers,) show ( ) show (view) show ( ) show (numbers) show  newline
+(Denial) show ( ) show (of) show ( ) show (service) show ( ) show (View) show ( ) show (change,) show ( ) show (rate) show ( ) show (limiting) show  newline
+(Sybil) show ( ) show (SPKI) show ( ) show (admission) show ( ) show (control) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(COMPLEXITY) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Metric) show ( ) show (Value) show  newline
+gsave
+margin 12 add ypos moveto (Message) show
+margin 60 add ypos moveto (complexity) show
+margin 174 add ypos moveto (O\(N\262\)) show
+margin 210 add ypos moveto (per) show
+margin 234 add ypos moveto (decision) show
+grestore
+newline
+(Communication) show ( ) show (rounds) show ( ) show (3) show ( ) show (\(normal) show ( ) show (case\)) show  newline
+(Cryptographic) show ( ) show (operations) show ( ) show (O\(N\)) show ( ) show (signatures/verifies) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show ( ) show (NOTES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(State) show ( ) show (Machine) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define-record-type) show ( ) show (<pbft-state>) show  newline
+(\(make-pbft-state) show ( ) show (view) show ( ) show (sequence) show ( ) show (log) show ( ) show (prepared) show ( ) show (committed\)) show  newline
+(pbft-state?) show  newline
+(\(view) show ( ) show (pbft-view\)) show  newline
+(\(sequence) show ( ) show (pbft-sequence\)) show  newline
+gsave
+margin 36 add ypos moveto (\(log) show
+margin 66 add ypos moveto (pbft-log\)) show
+margin 204 add ypos moveto (;) show
+margin 216 add ypos moveto (sequence) show
+% box char 2192 at col 45
+newpath margin 273 add 3 sub ypos 2 add moveto margin 273 add 3 add ypos lineto margin 273 add 3 sub ypos 2 sub lineto closepath fill
+margin 282 add ypos moveto (messages) show
+grestore
+newline
+gsave
+margin 36 add ypos moveto (\(prepared) show
+margin 96 add ypos moveto (pbft-prepared\)) show
+margin 204 add ypos moveto (;) show
+margin 216 add ypos moveto (sequence) show
+% box char 2192 at col 45
+newpath margin 273 add 3 sub ypos 2 add moveto margin 273 add 3 add ypos lineto margin 273 add 3 sub ypos 2 sub lineto closepath fill
+margin 282 add ypos moveto (value) show
+grestore
+newline
+gsave
+margin 36 add ypos moveto (\(committed) show
+margin 102 add ypos moveto (pbft-committed\)\)) show
+margin 204 add ypos moveto (;) show
+margin 216 add ypos moveto (sequence) show
+% box char 2192 at col 45
+newpath margin 273 add 3 sub ypos 2 add moveto margin 273 add 3 add ypos lineto margin 273 add 3 sub ypos 2 sub lineto closepath fill
+margin 282 add ypos moveto (value) show
+grestore
+newline
+ newline
+ newline
+(Dependencies) show  newline
+newpath margin ypos moveto margin 72 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (crypto-ffi) show  newline
+(*) show ( ) show (Ed25519) show ( ) show (signatures) show ( ) show (-) show ( ) show (audit) show  newline
+(*) show ( ) show (Decision) show ( ) show (logging) show  newline
+(*) show ( ) show (Network) show ( ) show (transport) show ( ) show (\(TCP,) show ( ) show (QUIC\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Lamport,) show ( ) show (L.,) show ( ) show (Shostak,) show ( ) show (R.,) show ( ) show (&) show ( ) show (Pease,) show ( ) show (M.) show ( ) show (\(1982\).) show ( ) show (The) show ( ) show (Byzantine) show ( ) show (Generals) show ( ) show (Problem.) show  newline
+(*) show ( ) show (Castro,) show ( ) show (M.,) show ( ) show (&) show ( ) show (Liskov,) show ( ) show (B.) show ( ) show (\(1999\).) show ( ) show (Practical) show ( ) show (Byzantine) show ( ) show (Fault) show ( ) show (Tolerance.) show  newline
+(*) show ( ) show (Yin,) show ( ) show (M.,) show ( ) show (et) show ( ) show (al.) show ( ) show (\(2019\).) show ( ) show (HotStuff:) show ( ) show (BFT) show ( ) show (Consensus) show ( ) show (with) show ( ) show (Linearity) show ( ) show (and) show ( ) show (Responsiveness.) show  newline
+(*) show ( ) show (Memo-008:) show ( ) show (Threshold) show ( ) show (Signature) show ( ) show (Governance) show  newline
+(*) show ( ) show (Memo-010:) show ( ) show (Federation) show ( ) show (Protocol) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-06) show  newline
+(*) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

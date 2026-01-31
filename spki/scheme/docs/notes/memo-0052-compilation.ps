@@ -15,1027 +15,2353 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0052: Compilation and Debugging Manual) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo is the compilation and debugging manual for Cyberspace Scheme.) show newline
-(It specifies type inference conventions, build system architecture,) show newline
-(debugging infrastructure, exception handling, and inspector design. The) show newline
-(guiding principles are Ada's "declare everything, infer nothing" and) show newline
-(Dylan's "inspect everything, hide nothing.") show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PART I: COMPILATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(1. TYPE SYSTEM OVERVIEW) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(1.1 Chicken's Scrutinizer) show newline
-(-------------------------) show newline
-() show newline
-(Chicken Scheme includes a flow-sensitive type analyzer called the) show newline
-(scrutinizer. When invoked with -strict-types, it performs whole-program) show newline
-(type inference and reports errors when types cannot be proven safe.) show newline
-() show newline
-(The scrutinizer tracks type information through:) show newline
-() show newline
-(  * Variable bindings and assignments) show newline
-(  * Conditional branches \(if, cond, case\)) show newline
-(  * Procedure calls and returns) show newline
-(  * Special forms \(let, let*, letrec\)) show newline
-() show newline
-() show newline
-(1.2 The Inference Problem) show newline
-(-------------------------) show newline
-() show newline
-(Whole-program type inference without declarations can exhibit) show newline
-(exponential complexity. The scrutinizer's flow-sensitive analysis) show newline
-(becomes intractable when:) show newline
-() show newline
-(  * Functions contain many conditional branches with side effects) show newline
-(  * Format strings \(sprintf\) create implicit polymorphic constraints) show newline
-(  * Type information cannot flow through set! mutations) show newline
-(  * Multiple paths merge with incompatible inferred types) show newline
-() show newline
-(Empirical observation: A function with 30 conditional sprintf calls can) show newline
-(take 5+ minutes to analyze. The same function with type declarations) show newline
-(compiles in under 1 second.) show newline
-() show newline
-() show newline
-(1.3 The Ada Principle) show newline
-(---------------------) show newline
-() show newline
-(Ada's compilation model requires explicit type declarations everywhere.) show newline
-(The compiler is a checker, not a guesser. Jean Ichbiah's design traded) show newline
-(verbosity for predictability - when Ada compiles, it tends to run) show newline
-(correctly.) show newline
-() show newline
-(For Cyberspace modules, we adopt this principle:) show newline
-() show newline
-() show newline
-(    DECLARE EVERYTHING, INFER NOTHING) show newline
-() show newline
-(Benefits:) show newline
-() show newline
-(  * Predictable compilation times) show newline
-(  * Better error messages \(mismatch against declaration, not inference\)) show newline
-(  * Documentation of programmer intent) show newline
-(  * Enables separate compilation) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(2. TYPE DECLARATION CONVENTIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(2.1 Required Import) show newline
-(-------------------) show newline
-() show newline
-(Modules using type declarations must import the type system:) show newline
-() show newline
-() show newline
-(    \(import \(chicken type\)\)) show newline
-() show newline
-(Place this import with other chicken imports, before srfi and cyberspace) show newline
-(modules.) show newline
-() show newline
-() show newline
-(2.2 Declaration Placement) show newline
-(-------------------------) show newline
-() show newline
-(Type declarations are placed in a dedicated section after imports,) show newline
-(before any function definitions:) show newline
-() show newline
-() show newline
-(    \(module example) show newline
-(      \(export1 export2\)) show newline
-(      \(import scheme) show newline
-(              \(chicken base\)) show newline
-(              \(chicken type\)) show newline
-(              ...\)) show newline
-(      ;;; ============================================================) show newline
-(      ;;; Type Declarations) show newline
-(      ;;; ============================================================) show newline
-(      \(: export1 \(string -> boolean\)\)) show newline
-(      \(: export2 \(fixnum fixnum -> fixnum\)\)) show newline
-(      \(: internal-helper \(list -> \(or string false\)\)\)) show newline
-(      ;;; ============================================================) show newline
-(      ;;; Implementation) show newline
-(      ;;; ============================================================) show newline
-(      \(define \(export1 s\) ...\)) show newline
-(      ...\)) show newline
-() show newline
-() show newline
-(2.3 Declaration Syntax) show newline
-(----------------------) show newline
-() show newline
-(The \(: name type\) form declares the type of a binding:) show newline
-() show newline
-() show newline
-(    ;; Simple function types) show newline
-(    \(: add1 \(fixnum -> fixnum\)\)) show newline
-(    \(: string-empty? \(string -> boolean\)\)) show newline
-(    ;; Multiple arguments) show newline
-(    \(: substring \(string fixnum fixnum -> string\)\)) show newline
-(    ;; Optional arguments) show newline
-(    \(: open-file \(string #!optional symbol -> port\)\)) show newline
-(    ;; Rest arguments) show newline
-(    \(: format \(string #!rest * -> string\)\)) show newline
-(    ;; Union types) show newline
-(    \(: find-item \(symbol -> \(or item false\)\)\)) show newline
-(    ;; Procedures as arguments) show newline
-(    \(: map-items \(\(item -> result\) \(list-of item\) -> \(list-of result\)\)\)) show newline
-(    ;; No return \(exits or loops forever\)) show newline
-(    \(: fatal-error \(string -> noreturn\)\)) show newline
-() show newline
-() show newline
-(2.4 Common Type Names) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(  Type           Description          Example Values         ) show newline
-(  fixnum         Small exact integer  0, 42, -17             ) show newline
-(  flonum         Floating point       3.14, -2.5e10          ) show newline
-(  number         Any number           fixnum or flonum       ) show newline
-(  string         Character string     "hello"                ) show newline
-(  symbol         Symbolic atom        'foo, 'bar             ) show newline
-(  boolean        Truth value          #t, #f                 ) show newline
-(  char           Single character     #\\a, #\\newline         ) show newline
-(  list           Proper list          '\(1 2 3\)               ) show newline
-(  \(list-of T\)    Homogeneous list     \(list-of string\)       ) show newline
-(  pair           Cons cell            '\(a . b\)               ) show newline
-(  vector         Fixed-size array     #\(1 2 3\)               ) show newline
-(  blob           Byte vector          \(make-blob 16\)         ) show newline
-(  port           I/O port             \(current-input-port\)   ) show newline
-(  procedure      Any procedure        car, +                 ) show newline
-(  \(T1 -> T2\)     Specific procedure   \(string -> fixnum\)     ) show newline
-(  \(or T1 T2\)     Union type           \(or string false\)      ) show newline
-(  \(struct name\)  C struct wrapper     \(struct tcp-listener\)  ) show newline
-(  false          The #f value         #f                     ) show newline
-(  *              Any type             anything               ) show newline
-(  noreturn       Never returns        for exit, error        ) show newline
-() show newline
-() show newline
-(2.5 When Declarations Are Required) show newline
-(----------------------------------) show newline
-() show newline
-(Type declarations are REQUIRED for:) show newline
-() show newline
-(  * Functions with more than 5 conditional branches) show newline
-(  * Functions using set! on local variables) show newline
-(  * Functions with multiple sprintf/format calls) show newline
-(  * All exported \(public API\) functions) show newline
-(  * Functions that call other modules' exported functions) show newline
-() show newline
-(Type declarations are OPTIONAL for:) show newline
-() show newline
-(  * Simple leaf functions \(< 5 lines, no branching\)) show newline
-(  * Local helper functions with obvious types) show newline
-(  * Functions used only in one place) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(3. TYPED HELPER PATTERN) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(3.1 The Problem) show newline
-(---------------) show newline
-() show newline
-(A common pattern causes exponential inference:) show newline
-() show newline
-() show newline
-(    ;; BAD: Exponential type inference) show newline
-(    \(define \(session-summary\)) show newline
-(      \(let \(\(stats '\(\)\)\)) show newline
-(        \(when \(> \(session-stat 'reads\) 0\)) show newline
-(          \(set! stats \(cons \(sprintf "~a read~a") show newline
-(                                      \(session-stat 'reads\)) show newline
-(                                      \(if \(= 1 \(session-stat 'reads\)\) "" "s"\)\)) show newline
-(                            stats\)\)\)) show newline
-(        \(when \(> \(session-stat 'writes\) 0\)) show newline
-(          \(set! stats \(cons \(sprintf "~a write~a" ...\) stats\)\)\)) show newline
-(        ;; ... 28 more similar blocks ...) show newline
-(        \(reverse stats\)\)\)) show newline
-() show newline
-(The scrutinizer must analyze all 2^30 possible paths through this) show newline
-(function.) show newline
-() show newline
-() show newline
-(3.2 The Solution) show newline
-(----------------) show newline
-() show newline
-(Factor into small typed helpers:) show newline
-() show newline
-() show newline
-(    ;; GOOD: Linear type inference) show newline
-(    \(: format-stat \(symbol string string -> \(or string false\)\)\)) show newline
-(    \(define \(format-stat key singular plural-suffix\)) show newline
-(      "Format a session stat with pluralization, or #f if zero.") show newline
-(      \(let \(\(n \(session-stat key\)\)\)) show newline
-(        \(if \(> n 0\)) show newline
-(            \(string-append \(number->string n\) " " singular) show newline
-(                           \(if \(= n 1\) "" plural-suffix\)\)) show newline
-(            #f\)\)\)) show newline
-(    \(: format-stat-irregular \(symbol string string -> \(or string false\)\)\)) show newline
-(    \(define \(format-stat-irregular key singular plural\)) show newline
-(      "Format with irregular plural.") show newline
-(      \(let \(\(n \(session-stat key\)\)\)) show newline
-(        \(if \(> n 0\)) show newline
-(            \(string-append \(number->string n\) " ") show newline
-(                           \(if \(= n 1\) singular plural\)\)) show newline
-(            #f\)\)\)) show newline
-(    \(: session-summary \(-> \(list-of string\)\)\)) show newline
-(    \(define \(session-summary\)) show newline
-(      "Generate session statistics summary.") show newline
-(      \(filter identity) show newline
-(        \(list) show newline
-(          \(format-stat 'reads "read" "s"\)) show newline
-(          \(format-stat 'writes "write" "s"\)) show newline
-(          \(format-stat-irregular 'queries "query" "queries"\)) show newline
-(          ...\)\)\)) show newline
-() show newline
-(Each helper is independently typed. The scrutinizer analyzes them) show newline
-(separately, giving O\(n\) instead of O\(2^n\) complexity.) show newline
-() show newline
-() show newline
-(3.3 Composition via filter) show newline
-(--------------------------) show newline
-() show newline
-(The pattern \(filter identity \(list ...\)\) collects non-#f results:) show newline
-() show newline
-() show newline
-(    \(filter identity \(list "a" #f "b" #f "c"\)\)) show newline
-(    ;; => \("a" "b" "c"\)) show newline
-() show newline
-(This replaces imperative set!/cons accumulation with functional) show newline
-(composition.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(4. BUILD SYSTEM ARCHITECTURE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(4.1 The Forge) show newline
-(-------------) show newline
-() show newline
-(The forge is the build system for Cyberspace modules. It compiles Scheme) show newline
-(to shared libraries \(.so\) with import specifications \(.import.scm\).) show newline
-() show newline
-(The name is deliberate. Not CompilationManager or BuildSystem - forge.) show newline
-(Words a squirrel would use. The same MIT hackers who gave us LISP,) show newline
-(Scheme, and the λ-calculus named things to mean something: lambda,) show newline
-(cons, car, cdr. We continue that tradition: forge, vault, portal,) show newline
-(gossip, bloom, keyring.) show newline
-() show newline
-(Invocation:) show newline
-() show newline
-() show newline
-(    \(bootstrap-modules!\)  ; Called automatically at REPL start) show newline
-() show newline
-(Output format:) show newline
-() show newline
-() show newline
-(    ┌──────────────── forge: portal ────────────────┐) show newline
-(    │ csc -shared -J -strict-types portal.scm       │) show newline
-(    │ ✓ 241K + 677B import in 921ms                 │) show newline
-(    │   296 LOC · 42 λ · 7 LOC/λ                    │) show newline
-(    └───────────────────────────────────────────────┘) show newline
-() show newline
-(The SICP metrics line shows:) show newline
-() show newline
-(  * LOC: Lines of code \(excluding blanks and comments\)) show newline
-(  * λ: Procedure definitions \(define + lambda forms\)) show newline
-(  * LOC/λ: Average lines per procedure \(smaller = more compositional\)) show newline
-() show newline
-(The fundamental unit is not the line - it's the λ. This is the heritage) show newline
-(of computer science invented at MIT by smart squirrel/hackers:) show newline
-(McCarthy's LISP, Sussman and Steele's Scheme, the AI Lab, Building 20.) show newline
-(They saw computation as pure thought, λ as the primitive, parentheses) show newline
-(as liberation not burden.) show newline
-() show newline
-(Measuring λ-density is measuring compositional discipline. A module) show newline
-(with 6 LOC/λ has crystallized more thought per line than one with 10.) show newline
-(The ratio tells you how SICP-minded the code is.) show newline
-() show newline
-(Metrics are stored in .forge/<module>.meta as s-expressions:) show newline
-() show newline
-() show newline
-(    \(\(module . "vault"\)) show newline
-(     \(timestamp . 1768359548\)) show newline
-(     \(so-size . 951016\)) show newline
-(     \(import-size . 3258\)) show newline
-(     \(compile-time-ms . 12686\)) show newline
-(     \(metrics \(loc . 2793\) \(lambdas . 260\) \(imports . 1\) \(loc/lambda . 10\)\)\)) show newline
-() show newline
-(The forge knows how λ-dense your code is. Each compilation records:) show newline
-(timestamp \(Unix epoch\), artifact sizes, build time, and the metrics that) show newline
-(matter - lines of code, lambda count, λ-density ratio.) show newline
-() show newline
-(Queryable via:) show newline
-() show newline
-() show newline
-(    \(forged "portal"\)     ; Single module metrics) show newline
-(    \(forged-all\)          ; Bitfarm harvest: all modules) show newline
-(    \(sicp\)                ; Live analysis \(no forge metadata needed\)) show newline
-() show newline
-(Standalone script for shell usage:) show newline
-() show newline
-() show newline
-(    $ ./sicp              # From spki/scheme directory) show newline
-(    $ lscs                # Shell alias \(defined in .zshrc\)) show newline
-() show newline
-(Compositional threshold:) show newline
-() show newline
-() show newline
-(    LOC/λ < 10  \(enforced\)) show newline
-() show newline
-(Modules exceeding 10 LOC/λ trigger a warning during forge and are) show newline
-(flagged in sicp output. This enforces SICP-style compositional) show newline
-(discipline: small procedures composed to build complex behavior.) show newline
-() show newline
-(Current totals \(v0.61\):) show newline
-() show newline
-() show newline
-(    Σ 8502 LOC · 920 λ · 9 LOC/λ ✓) show newline
-() show newline
-() show newline
-(4.2 Compiler Invocation) show newline
-(-----------------------) show newline
-() show newline
-(The forge invokes csc \(Chicken Scheme Compiler\) with these flags:) show newline
-() show newline
-() show newline
-(  Flag           Purpose                                  ) show newline
-(  -shared        Produce shared library \(.so\)             ) show newline
-(  -J             Generate import library \(.import.scm\)    ) show newline
-(  -strict-types  Enable scrutinizer type checking \(beta\)  ) show newline
-(  -I path        Add include path \(for FFI\)               ) show newline
-(  -L path        Add library path \(for FFI\)               ) show newline
-(  -l lib         Link library \(e.g., -lsodium\)            ) show newline
-() show newline
-(Example invocations:) show newline
-() show newline
-() show newline
-(    # Standard module) show newline
-(    csc -shared -J -strict-types portal.scm) show newline
-(    # FFI module with libsodium) show newline
-(    csc -shared -J -strict-types crypto-ffi.scm \\) show newline
-(        -I/opt/homebrew/include -L/opt/homebrew/lib -lsodium) show newline
-() show newline
-() show newline
-(4.3 Dependency Levels) show newline
-(---------------------) show newline
-() show newline
-(Modules are organized into dependency levels. Modules within a level) show newline
-(have no mutual dependencies and compile in parallel.) show newline
-() show newline
-() show newline
-(    ;; Level 0: Foundation \(no cyberspace dependencies\)) show newline
-(    \("os" "crypto-ffi" "sexp" "capability"\)) show newline
-(    ;; Level 1: Core utilities \(depend on Level 0 only\)) show newline
-(    \("mdns" "fips" "audit" "wordlist" "bloom") show newline
-(     "catalog" "keyring" "portal"\)) show newline
-(    ;; Level 2: Certificates and enrollment \(depend on Levels 0-1\)) show newline
-(    \("cert" "enroll"\)) show newline
-(    ;; Level 3: Protocols \(depend on Levels 0-2\)) show newline
-(    \("gossip" "security"\)) show newline
-(    ;; Level 4: High-level operations \(depend on Levels 0-3\)) show newline
-(    \("vault" "auto-enroll"\)) show newline
-(    ;; Level 5: User interface \(depend on all prior\)) show newline
-(    \("ui"\)) show newline
-() show newline
-(To determine a module's level, examine its imports:) show newline
-() show newline
-(  * If it imports only chicken/srfi modules: Level 0) show newline
-(  * If it imports Level 0 modules: Level 1) show newline
-(  * If it imports Level N modules: Level N+1 or higher) show newline
-() show newline
-() show newline
-(4.4 Parallel Compilation) show newline
-(------------------------) show newline
-() show newline
-(Each level compiles in parallel using process-fork:) show newline
-() show newline
-() show newline
-(    \(define \(rebuild-level-parallel! modules\)) show newline
-(      \(let \(\(pids \(map \(lambda \(module\)) show newline
-(                         \(process-fork) show newline
-(                           \(lambda \(\)) show newline
-(                             \(rebuild-module! module\)) show newline
-(                             \(exit 0\)\)\)\)) show newline
-(                       modules\)\)\)) show newline
-(        \(for-each process-wait pids\)) show newline
-(        \(length modules\)\)\)) show newline
-() show newline
-(The build blocks until all processes in a level complete before starting) show newline
-(the next level. This ensures dependencies are satisfied.) show newline
-() show newline
-() show newline
-(4.5 Architecture Neutrality) show newline
-(---------------------------) show newline
-() show newline
-(The weave must be universal. Only content-addressed,) show newline
-(architecture-neutral artifacts flow through the weave: s-expressions,) show newline
-(signatures, proofs. Binary artifacts \(.so, .o, the REPL executable\) are) show newline
-(local materializations - ephemeral as the hardware they run on.) show newline
-() show newline
-(Machine code is gibberish outside the local realm. Could be ARM64, could) show newline
-(be x86_64, could be a JPEG of a cat. The weave cannot inspect it, cannot) show newline
-(verify it, cannot reason about it. Only the s-expression source has) show newline
-(universal meaning - it parses the same on lambda as on fluffy as on) show newline
-(whatever Linux box joins the realm next.) show newline
-() show newline
-(Consequently, compiled artifacts are excluded from version control and) show newline
-(replication:) show newline
-() show newline
-() show newline
-(    # .gitignore) show newline
-(    spki/scheme/repl) show newline
-(    spki/scheme/*.so) show newline
-(    spki/scheme/*.o) show newline
-(    spki/scheme/*.import.scm) show newline
-(    spki/scheme/.*.arch) show newline
-() show newline
-(Each node compiles its own. Lambda is portable. Machine code is not.) show newline
-() show newline
-() show newline
-(4.6 Rebuild Detection) show newline
-(---------------------) show newline
-() show newline
-(A module needs rebuilding when any of these conditions hold:) show newline
-() show newline
-(  * The .so file does not exist) show newline
-(  * The .import.scm file does not exist) show newline
-(  * The source .scm is newer than the .so \(mtime comparison\)) show newline
-(  * The platform stamp doesn't match \(e.g., Darwin-arm64 vs Linux-x86_64\)) show newline
-() show newline
-() show newline
-(    \(define \(needs-rebuild? module\)) show newline
-(      \(or \(not \(file-exists? \(string-append module ".so"\)\)\)) show newline
-(          \(not \(file-exists? \(string-append module ".import.scm"\)\)\)) show newline
-(          \(> \(file-mtime \(string-append module ".scm"\)\)) show newline
-(             \(file-mtime \(string-append module ".so"\)\)\)) show newline
-(          \(not \(string=? \(read-arch-stamp module\) \(current-arch\)\)\)\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(5. BETA VS PRODUCTION BUILDS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(5.1 Build Mode Flag) show newline
-(-------------------) show newline
-() show newline
-(The *beta-build* flag controls strict type checking:) show newline
-() show newline
-() show newline
-(    ;; In repl.scm) show newline
-(    \(define *beta-build* #t\)  ; Enable for development) show newline
-(    \(define *beta-build* #f\)  ; Disable for release) show newline
-() show newline
-() show newline
-(5.2 Beta Mode Benefits) show newline
-(----------------------) show newline
-() show newline
-(With *beta-build* = #t:) show newline
-() show newline
-(  * All modules compile with -strict-types) show newline
-(  * Type mismatches are compile-time errors) show newline
-(  * Invalid arguments are detected) show newline
-(  * Deprecated identifiers are flagged) show newline
-(  * Format string errors are caught) show newline
-() show newline
-(Build time impact: ~20-25 seconds for full rebuild) show newline
-() show newline
-() show newline
-(5.3 Production Mode) show newline
-(-------------------) show newline
-() show newline
-(With *beta-build* = #f:) show newline
-() show newline
-(  * Modules compile without -strict-types) show newline
-(  * Type declarations remain as documentation) show newline
-(  * Faster compilation) show newline
-(  * Smaller binaries \(no type metadata\)) show newline
-() show newline
-(Build time impact: ~10-15 seconds for full rebuild) show newline
-() show newline
-() show newline
-(5.4 When to Use Each Mode) show newline
-(-------------------------) show newline
-() show newline
-() show newline
-(  Scenario             Mode        Rationale                 ) show newline
-(  Active development   Beta        Catch type errors early   ) show newline
-(  CI/CD pipeline       Beta        Prevent type regressions  ) show newline
-(  Release builds       Production  Optimize for users        ) show newline
-(  Debugging issues     Beta        Better error context      ) show newline
-(  Performance testing  Production  Measure real performance  ) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(PART II: DEBUGGING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(6. EXCEPTION HANDLING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(6.1 Condition System) show newline
-(--------------------) show newline
-() show newline
-(Chicken uses the SRFI-12 condition system. Exceptions are condition) show newline
-(objects with properties:) show newline
-() show newline
-() show newline
-(    \(handle-exceptions exn) show newline
-(      ;; Handler: exn is the condition object) show newline
-(      \(print "Error: " \(get-condition-property exn 'exn 'message\)\)) show newline
-(      ;; Protected code) show newline
-(      \(dangerous-operation\)\)) show newline
-() show newline
-() show newline
-(6.2 Standard Condition Properties) show newline
-(---------------------------------) show newline
-() show newline
-() show newline
-(  Property          Type    Description                     ) show newline
-(  'exn 'message     string  Human-readable error message    ) show newline
-(  'exn 'location    symbol  Procedure where error occurred  ) show newline
-(  'exn 'arguments   list    Arguments that caused error     ) show newline
-(  'exn 'call-chain  list    Stack trace                     ) show newline
-() show newline
-() show newline
-(    \(define \(safe-operation x\)) show newline
-(      \(handle-exceptions exn) show newline
-(        \(let \(\(msg \(get-condition-property exn 'exn 'message "unknown"\)\)) show newline
-(              \(loc \(get-condition-property exn 'exn 'location #f\)\)) show newline
-(              \(chain \(get-condition-property exn 'exn 'call-chain '\(\)\)\)\)) show newline
-(          \(printf "Error in ~a: ~a~n" loc msg\)) show newline
-(          \(print-call-chain chain\)) show newline
-(          #f\)) show newline
-(        \(actual-operation x\)\)\)) show newline
-() show newline
-() show newline
-(6.3 Rich Exception Display) show newline
-(--------------------------) show newline
-() show newline
-(The REPL provides rich exception display with box formatting:) show newline
-() show newline
-() show newline
-(    ┌────────────── Exception ───────────────┐) show newline
-(    │ division by zero                       │) show newline
-(    │ Location: quotient                     │) show newline
-(    │ Arguments: \(42 0\)                      │) show newline
-(    ├─────────────────────────────────────────┤) show newline
-(    │ Call Chain:                            │) show newline
-(    │   divide-values                        │) show newline
-(    │   process-input                        │) show newline
-(    │   main-loop                            │) show newline
-(    └─────────────────────────────────────────┘) show newline
-() show newline
-(Implementation uses the centralized box-drawing API from os.scm.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(7. TRACING AND PROFILING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(7.1 Procedure Tracing) show newline
-(---------------------) show newline
-() show newline
-(Trace procedure calls and returns:) show newline
-() show newline
-() show newline
-(    ;; Enable tracing) show newline
-(    \(trace foo\)) show newline
-(    \(trace bar baz\)) show newline
-(    ;; Disable tracing) show newline
-(    \(untrace foo\)) show newline
-(    \(untrace\)  ; untrace all) show newline
-() show newline
-(Trace output:) show newline
-() show newline
-() show newline
-(    \(foo 1 2 3\)) show newline
-(      |\(bar 1\)) show newline
-(      | \(baz 2\)) show newline
-(      | baz -> 4) show newline
-(      |bar -> 5) show newline
-(    foo -> 8) show newline
-() show newline
-() show newline
-(7.2 REPL Trace Commands) show newline
-(-----------------------) show newline
-() show newline
-(CSI provides trace commands:) show newline
-() show newline
-() show newline
-(    ,trace proc     ; trace procedure) show newline
-(    ,trace         ; show traced procedures) show newline
-(    ,untrace proc  ; stop tracing) show newline
-(    ,untrace       ; stop all tracing) show newline
-() show newline
-() show newline
-(7.3 Call Chain) show newline
-(--------------) show newline
-() show newline
-(Get the current call chain at any point:) show newline
-() show newline
-() show newline
-(    \(define \(debug-here\)) show newline
-(      \(print-call-chain \(get-call-chain\)\)\)) show newline
-(    ;; Or after an error in the REPL:) show newline
-(    ,n              ; show call chain) show newline
-(    ,c              ; continue) show newline
-(    ,d              ; describe exception) show newline
-() show newline
-() show newline
-(7.4 Time Profiling) show newline
-(------------------) show newline
-() show newline
-(Measure execution time:) show newline
-() show newline
-() show newline
-(    \(time \(expensive-operation\)\)) show newline
-(    ;; => 0.142s CPU, 0.145s real, 12345 bytes allocated) show newline
-() show newline
-(For more detailed profiling, compile with -profile and use) show newline
-(chicken-profile.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(8. INSPECTOR DESIGN) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Inspired by Dylan's inspector - the gold standard for interactive) show newline
-(debugging.) show newline
-() show newline
-() show newline
-(8.1 Design Principles) show newline
-(---------------------) show newline
-() show newline
-(The Dylan inspector philosophy:) show newline
-() show newline
-(  * INSPECT EVERYTHING: Any object can be inspected) show newline
-(  * HIDE NOTHING: Internal structure is visible) show newline
-(  * NAVIGATE FREELY: Drill down into any component) show newline
-(  * MODIFY CAREFULLY: Live patching with safety checks) show newline
-(  * HISTORY MATTERS: Navigation history, bookmarks) show newline
-() show newline
-() show newline
-(8.2 Inspector Commands) show newline
-(----------------------) show newline
-() show newline
-(Implemented in inspector.scm and repl.scm. The :m \(modify\) and :r) show newline
-(\(references\) commands are deferred as too complex.) show newline
-() show newline
-() show newline
-(  Command  Action                                 ) show newline
-(  :i obj   Inspect object, enter navigation mode  ) show newline
-(  :s       Show current object                    ) show newline
-(  :d N     Descend into slot N                    ) show newline
-(  :u       Up to parent object                    ) show newline
-(  :h       Show inspection history                ) show newline
-(  :b       Bookmark current object                ) show newline
-(  :t       Show object type info                  ) show newline
-() show newline
-() show newline
-(8.3 Object Display Format) show newline
-(-------------------------) show newline
-() show newline
-() show newline
-(    ┌────────── Inspecting: pair ─────────────┐) show newline
-(    │ Type: pair                             │) show newline
-(    │ Address: 0x7fff5fbff8a0                │) show newline
-(    ├─────────────────────────────────────────┤) show newline
-(    │ [0] car: symbol 'foo                   │) show newline
-(    │ [1] cdr: pair \(...\)                    │) show newline
-(    ├─────────────────────────────────────────┤) show newline
-(    │ :d 0  - inspect car                    │) show newline
-(    │ :d 1  - inspect cdr                    │) show newline
-(    │ :u    - go back                        │) show newline
-(    └─────────────────────────────────────────┘) show newline
-() show newline
-() show newline
-(8.4 Type-Specific Inspectors) show newline
-(----------------------------) show newline
-() show newline
-(Specialized display for common types:) show newline
-() show newline
-(  * Procedures: arity, source location, closure variables) show newline
-(  * Ports: direction, filename, position) show newline
-(  * Blobs: hex dump, ASCII preview) show newline
-(  * Hash tables: key count, load factor, entries) show newline
-(  * SPKI certs: issuer, subject, validity, delegation) show newline
-(  * Audit entries: timestamp, actor, operation) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(9. REPL DEBUGGING COMMANDS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(9.1 Built-in Commands) show newline
-(---------------------) show newline
-() show newline
-() show newline
-(  Command    Description                  ) show newline
-(  ,?         Show help                    ) show newline
-(  ,l file    Load file                    ) show newline
-(  ,r         Show recent expressions      ) show newline
-(  ,s         Show current module          ) show newline
-(  ,m module  Enter module                 ) show newline
-(  ,n         Show call chain after error  ) show newline
-(  ,d         Describe last exception      ) show newline
-(  ,c         Continue after break         ) show newline
-(  ,q         Quit REPL                    ) show newline
-(  ,t proc    Trace procedure              ) show newline
-(  ,u proc    Untrace procedure            ) show newline
-() show newline
-() show newline
-(9.2 Cyberspace Extensions) show newline
-(-------------------------) show newline
-() show newline
-() show newline
-(  Command   Description                      ) show newline
-(  :rebuild  Force rebuild all modules        ) show newline
-(  :status   Show session statistics          ) show newline
-(  :soup     Enter soup browser               ) show newline
-(  :i obj    Enter inspector mode for object  ) show newline
-(  :s        Show current inspected object    ) show newline
-(  :d N      Descend into slot N              ) show newline
-(  :u        Go up to parent object           ) show newline
-(  :h        Show navigation history          ) show newline
-(  :b        Bookmark current object          ) show newline
-(  :t        Show object type info            ) show newline
-(  :audit    Show recent audit entries        ) show newline
-(  :keys     Show loaded keys                 ) show newline
-() show newline
-() show newline
-(9.3 Error Recovery) show newline
-(------------------) show newline
-() show newline
-(After an error, the REPL captures context:) show newline
-() show newline
-() show newline
-(    > \(/ 1 0\)) show newline
-(    ┌────────────── Exception ───────────────┐) show newline
-(    │ division by zero                       │) show newline
-(    └─────────────────────────────────────────┘) show newline
-(    > ,n) show newline
-(    Call chain:) show newline
-(      \(/ 1 0\)) show newline
-(      <toplevel>) show newline
-(    > ,d) show newline
-(    Condition: exn) show newline
-(      message: "division by zero") show newline
-(      location: /) show newline
-(      arguments: \(1 0\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(10. COMPILER WARNINGS REFERENCE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(10.1 Type Warnings) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    Warning: Invalid argument) show newline
-(      Argument #1 to procedure `tcp-accept' has an invalid type:) show newline
-(        false) show newline
-(      The expected type is:) show newline
-(        \(struct tcp-listener\)) show newline
-() show newline
-(Fix: Add type check or adjust control flow to ensure correct type.) show newline
-() show newline
-() show newline
-(10.2 Deprecation Warnings) show newline
-(-------------------------) show newline
-() show newline
-() show newline
-(    Warning: Deprecated identifier `current-milliseconds') show newline
-(      Use of deprecated identifier from module `chicken.time'.) show newline
-() show newline
-(Fix: Use current-process-milliseconds instead.) show newline
-() show newline
-() show newline
-(10.3 Format String Warnings) show newline
-(---------------------------) show newline
-() show newline
-() show newline
-(    Warning: `printf', in format string "~.2f",) show newline
-(      illegal format-string character `.') show newline
-() show newline
-(Fix: Chicken format doesn't support precision specifiers. Use manual) show newline
-(rounding.) show newline
-() show newline
-() show newline
-(10.4 Redefinition Warnings) show newline
-(--------------------------) show newline
-() show newline
-() show newline
-(    Warning: redefinition of imported value binding: blob=?) show newline
-() show newline
-(Fix: Either don't redefine, or explicitly shadow with \(only \(chicken) show newline
-(blob\) \(not blob=?\)\)) show newline
-() show newline
-() show newline
-(10.5 Warning Policy) show newline
-(-------------------) show newline
-() show newline
-(For production code:) show newline
-() show newline
-(  * Zero warnings is the goal) show newline
-(  * All warnings should be investigated) show newline
-(  * Known acceptable warnings should be documented) show newline
-(  * CI should fail on new warnings) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(11. PERFORMANCE TUNING) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(11.1 Compilation Performance) show newline
-(----------------------------) show newline
-() show newline
-() show newline
-(  Module Size           Without -strict-types  With -strict-types  ) show newline
-(  < 500 LOC             ~500ms                 ~700ms              ) show newline
-(  500-2000 LOC          ~1s                    ~2s                 ) show newline
-(  > 2000 LOC \(typed\)    ~2s                    ~7s                 ) show newline
-(  > 2000 LOC \(untyped\)  ~2s                    exponential         ) show newline
-() show newline
-(Full bootstrap \(21 modules\): ~20-25s with strict types) show newline
-() show newline
-() show newline
-(11.2 Runtime Performance) show newline
-(------------------------) show newline
-() show newline
-(Type declarations have no runtime cost - they're only used at compile) show newline
-(time.) show newline
-() show newline
-(For runtime optimization:) show newline
-() show newline
-(  * Use fixnum operations for integer math \(fx+, fx<, etc.\)) show newline
-(  * Use flonum operations for float math \(fp+, fp<, etc.\)) show newline
-(  * Avoid unnecessary string allocation) show newline
-(  * Prefer vectors over lists for random access) show newline
-(  * Use hash tables for lookup-heavy operations) show newline
-() show newline
-() show newline
-(11.3 Memory Profiling) show newline
-(---------------------) show newline
-() show newline
-(Track allocations:) show newline
-() show newline
-() show newline
-(    \(gc #t\)  ; Force GC and print statistics) show newline
-(    \(memory-statistics\)  ; Show current memory use) show newline
-() show newline
-(For detailed profiling, compile with -profile flag.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(12. MODULE CONVENTIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(12.1 File Structure) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    ;;; module.scm - One line description) show newline
-(    ;;;) show newline
-(    ;;; Longer description of purpose, heritage, references.) show newline
-(    ;;;) show newline
-(    ;;; Copyright \(c\) 2026 Author. See LICENSE.) show newline
-(    \(module module-name) show newline
-(      \(;; Exports grouped by category) show newline
-(       export1) show newline
-(       export2) show newline
-(       ;; Internal \(for testing/debugging\)) show newline
-(       internal-helper\)) show newline
-(      \(import scheme) show newline
-(              \(chicken base\)) show newline
-(              \(chicken type\)) show newline
-(              ...\)) show newline
-(      ;;; ============================================================) show newline
-(      ;;; Type Declarations) show newline
-(      ;;; ============================================================) show newline
-(      \(: export1 ...\)) show newline
-(      \(: export2 ...\)) show newline
-(      ;;; ============================================================) show newline
-(      ;;; Section Name) show newline
-(      ;;; ============================================================) show newline
-(      \(define \(export1 ...\) ...\)) show newline
-(    \) ; end module) show newline
-() show newline
-() show newline
-(12.2 Naming Conventions) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(  Type        Convention    Example                           ) show newline
-(  Procedure   verb-noun     read-file, parse-cert             ) show newline
-(  Predicate   noun?         empty?, valid-cert?               ) show newline
-(  Conversion  x->y          string->blob, cert->sexp          ) show newline
-(  Mutator     verb!         set-value!, init!                 ) show newline
-(  Constant    *name*        *default-port*, *max-retries*     ) show newline
-(  Parameter   current-name  current-realm, current-principal  ) show newline
-() show newline
-() show newline
-(12.3 Documentation Strings) show newline
-(--------------------------) show newline
-() show newline
-(All exported procedures should have docstrings:) show newline
-() show newline
-() show newline
-(    \(define \(read-file path\)) show newline
-(      "Read entire file contents as string.) show newline
-(       Returns #f if file doesn't exist.") show newline
-(      ...\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(13. TESTING CONVENTIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(13.1 Test File Location) show newline
-(-----------------------) show newline
-() show newline
-(Tests live alongside source:) show newline
-() show newline
-() show newline
-(    module.scm       ; Source) show newline
-(    module-test.scm  ; Tests) show newline
-() show newline
-() show newline
-(13.2 Test Structure) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    \(import module\)) show newline
-(    \(import test\)  ; SRFI-64 or similar) show newline
-(    \(test-begin "module"\)) show newline
-(    \(test-group "feature-name") show newline
-(      \(test-equal "description" expected \(actual\)\)) show newline
-(      \(test-assert "predicate" \(condition?\)\)\)) show newline
-(    \(test-end "module"\)) show newline
-() show newline
-() show newline
-(13.3 Running Tests) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    csi -s module-test.scm) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(14. REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Chicken Scheme User's Manual: Types) show newline
-(  * Chicken Scheme User's Manual: Debugging) show newline
-(  * SRFI-12: Exception Handling) show newline
-(  * Ada Reference Manual: Type System) show newline
-(  * Dylan Reference Manual: Inspector) show newline
-(  * Memo-054 Terminal Interface Conventions) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0052:) show ( ) show (Compilation) show ( ) show (and) show ( ) show (Debugging) show ( ) show (Manual) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (is) show ( ) show (the) show ( ) show (compilation) show ( ) show (and) show ( ) show (debugging) show ( ) show (manual) show ( ) show (for) show ( ) show (Cyberspace) show ( ) show (Scheme.) show  newline
+(It) show ( ) show (specifies) show ( ) show (type) show ( ) show (inference) show ( ) show (conventions,) show ( ) show (build) show ( ) show (system) show ( ) show (architecture,) show  newline
+(debugging) show ( ) show (infrastructure,) show ( ) show (exception) show ( ) show (handling,) show ( ) show (and) show ( ) show (inspector) show ( ) show (design.) show ( ) show (The) show  newline
+(guiding) show ( ) show (principles) show ( ) show (are) show ( ) show (Ada's) show ( ) show ("declare) show ( ) show (everything,) show ( ) show (infer) show ( ) show (nothing") show ( ) show (and) show  newline
+(Dylan's) show ( ) show ("inspect) show ( ) show (everything,) show ( ) show (hide) show ( ) show (nothing.") show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PART) show ( ) show (I:) show ( ) show (COMPILATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(1.) show ( ) show (TYPE) show ( ) show (SYSTEM) show ( ) show (OVERVIEW) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(1.1) show ( ) show (Chicken's) show ( ) show (Scrutinizer) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+(Chicken) show ( ) show (Scheme) show ( ) show (includes) show ( ) show (a) show ( ) show (flow-sensitive) show ( ) show (type) show ( ) show (analyzer) show ( ) show (called) show ( ) show (the) show  newline
+(scrutinizer.) show ( ) show (When) show ( ) show (invoked) show ( ) show (with) show ( ) show (-strict-types,) show ( ) show (it) show ( ) show (performs) show ( ) show (whole-program) show  newline
+(type) show ( ) show (inference) show ( ) show (and) show ( ) show (reports) show ( ) show (errors) show ( ) show (when) show ( ) show (types) show ( ) show (cannot) show ( ) show (be) show ( ) show (proven) show ( ) show (safe.) show  newline
+ newline
+(The) show ( ) show (scrutinizer) show ( ) show (tracks) show ( ) show (type) show ( ) show (information) show ( ) show (through:) show  newline
+ newline
+(*) show ( ) show (Variable) show ( ) show (bindings) show ( ) show (and) show ( ) show (assignments) show  newline
+(*) show ( ) show (Conditional) show ( ) show (branches) show ( ) show (\(if,) show ( ) show (cond,) show ( ) show (case\)) show  newline
+(*) show ( ) show (Procedure) show ( ) show (calls) show ( ) show (and) show ( ) show (returns) show  newline
+(*) show ( ) show (Special) show ( ) show (forms) show ( ) show (\(let,) show ( ) show (let*,) show ( ) show (letrec\)) show  newline
+ newline
+ newline
+(1.2) show ( ) show (The) show ( ) show (Inference) show ( ) show (Problem) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+(Whole-program) show ( ) show (type) show ( ) show (inference) show ( ) show (without) show ( ) show (declarations) show ( ) show (can) show ( ) show (exhibit) show  newline
+(exponential) show ( ) show (complexity.) show ( ) show (The) show ( ) show (scrutinizer's) show ( ) show (flow-sensitive) show ( ) show (analysis) show  newline
+(becomes) show ( ) show (intractable) show ( ) show (when:) show  newline
+ newline
+(*) show ( ) show (Functions) show ( ) show (contain) show ( ) show (many) show ( ) show (conditional) show ( ) show (branches) show ( ) show (with) show ( ) show (side) show ( ) show (effects) show  newline
+(*) show ( ) show (Format) show ( ) show (strings) show ( ) show (\(sprintf\)) show ( ) show (create) show ( ) show (implicit) show ( ) show (polymorphic) show ( ) show (constraints) show  newline
+(*) show ( ) show (Type) show ( ) show (information) show ( ) show (cannot) show ( ) show (flow) show ( ) show (through) show ( ) show (set!) show ( ) show (mutations) show  newline
+(*) show ( ) show (Multiple) show ( ) show (paths) show ( ) show (merge) show ( ) show (with) show ( ) show (incompatible) show ( ) show (inferred) show ( ) show (types) show  newline
+ newline
+(Empirical) show ( ) show (observation:) show ( ) show (A) show ( ) show (function) show ( ) show (with) show ( ) show (30) show ( ) show (conditional) show ( ) show (sprintf) show ( ) show (calls) show ( ) show (can) show  newline
+(take) show ( ) show (5+) show ( ) show (minutes) show ( ) show (to) show ( ) show (analyze.) show ( ) show (The) show ( ) show (same) show ( ) show (function) show ( ) show (with) show ( ) show (type) show ( ) show (declarations) show  newline
+(compiles) show ( ) show (in) show ( ) show (under) show ( ) show (1) show ( ) show (second.) show  newline
+ newline
+ newline
+(1.3) show ( ) show (The) show ( ) show (Ada) show ( ) show (Principle) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(Ada's) show ( ) show (compilation) show ( ) show (model) show ( ) show (requires) show ( ) show (explicit) show ( ) show (type) show ( ) show (declarations) show ( ) show (everywhere.) show  newline
+(The) show ( ) show (compiler) show ( ) show (is) show ( ) show (a) show ( ) show (checker,) show ( ) show (not) show ( ) show (a) show ( ) show (guesser.) show ( ) show (Jean) show ( ) show (Ichbiah's) show ( ) show (design) show ( ) show (traded) show  newline
+(verbosity) show ( ) show (for) show ( ) show (predictability) show ( ) show (-) show ( ) show (when) show ( ) show (Ada) show ( ) show (compiles,) show ( ) show (it) show ( ) show (tends) show ( ) show (to) show ( ) show (run) show  newline
+(correctly.) show  newline
+ newline
+(For) show ( ) show (Cyberspace) show ( ) show (modules,) show ( ) show (we) show ( ) show (adopt) show ( ) show (this) show ( ) show (principle:) show  newline
+ newline
+ newline
+(DECLARE) show ( ) show (EVERYTHING,) show ( ) show (INFER) show ( ) show (NOTHING) show  newline
+ newline
+(Benefits:) show  newline
+ newline
+(*) show ( ) show (Predictable) show ( ) show (compilation) show ( ) show (times) show  newline
+(*) show ( ) show (Better) show ( ) show (error) show ( ) show (messages) show ( ) show (\(mismatch) show ( ) show (against) show ( ) show (declaration,) show ( ) show (not) show ( ) show (inference\)) show  newline
+(*) show ( ) show (Documentation) show ( ) show (of) show ( ) show (programmer) show ( ) show (intent) show  newline
+(*) show ( ) show (Enables) show ( ) show (separate) show ( ) show (compilation) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(2.) show ( ) show (TYPE) show ( ) show (DECLARATION) show ( ) show (CONVENTIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(2.1) show ( ) show (Required) show ( ) show (Import) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(Modules) show ( ) show (using) show ( ) show (type) show ( ) show (declarations) show ( ) show (must) show ( ) show (import) show ( ) show (the) show ( ) show (type) show ( ) show (system:) show  newline
+ newline
+ newline
+(\(import) show ( ) show (\(chicken) show ( ) show (type\)\)) show  newline
+ newline
+(Place) show ( ) show (this) show ( ) show (import) show ( ) show (with) show ( ) show (other) show ( ) show (chicken) show ( ) show (imports,) show ( ) show (before) show ( ) show (srfi) show ( ) show (and) show ( ) show (cyberspace) show  newline
+(modules.) show  newline
+ newline
+ newline
+(2.2) show ( ) show (Declaration) show ( ) show (Placement) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+(Type) show ( ) show (declarations) show ( ) show (are) show ( ) show (placed) show ( ) show (in) show ( ) show (a) show ( ) show (dedicated) show ( ) show (section) show ( ) show (after) show ( ) show (imports,) show  newline
+(before) show ( ) show (any) show ( ) show (function) show ( ) show (definitions:) show  newline
+ newline
+ newline
+(\(module) show ( ) show (example) show  newline
+(\(export1) show ( ) show (export2\)) show  newline
+(\(import) show ( ) show (scheme) show  newline
+(\(chicken) show ( ) show (base\)) show  newline
+(\(chicken) show ( ) show (type\)) show  newline
+(...\)) show  newline
+(;;;) show ( ) show (============================================================) show  newline
+(;;;) show ( ) show (Type) show ( ) show (Declarations) show  newline
+(;;;) show ( ) show (============================================================) show  newline
+(\(:) show ( ) show (export1) show ( ) show (\(string) show ( ) show (->) show ( ) show (boolean\)\)) show  newline
+(\(:) show ( ) show (export2) show ( ) show (\(fixnum) show ( ) show (fixnum) show ( ) show (->) show ( ) show (fixnum\)\)) show  newline
+(\(:) show ( ) show (internal-helper) show ( ) show (\(list) show ( ) show (->) show ( ) show (\(or) show ( ) show (string) show ( ) show (false\)\)\)) show  newline
+(;;;) show ( ) show (============================================================) show  newline
+(;;;) show ( ) show (Implementation) show  newline
+(;;;) show ( ) show (============================================================) show  newline
+(\(define) show ( ) show (\(export1) show ( ) show (s\)) show ( ) show (...\)) show  newline
+(...\)) show  newline
+ newline
+ newline
+(2.3) show ( ) show (Declaration) show ( ) show (Syntax) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (\(:) show ( ) show (name) show ( ) show (type\)) show ( ) show (form) show ( ) show (declares) show ( ) show (the) show ( ) show (type) show ( ) show (of) show ( ) show (a) show ( ) show (binding:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Simple) show ( ) show (function) show ( ) show (types) show  newline
+(\(:) show ( ) show (add1) show ( ) show (\(fixnum) show ( ) show (->) show ( ) show (fixnum\)\)) show  newline
+(\(:) show ( ) show (string-empty?) show ( ) show (\(string) show ( ) show (->) show ( ) show (boolean\)\)) show  newline
+(;;) show ( ) show (Multiple) show ( ) show (arguments) show  newline
+(\(:) show ( ) show (substring) show ( ) show (\(string) show ( ) show (fixnum) show ( ) show (fixnum) show ( ) show (->) show ( ) show (string\)\)) show  newline
+(;;) show ( ) show (Optional) show ( ) show (arguments) show  newline
+(\(:) show ( ) show (open-file) show ( ) show (\(string) show ( ) show (#!optional) show ( ) show (symbol) show ( ) show (->) show ( ) show (port\)\)) show  newline
+(;;) show ( ) show (Rest) show ( ) show (arguments) show  newline
+(\(:) show ( ) show (format) show ( ) show (\(string) show ( ) show (#!rest) show ( ) show (*) show ( ) show (->) show ( ) show (string\)\)) show  newline
+(;;) show ( ) show (Union) show ( ) show (types) show  newline
+(\(:) show ( ) show (find-item) show ( ) show (\(symbol) show ( ) show (->) show ( ) show (\(or) show ( ) show (item) show ( ) show (false\)\)\)) show  newline
+(;;) show ( ) show (Procedures) show ( ) show (as) show ( ) show (arguments) show  newline
+(\(:) show ( ) show (map-items) show ( ) show (\(\(item) show ( ) show (->) show ( ) show (result\)) show ( ) show (\(list-of) show ( ) show (item\)) show ( ) show (->) show ( ) show (\(list-of) show ( ) show (result\)\)\)) show  newline
+(;;) show ( ) show (No) show ( ) show (return) show ( ) show (\(exits) show ( ) show (or) show ( ) show (loops) show ( ) show (forever\)) show  newline
+(\(:) show ( ) show (fatal-error) show ( ) show (\(string) show ( ) show (->) show ( ) show (noreturn\)\)) show  newline
+ newline
+ newline
+(2.4) show ( ) show (Common) show ( ) show (Type) show ( ) show (Names) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(Type) show ( ) show (Description) show ( ) show (Example) show ( ) show (Values) show  newline
+(fixnum) show ( ) show (Small) show ( ) show (exact) show ( ) show (integer) show ( ) show (0,) show ( ) show (42,) show ( ) show (-17) show  newline
+(flonum) show ( ) show (Floating) show ( ) show (point) show ( ) show (3.14,) show ( ) show (-2.5e10) show  newline
+(number) show ( ) show (Any) show ( ) show (number) show ( ) show (fixnum) show ( ) show (or) show ( ) show (flonum) show  newline
+(string) show ( ) show (Character) show ( ) show (string) show ( ) show ("hello") show  newline
+(symbol) show ( ) show (Symbolic) show ( ) show (atom) show ( ) show ('foo,) show ( ) show ('bar) show  newline
+(boolean) show ( ) show (Truth) show ( ) show (value) show ( ) show (#t,) show ( ) show (#f) show  newline
+(char) show ( ) show (Single) show ( ) show (character) show ( ) show (#\\a,) show ( ) show (#\\newline) show  newline
+(list) show ( ) show (Proper) show ( ) show (list) show ( ) show ('\(1) show ( ) show (2) show ( ) show (3\)) show  newline
+(\(list-of) show ( ) show (T\)) show ( ) show (Homogeneous) show ( ) show (list) show ( ) show (\(list-of) show ( ) show (string\)) show  newline
+(pair) show ( ) show (Cons) show ( ) show (cell) show ( ) show ('\(a) show ( ) show (.) show ( ) show (b\)) show  newline
+(vector) show ( ) show (Fixed-size) show ( ) show (array) show ( ) show (#\(1) show ( ) show (2) show ( ) show (3\)) show  newline
+(blob) show ( ) show (Byte) show ( ) show (vector) show ( ) show (\(make-blob) show ( ) show (16\)) show  newline
+(port) show ( ) show (I/O) show ( ) show (port) show ( ) show (\(current-input-port\)) show  newline
+(procedure) show ( ) show (Any) show ( ) show (procedure) show ( ) show (car,) show ( ) show (+) show  newline
+(\(T1) show ( ) show (->) show ( ) show (T2\)) show ( ) show (Specific) show ( ) show (procedure) show ( ) show (\(string) show ( ) show (->) show ( ) show (fixnum\)) show  newline
+(\(or) show ( ) show (T1) show ( ) show (T2\)) show ( ) show (Union) show ( ) show (type) show ( ) show (\(or) show ( ) show (string) show ( ) show (false\)) show  newline
+(\(struct) show ( ) show (name\)) show ( ) show (C) show ( ) show (struct) show ( ) show (wrapper) show ( ) show (\(struct) show ( ) show (tcp-listener\)) show  newline
+(false) show ( ) show (The) show ( ) show (#f) show ( ) show (value) show ( ) show (#f) show  newline
+(*) show ( ) show (Any) show ( ) show (type) show ( ) show (anything) show  newline
+(noreturn) show ( ) show (Never) show ( ) show (returns) show ( ) show (for) show ( ) show (exit,) show ( ) show (error) show  newline
+ newline
+ newline
+(2.5) show ( ) show (When) show ( ) show (Declarations) show ( ) show (Are) show ( ) show (Required) show  newline
+newpath margin ypos moveto margin 204 add ypos lineto stroke
+newline
+ newline
+(Type) show ( ) show (declarations) show ( ) show (are) show ( ) show (REQUIRED) show ( ) show (for:) show  newline
+ newline
+(*) show ( ) show (Functions) show ( ) show (with) show ( ) show (more) show ( ) show (than) show ( ) show (5) show ( ) show (conditional) show ( ) show (branches) show  newline
+(*) show ( ) show (Functions) show ( ) show (using) show ( ) show (set!) show ( ) show (on) show ( ) show (local) show ( ) show (variables) show  newline
+(*) show ( ) show (Functions) show ( ) show (with) show ( ) show (multiple) show ( ) show (sprintf/format) show ( ) show (calls) show  newline
+(*) show ( ) show (All) show ( ) show (exported) show ( ) show (\(public) show ( ) show (API\)) show ( ) show (functions) show  newline
+(*) show ( ) show (Functions) show ( ) show (that) show ( ) show (call) show ( ) show (other) show ( ) show (modules') show ( ) show (exported) show ( ) show (functions) show  newline
+ newline
+(Type) show ( ) show (declarations) show ( ) show (are) show ( ) show (OPTIONAL) show ( ) show (for:) show  newline
+ newline
+(*) show ( ) show (Simple) show ( ) show (leaf) show ( ) show (functions) show ( ) show (\(<) show ( ) show (5) show ( ) show (lines,) show ( ) show (no) show ( ) show (branching\)) show  newline
+(*) show ( ) show (Local) show ( ) show (helper) show ( ) show (functions) show ( ) show (with) show ( ) show (obvious) show ( ) show (types) show  newline
+(*) show ( ) show (Functions) show ( ) show (used) show ( ) show (only) show ( ) show (in) show ( ) show (one) show ( ) show (place) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(3.) show ( ) show (TYPED) show ( ) show (HELPER) show ( ) show (PATTERN) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(3.1) show ( ) show (The) show ( ) show (Problem) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(A) show ( ) show (common) show ( ) show (pattern) show ( ) show (causes) show ( ) show (exponential) show ( ) show (inference:) show  newline
+ newline
+ newline
+(;;) show ( ) show (BAD:) show ( ) show (Exponential) show ( ) show (type) show ( ) show (inference) show  newline
+(\(define) show ( ) show (\(session-summary\)) show  newline
+(\(let) show ( ) show (\(\(stats) show ( ) show ('\(\)\)\)) show  newline
+(\(when) show ( ) show (\(>) show ( ) show (\(session-stat) show ( ) show ('reads\)) show ( ) show (0\)) show  newline
+(\(set!) show ( ) show (stats) show ( ) show (\(cons) show ( ) show (\(sprintf) show ( ) show ("~a) show ( ) show (read~a") show  newline
+(\(session-stat) show ( ) show ('reads\)) show  newline
+(\(if) show ( ) show (\(=) show ( ) show (1) show ( ) show (\(session-stat) show ( ) show ('reads\)\)) show ( ) show ("") show ( ) show ("s"\)\)) show  newline
+(stats\)\)\)) show  newline
+(\(when) show ( ) show (\(>) show ( ) show (\(session-stat) show ( ) show ('writes\)) show ( ) show (0\)) show  newline
+(\(set!) show ( ) show (stats) show ( ) show (\(cons) show ( ) show (\(sprintf) show ( ) show ("~a) show ( ) show (write~a") show ( ) show (...\)) show ( ) show (stats\)\)\)) show  newline
+(;;) show ( ) show (...) show ( ) show (28) show ( ) show (more) show ( ) show (similar) show ( ) show (blocks) show ( ) show (...) show  newline
+(\(reverse) show ( ) show (stats\)\)\)) show  newline
+ newline
+(The) show ( ) show (scrutinizer) show ( ) show (must) show ( ) show (analyze) show ( ) show (all) show ( ) show (2^30) show ( ) show (possible) show ( ) show (paths) show ( ) show (through) show ( ) show (this) show  newline
+(function.) show  newline
+ newline
+ newline
+(3.2) show ( ) show (The) show ( ) show (Solution) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(Factor) show ( ) show (into) show ( ) show (small) show ( ) show (typed) show ( ) show (helpers:) show  newline
+ newline
+ newline
+(;;) show ( ) show (GOOD:) show ( ) show (Linear) show ( ) show (type) show ( ) show (inference) show  newline
+(\(:) show ( ) show (format-stat) show ( ) show (\(symbol) show ( ) show (string) show ( ) show (string) show ( ) show (->) show ( ) show (\(or) show ( ) show (string) show ( ) show (false\)\)\)) show  newline
+(\(define) show ( ) show (\(format-stat) show ( ) show (key) show ( ) show (singular) show ( ) show (plural-suffix\)) show  newline
+("Format) show ( ) show (a) show ( ) show (session) show ( ) show (stat) show ( ) show (with) show ( ) show (pluralization,) show ( ) show (or) show ( ) show (#f) show ( ) show (if) show ( ) show (zero.") show  newline
+(\(let) show ( ) show (\(\(n) show ( ) show (\(session-stat) show ( ) show (key\)\)\)) show  newline
+(\(if) show ( ) show (\(>) show ( ) show (n) show ( ) show (0\)) show  newline
+(\(string-append) show ( ) show (\(number->string) show ( ) show (n\)) show ( ) show (") show ( ) show (") show ( ) show (singular) show  newline
+(\(if) show ( ) show (\(=) show ( ) show (n) show ( ) show (1\)) show ( ) show ("") show ( ) show (plural-suffix\)\)) show  newline
+(#f\)\)\)) show  newline
+(\(:) show ( ) show (format-stat-irregular) show ( ) show (\(symbol) show ( ) show (string) show ( ) show (string) show ( ) show (->) show ( ) show (\(or) show ( ) show (string) show ( ) show (false\)\)\)) show  newline
+(\(define) show ( ) show (\(format-stat-irregular) show ( ) show (key) show ( ) show (singular) show ( ) show (plural\)) show  newline
+("Format) show ( ) show (with) show ( ) show (irregular) show ( ) show (plural.") show  newline
+(\(let) show ( ) show (\(\(n) show ( ) show (\(session-stat) show ( ) show (key\)\)\)) show  newline
+(\(if) show ( ) show (\(>) show ( ) show (n) show ( ) show (0\)) show  newline
+(\(string-append) show ( ) show (\(number->string) show ( ) show (n\)) show ( ) show (") show ( ) show (") show  newline
+(\(if) show ( ) show (\(=) show ( ) show (n) show ( ) show (1\)) show ( ) show (singular) show ( ) show (plural\)\)) show  newline
+(#f\)\)\)) show  newline
+(\(:) show ( ) show (session-summary) show ( ) show (\(->) show ( ) show (\(list-of) show ( ) show (string\)\)\)) show  newline
+(\(define) show ( ) show (\(session-summary\)) show  newline
+("Generate) show ( ) show (session) show ( ) show (statistics) show ( ) show (summary.") show  newline
+(\(filter) show ( ) show (identity) show  newline
+(\(list) show  newline
+(\(format-stat) show ( ) show ('reads) show ( ) show ("read") show ( ) show ("s"\)) show  newline
+(\(format-stat) show ( ) show ('writes) show ( ) show ("write") show ( ) show ("s"\)) show  newline
+(\(format-stat-irregular) show ( ) show ('queries) show ( ) show ("query") show ( ) show ("queries"\)) show  newline
+(...\)\)\)) show  newline
+ newline
+(Each) show ( ) show (helper) show ( ) show (is) show ( ) show (independently) show ( ) show (typed.) show ( ) show (The) show ( ) show (scrutinizer) show ( ) show (analyzes) show ( ) show (them) show  newline
+(separately,) show ( ) show (giving) show ( ) show (O\(n\)) show ( ) show (instead) show ( ) show (of) show ( ) show (O\(2^n\)) show ( ) show (complexity.) show  newline
+ newline
+ newline
+(3.3) show ( ) show (Composition) show ( ) show (via) show ( ) show (filter) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (pattern) show ( ) show (\(filter) show ( ) show (identity) show ( ) show (\(list) show ( ) show (...\)\)) show ( ) show (collects) show ( ) show (non-#f) show ( ) show (results:) show  newline
+ newline
+ newline
+(\(filter) show ( ) show (identity) show ( ) show (\(list) show ( ) show ("a") show ( ) show (#f) show ( ) show ("b") show ( ) show (#f) show ( ) show ("c"\)\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (\("a") show ( ) show ("b") show ( ) show ("c"\)) show  newline
+ newline
+(This) show ( ) show (replaces) show ( ) show (imperative) show ( ) show (set!/cons) show ( ) show (accumulation) show ( ) show (with) show ( ) show (functional) show  newline
+(composition.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(4.) show ( ) show (BUILD) show ( ) show (SYSTEM) show ( ) show (ARCHITECTURE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(4.1) show ( ) show (The) show ( ) show (Forge) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (forge) show ( ) show (is) show ( ) show (the) show ( ) show (build) show ( ) show (system) show ( ) show (for) show ( ) show (Cyberspace) show ( ) show (modules.) show ( ) show (It) show ( ) show (compiles) show ( ) show (Scheme) show  newline
+(to) show ( ) show (shared) show ( ) show (libraries) show ( ) show (\(.so\)) show ( ) show (with) show ( ) show (import) show ( ) show (specifications) show ( ) show (\(.import.scm\).) show  newline
+ newline
+(The) show ( ) show (name) show ( ) show (is) show ( ) show (deliberate.) show ( ) show (Not) show ( ) show (CompilationManager) show ( ) show (or) show ( ) show (BuildSystem) show ( ) show (-) show ( ) show (forge.) show  newline
+(Words) show ( ) show (a) show ( ) show (squirrel) show ( ) show (would) show ( ) show (use.) show ( ) show (The) show ( ) show (same) show ( ) show (MIT) show ( ) show (hackers) show ( ) show (who) show ( ) show (gave) show ( ) show (us) show ( ) show (LISP,) show  newline
+gsave
+margin 0 add ypos moveto (Scheme,) show
+margin 48 add ypos moveto (and) show
+margin 72 add ypos moveto (the) show
+margin 96 add ypos moveto (-calculus) show
+margin 162 add ypos moveto (named) show
+margin 198 add ypos moveto (things) show
+margin 240 add ypos moveto (to) show
+margin 258 add ypos moveto (mean) show
+margin 288 add ypos moveto (something:) show
+margin 354 add ypos moveto (lambda,) show
+grestore
+newline
+(cons,) show ( ) show (car,) show ( ) show (cdr.) show ( ) show (We) show ( ) show (continue) show ( ) show (that) show ( ) show (tradition:) show ( ) show (forge,) show ( ) show (vault,) show ( ) show (portal,) show  newline
+(gossip,) show ( ) show (bloom,) show ( ) show (keyring.) show  newline
+ newline
+(Invocation:) show  newline
+ newline
+ newline
+(\(bootstrap-modules!\)) show ( ) show (;) show ( ) show (Called) show ( ) show (automatically) show ( ) show (at) show ( ) show (REPL) show ( ) show (start) show  newline
+ newline
+(Output) show ( ) show (format:) show  newline
+ newline
+ newline
+gsave
+% box char 250c at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+margin 132 add ypos moveto (forge:) show
+margin 174 add ypos moveto (portal) show
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2510 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add ypos lineto stroke
+newpath margin 315 add ypos moveto margin 315 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (csc) show
+margin 60 add ypos moveto (-shared) show
+margin 108 add ypos moveto (-J) show
+margin 126 add ypos moveto (-strict-types) show
+margin 210 add ypos moveto (portal.scm) show
+% box char 2502 at col 52
+newpath margin 315 add ypos 6 sub moveto margin 315 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto () show
+margin 48 add ypos moveto (241K) show
+margin 78 add ypos moveto (+) show
+margin 90 add ypos moveto (677B) show
+margin 120 add ypos moveto (import) show
+margin 162 add ypos moveto (in) show
+margin 180 add ypos moveto (921ms) show
+% box char 2502 at col 52
+newpath margin 315 add ypos 6 sub moveto margin 315 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 48 add ypos moveto (296) show
+margin 72 add ypos moveto (LOC) show
+margin 96 add ypos moveto (\267) show
+margin 108 add ypos moveto (42) show
+margin 126 add ypos moveto () show
+margin 138 add ypos moveto (\267) show
+margin 150 add ypos moveto (7) show
+margin 162 add ypos moveto (LOC/) show
+% box char 2502 at col 52
+newpath margin 315 add ypos 6 sub moveto margin 315 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2518 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add ypos lineto stroke
+newpath margin 315 add ypos 6 add moveto margin 315 add ypos lineto stroke
+grestore
+newline
+ newline
+(The) show ( ) show (SICP) show ( ) show (metrics) show ( ) show (line) show ( ) show (shows:) show  newline
+ newline
+(*) show ( ) show (LOC:) show ( ) show (Lines) show ( ) show (of) show ( ) show (code) show ( ) show (\(excluding) show ( ) show (blanks) show ( ) show (and) show ( ) show (comments\)) show  newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (:) show
+margin 42 add ypos moveto (Procedure) show
+margin 102 add ypos moveto (definitions) show
+margin 174 add ypos moveto (\(define) show
+margin 222 add ypos moveto (+) show
+margin 234 add ypos moveto (lambda) show
+margin 276 add ypos moveto (forms\)) show
+grestore
+newline
+gsave
+margin 12 add ypos moveto (*) show
+margin 24 add ypos moveto (LOC/:) show
+margin 66 add ypos moveto (Average) show
+margin 114 add ypos moveto (lines) show
+margin 150 add ypos moveto (per) show
+margin 174 add ypos moveto (procedure) show
+margin 234 add ypos moveto (\(smaller) show
+margin 288 add ypos moveto (=) show
+margin 300 add ypos moveto (more) show
+margin 330 add ypos moveto (compositional\)) show
+grestore
+newline
+ newline
+gsave
+margin 0 add ypos moveto (The) show
+margin 24 add ypos moveto (fundamental) show
+margin 96 add ypos moveto (unit) show
+margin 126 add ypos moveto (is) show
+margin 144 add ypos moveto (not) show
+margin 168 add ypos moveto (the) show
+margin 192 add ypos moveto (line) show
+margin 222 add ypos moveto (-) show
+margin 234 add ypos moveto (it's) show
+margin 264 add ypos moveto (the) show
+margin 288 add ypos moveto (.) show
+margin 306 add ypos moveto (This) show
+margin 336 add ypos moveto (is) show
+margin 354 add ypos moveto (the) show
+margin 378 add ypos moveto (heritage) show
+grestore
+newline
+(of) show ( ) show (computer) show ( ) show (science) show ( ) show (invented) show ( ) show (at) show ( ) show (MIT) show ( ) show (by) show ( ) show (smart) show ( ) show (squirrel/hackers:) show  newline
+(McCarthy's) show ( ) show (LISP,) show ( ) show (Sussman) show ( ) show (and) show ( ) show (Steele's) show ( ) show (Scheme,) show ( ) show (the) show ( ) show (AI) show ( ) show (Lab,) show ( ) show (Building) show ( ) show (20.) show  newline
+gsave
+margin 0 add ypos moveto (They) show
+margin 30 add ypos moveto (saw) show
+margin 54 add ypos moveto (computation) show
+margin 126 add ypos moveto (as) show
+margin 144 add ypos moveto (pure) show
+margin 174 add ypos moveto (thought,) show
+margin 228 add ypos moveto () show
+margin 240 add ypos moveto (as) show
+margin 258 add ypos moveto (the) show
+margin 282 add ypos moveto (primitive,) show
+margin 348 add ypos moveto (parentheses) show
+grestore
+newline
+(as) show ( ) show (liberation) show ( ) show (not) show ( ) show (burden.) show  newline
+ newline
+gsave
+margin 0 add ypos moveto (Measuring) show
+margin 60 add ypos moveto (-density) show
+margin 120 add ypos moveto (is) show
+margin 138 add ypos moveto (measuring) show
+margin 198 add ypos moveto (compositional) show
+margin 282 add ypos moveto (discipline.) show
+margin 354 add ypos moveto (A) show
+margin 366 add ypos moveto (module) show
+grestore
+newline
+gsave
+margin 0 add ypos moveto (with) show
+margin 30 add ypos moveto (6) show
+margin 42 add ypos moveto (LOC/) show
+margin 78 add ypos moveto (has) show
+margin 102 add ypos moveto (crystallized) show
+margin 180 add ypos moveto (more) show
+margin 210 add ypos moveto (thought) show
+margin 258 add ypos moveto (per) show
+margin 282 add ypos moveto (line) show
+margin 312 add ypos moveto (than) show
+margin 342 add ypos moveto (one) show
+margin 366 add ypos moveto (with) show
+margin 396 add ypos moveto (10.) show
+grestore
+newline
+(The) show ( ) show (ratio) show ( ) show (tells) show ( ) show (you) show ( ) show (how) show ( ) show (SICP-minded) show ( ) show (the) show ( ) show (code) show ( ) show (is.) show  newline
+ newline
+(Metrics) show ( ) show (are) show ( ) show (stored) show ( ) show (in) show ( ) show (.forge/<module>.meta) show ( ) show (as) show ( ) show (s-expressions:) show  newline
+ newline
+ newline
+(\(\(module) show ( ) show (.) show ( ) show ("vault"\)) show  newline
+(\(timestamp) show ( ) show (.) show ( ) show (1768359548\)) show  newline
+(\(so-size) show ( ) show (.) show ( ) show (951016\)) show  newline
+(\(import-size) show ( ) show (.) show ( ) show (3258\)) show  newline
+(\(compile-time-ms) show ( ) show (.) show ( ) show (12686\)) show  newline
+(\(metrics) show ( ) show (\(loc) show ( ) show (.) show ( ) show (2793\)) show ( ) show (\(lambdas) show ( ) show (.) show ( ) show (260\)) show ( ) show (\(imports) show ( ) show (.) show ( ) show (1\)) show ( ) show (\(loc/lambda) show ( ) show (.) show ( ) show (10\)\)\)) show  newline
+ newline
+gsave
+margin 0 add ypos moveto (The) show
+margin 24 add ypos moveto (forge) show
+margin 60 add ypos moveto (knows) show
+margin 96 add ypos moveto (how) show
+margin 120 add ypos moveto (-dense) show
+margin 168 add ypos moveto (your) show
+margin 198 add ypos moveto (code) show
+margin 228 add ypos moveto (is.) show
+margin 252 add ypos moveto (Each) show
+margin 282 add ypos moveto (compilation) show
+margin 354 add ypos moveto (records:) show
+grestore
+newline
+(timestamp) show ( ) show (\(Unix) show ( ) show (epoch\),) show ( ) show (artifact) show ( ) show (sizes,) show ( ) show (build) show ( ) show (time,) show ( ) show (and) show ( ) show (the) show ( ) show (metrics) show ( ) show (that) show  newline
+gsave
+margin 0 add ypos moveto (matter) show
+margin 42 add ypos moveto (-) show
+margin 54 add ypos moveto (lines) show
+margin 90 add ypos moveto (of) show
+margin 108 add ypos moveto (code,) show
+margin 144 add ypos moveto (lambda) show
+margin 186 add ypos moveto (count,) show
+margin 228 add ypos moveto (-density) show
+margin 288 add ypos moveto (ratio.) show
+grestore
+newline
+ newline
+(Queryable) show ( ) show (via:) show  newline
+ newline
+ newline
+(\(forged) show ( ) show ("portal"\)) show ( ) show (;) show ( ) show (Single) show ( ) show (module) show ( ) show (metrics) show  newline
+(\(forged-all\)) show ( ) show (;) show ( ) show (Bitfarm) show ( ) show (harvest:) show ( ) show (all) show ( ) show (modules) show  newline
+(\(sicp\)) show ( ) show (;) show ( ) show (Live) show ( ) show (analysis) show ( ) show (\(no) show ( ) show (forge) show ( ) show (metadata) show ( ) show (needed\)) show  newline
+ newline
+(Standalone) show ( ) show (script) show ( ) show (for) show ( ) show (shell) show ( ) show (usage:) show  newline
+ newline
+ newline
+($) show ( ) show (./sicp) show ( ) show (#) show ( ) show (From) show ( ) show (spki/scheme) show ( ) show (directory) show  newline
+($) show ( ) show (lscs) show ( ) show (#) show ( ) show (Shell) show ( ) show (alias) show ( ) show (\(defined) show ( ) show (in) show ( ) show (.zshrc\)) show  newline
+ newline
+(Compositional) show ( ) show (threshold:) show  newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto (LOC/) show
+margin 60 add ypos moveto (<) show
+margin 72 add ypos moveto (10) show
+margin 96 add ypos moveto (\(enforced\)) show
+grestore
+newline
+ newline
+gsave
+margin 0 add ypos moveto (Modules) show
+margin 48 add ypos moveto (exceeding) show
+margin 108 add ypos moveto (10) show
+margin 126 add ypos moveto (LOC/) show
+margin 162 add ypos moveto (trigger) show
+margin 210 add ypos moveto (a) show
+margin 222 add ypos moveto (warning) show
+margin 270 add ypos moveto (during) show
+margin 312 add ypos moveto (forge) show
+margin 348 add ypos moveto (and) show
+margin 372 add ypos moveto (are) show
+grestore
+newline
+(flagged) show ( ) show (in) show ( ) show (sicp) show ( ) show (output.) show ( ) show (This) show ( ) show (enforces) show ( ) show (SICP-style) show ( ) show (compositional) show  newline
+(discipline:) show ( ) show (small) show ( ) show (procedures) show ( ) show (composed) show ( ) show (to) show ( ) show (build) show ( ) show (complex) show ( ) show (behavior.) show  newline
+ newline
+(Current) show ( ) show (totals) show ( ) show (\(v0.61\):) show  newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (8502) show
+margin 66 add ypos moveto (LOC) show
+margin 90 add ypos moveto (\267) show
+margin 102 add ypos moveto (920) show
+margin 126 add ypos moveto () show
+margin 138 add ypos moveto (\267) show
+margin 150 add ypos moveto (9) show
+margin 162 add ypos moveto (LOC/) show
+margin 198 add ypos moveto () show
+grestore
+newline
+ newline
+ newline
+(4.2) show ( ) show (Compiler) show ( ) show (Invocation) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (forge) show ( ) show (invokes) show ( ) show (csc) show ( ) show (\(Chicken) show ( ) show (Scheme) show ( ) show (Compiler\)) show ( ) show (with) show ( ) show (these) show ( ) show (flags:) show  newline
+ newline
+ newline
+(Flag) show ( ) show (Purpose) show  newline
+(-shared) show ( ) show (Produce) show ( ) show (shared) show ( ) show (library) show ( ) show (\(.so\)) show  newline
+(-J) show ( ) show (Generate) show ( ) show (import) show ( ) show (library) show ( ) show (\(.import.scm\)) show  newline
+(-strict-types) show ( ) show (Enable) show ( ) show (scrutinizer) show ( ) show (type) show ( ) show (checking) show ( ) show (\(beta\)) show  newline
+(-I) show ( ) show (path) show ( ) show (Add) show ( ) show (include) show ( ) show (path) show ( ) show (\(for) show ( ) show (FFI\)) show  newline
+(-L) show ( ) show (path) show ( ) show (Add) show ( ) show (library) show ( ) show (path) show ( ) show (\(for) show ( ) show (FFI\)) show  newline
+(-l) show ( ) show (lib) show ( ) show (Link) show ( ) show (library) show ( ) show (\(e.g.,) show ( ) show (-lsodium\)) show  newline
+ newline
+(Example) show ( ) show (invocations:) show  newline
+ newline
+ newline
+(#) show ( ) show (Standard) show ( ) show (module) show  newline
+(csc) show ( ) show (-shared) show ( ) show (-J) show ( ) show (-strict-types) show ( ) show (portal.scm) show  newline
+(#) show ( ) show (FFI) show ( ) show (module) show ( ) show (with) show ( ) show (libsodium) show  newline
+(csc) show ( ) show (-shared) show ( ) show (-J) show ( ) show (-strict-types) show ( ) show (crypto-ffi.scm) show ( ) show (\\) show  newline
+(-I/opt/homebrew/include) show ( ) show (-L/opt/homebrew/lib) show ( ) show (-lsodium) show  newline
+ newline
+ newline
+(4.3) show ( ) show (Dependency) show ( ) show (Levels) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(Modules) show ( ) show (are) show ( ) show (organized) show ( ) show (into) show ( ) show (dependency) show ( ) show (levels.) show ( ) show (Modules) show ( ) show (within) show ( ) show (a) show ( ) show (level) show  newline
+(have) show ( ) show (no) show ( ) show (mutual) show ( ) show (dependencies) show ( ) show (and) show ( ) show (compile) show ( ) show (in) show ( ) show (parallel.) show  newline
+ newline
+ newline
+(;;) show ( ) show (Level) show ( ) show (0:) show ( ) show (Foundation) show ( ) show (\(no) show ( ) show (cyberspace) show ( ) show (dependencies\)) show  newline
+(\("os") show ( ) show ("crypto-ffi") show ( ) show ("sexp") show ( ) show ("capability"\)) show  newline
+(;;) show ( ) show (Level) show ( ) show (1:) show ( ) show (Core) show ( ) show (utilities) show ( ) show (\(depend) show ( ) show (on) show ( ) show (Level) show ( ) show (0) show ( ) show (only\)) show  newline
+(\("mdns") show ( ) show ("fips") show ( ) show ("audit") show ( ) show ("wordlist") show ( ) show ("bloom") show  newline
+("catalog") show ( ) show ("keyring") show ( ) show ("portal"\)) show  newline
+(;;) show ( ) show (Level) show ( ) show (2:) show ( ) show (Certificates) show ( ) show (and) show ( ) show (enrollment) show ( ) show (\(depend) show ( ) show (on) show ( ) show (Levels) show ( ) show (0-1\)) show  newline
+(\("cert") show ( ) show ("enroll"\)) show  newline
+(;;) show ( ) show (Level) show ( ) show (3:) show ( ) show (Protocols) show ( ) show (\(depend) show ( ) show (on) show ( ) show (Levels) show ( ) show (0-2\)) show  newline
+(\("gossip") show ( ) show ("security"\)) show  newline
+(;;) show ( ) show (Level) show ( ) show (4:) show ( ) show (High-level) show ( ) show (operations) show ( ) show (\(depend) show ( ) show (on) show ( ) show (Levels) show ( ) show (0-3\)) show  newline
+(\("vault") show ( ) show ("auto-enroll"\)) show  newline
+(;;) show ( ) show (Level) show ( ) show (5:) show ( ) show (User) show ( ) show (interface) show ( ) show (\(depend) show ( ) show (on) show ( ) show (all) show ( ) show (prior\)) show  newline
+(\("ui"\)) show  newline
+ newline
+(To) show ( ) show (determine) show ( ) show (a) show ( ) show (module's) show ( ) show (level,) show ( ) show (examine) show ( ) show (its) show ( ) show (imports:) show  newline
+ newline
+(*) show ( ) show (If) show ( ) show (it) show ( ) show (imports) show ( ) show (only) show ( ) show (chicken/srfi) show ( ) show (modules:) show ( ) show (Level) show ( ) show (0) show  newline
+(*) show ( ) show (If) show ( ) show (it) show ( ) show (imports) show ( ) show (Level) show ( ) show (0) show ( ) show (modules:) show ( ) show (Level) show ( ) show (1) show  newline
+(*) show ( ) show (If) show ( ) show (it) show ( ) show (imports) show ( ) show (Level) show ( ) show (N) show ( ) show (modules:) show ( ) show (Level) show ( ) show (N+1) show ( ) show (or) show ( ) show (higher) show  newline
+ newline
+ newline
+(4.4) show ( ) show (Parallel) show ( ) show (Compilation) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+(Each) show ( ) show (level) show ( ) show (compiles) show ( ) show (in) show ( ) show (parallel) show ( ) show (using) show ( ) show (process-fork:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(rebuild-level-parallel!) show ( ) show (modules\)) show  newline
+(\(let) show ( ) show (\(\(pids) show ( ) show (\(map) show ( ) show (\(lambda) show ( ) show (\(module\)) show  newline
+(\(process-fork) show  newline
+(\(lambda) show ( ) show (\(\)) show  newline
+(\(rebuild-module!) show ( ) show (module\)) show  newline
+(\(exit) show ( ) show (0\)\)\)\)) show  newline
+(modules\)\)\)) show  newline
+(\(for-each) show ( ) show (process-wait) show ( ) show (pids\)) show  newline
+(\(length) show ( ) show (modules\)\)\)) show  newline
+ newline
+(The) show ( ) show (build) show ( ) show (blocks) show ( ) show (until) show ( ) show (all) show ( ) show (processes) show ( ) show (in) show ( ) show (a) show ( ) show (level) show ( ) show (complete) show ( ) show (before) show ( ) show (starting) show  newline
+(the) show ( ) show (next) show ( ) show (level.) show ( ) show (This) show ( ) show (ensures) show ( ) show (dependencies) show ( ) show (are) show ( ) show (satisfied.) show  newline
+ newline
+ newline
+(4.5) show ( ) show (Architecture) show ( ) show (Neutrality) show  newline
+newpath margin ypos moveto margin 162 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (weave) show ( ) show (must) show ( ) show (be) show ( ) show (universal.) show ( ) show (Only) show ( ) show (content-addressed,) show  newline
+(architecture-neutral) show ( ) show (artifacts) show ( ) show (flow) show ( ) show (through) show ( ) show (the) show ( ) show (weave:) show ( ) show (s-expressions,) show  newline
+(signatures,) show ( ) show (proofs.) show ( ) show (Binary) show ( ) show (artifacts) show ( ) show (\(.so,) show ( ) show (.o,) show ( ) show (the) show ( ) show (REPL) show ( ) show (executable\)) show ( ) show (are) show  newline
+(local) show ( ) show (materializations) show ( ) show (-) show ( ) show (ephemeral) show ( ) show (as) show ( ) show (the) show ( ) show (hardware) show ( ) show (they) show ( ) show (run) show ( ) show (on.) show  newline
+ newline
+(Machine) show ( ) show (code) show ( ) show (is) show ( ) show (gibberish) show ( ) show (outside) show ( ) show (the) show ( ) show (local) show ( ) show (realm.) show ( ) show (Could) show ( ) show (be) show ( ) show (ARM64,) show ( ) show (could) show  newline
+(be) show ( ) show (x86_64,) show ( ) show (could) show ( ) show (be) show ( ) show (a) show ( ) show (JPEG) show ( ) show (of) show ( ) show (a) show ( ) show (cat.) show ( ) show (The) show ( ) show (weave) show ( ) show (cannot) show ( ) show (inspect) show ( ) show (it,) show ( ) show (cannot) show  newline
+(verify) show ( ) show (it,) show ( ) show (cannot) show ( ) show (reason) show ( ) show (about) show ( ) show (it.) show ( ) show (Only) show ( ) show (the) show ( ) show (s-expression) show ( ) show (source) show ( ) show (has) show  newline
+(universal) show ( ) show (meaning) show ( ) show (-) show ( ) show (it) show ( ) show (parses) show ( ) show (the) show ( ) show (same) show ( ) show (on) show ( ) show (lambda) show ( ) show (as) show ( ) show (on) show ( ) show (fluffy) show ( ) show (as) show ( ) show (on) show  newline
+(whatever) show ( ) show (Linux) show ( ) show (box) show ( ) show (joins) show ( ) show (the) show ( ) show (realm) show ( ) show (next.) show  newline
+ newline
+(Consequently,) show ( ) show (compiled) show ( ) show (artifacts) show ( ) show (are) show ( ) show (excluded) show ( ) show (from) show ( ) show (version) show ( ) show (control) show ( ) show (and) show  newline
+(replication:) show  newline
+ newline
+ newline
+(#) show ( ) show (.gitignore) show  newline
+(spki/scheme/repl) show  newline
+(spki/scheme/*.so) show  newline
+(spki/scheme/*.o) show  newline
+(spki/scheme/*.import.scm) show  newline
+(spki/scheme/.*.arch) show  newline
+ newline
+(Each) show ( ) show (node) show ( ) show (compiles) show ( ) show (its) show ( ) show (own.) show ( ) show (Lambda) show ( ) show (is) show ( ) show (portable.) show ( ) show (Machine) show ( ) show (code) show ( ) show (is) show ( ) show (not.) show  newline
+ newline
+ newline
+(4.6) show ( ) show (Rebuild) show ( ) show (Detection) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(A) show ( ) show (module) show ( ) show (needs) show ( ) show (rebuilding) show ( ) show (when) show ( ) show (any) show ( ) show (of) show ( ) show (these) show ( ) show (conditions) show ( ) show (hold:) show  newline
+ newline
+(*) show ( ) show (The) show ( ) show (.so) show ( ) show (file) show ( ) show (does) show ( ) show (not) show ( ) show (exist) show  newline
+(*) show ( ) show (The) show ( ) show (.import.scm) show ( ) show (file) show ( ) show (does) show ( ) show (not) show ( ) show (exist) show  newline
+(*) show ( ) show (The) show ( ) show (source) show ( ) show (.scm) show ( ) show (is) show ( ) show (newer) show ( ) show (than) show ( ) show (the) show ( ) show (.so) show ( ) show (\(mtime) show ( ) show (comparison\)) show  newline
+(*) show ( ) show (The) show ( ) show (platform) show ( ) show (stamp) show ( ) show (doesn't) show ( ) show (match) show ( ) show (\(e.g.,) show ( ) show (Darwin-arm64) show ( ) show (vs) show ( ) show (Linux-x86_64\)) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(needs-rebuild?) show ( ) show (module\)) show  newline
+(\(or) show ( ) show (\(not) show ( ) show (\(file-exists?) show ( ) show (\(string-append) show ( ) show (module) show ( ) show (".so"\)\)\)) show  newline
+(\(not) show ( ) show (\(file-exists?) show ( ) show (\(string-append) show ( ) show (module) show ( ) show (".import.scm"\)\)\)) show  newline
+(\(>) show ( ) show (\(file-mtime) show ( ) show (\(string-append) show ( ) show (module) show ( ) show (".scm"\)\)) show  newline
+(\(file-mtime) show ( ) show (\(string-append) show ( ) show (module) show ( ) show (".so"\)\)\)) show  newline
+(\(not) show ( ) show (\(string=?) show ( ) show (\(read-arch-stamp) show ( ) show (module\)) show ( ) show (\(current-arch\)\)\)\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(5.) show ( ) show (BETA) show ( ) show (VS) show ( ) show (PRODUCTION) show ( ) show (BUILDS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(5.1) show ( ) show (Build) show ( ) show (Mode) show ( ) show (Flag) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (*beta-build*) show ( ) show (flag) show ( ) show (controls) show ( ) show (strict) show ( ) show (type) show ( ) show (checking:) show  newline
+ newline
+ newline
+(;;) show ( ) show (In) show ( ) show (repl.scm) show  newline
+(\(define) show ( ) show (*beta-build*) show ( ) show (#t\)) show ( ) show (;) show ( ) show (Enable) show ( ) show (for) show ( ) show (development) show  newline
+(\(define) show ( ) show (*beta-build*) show ( ) show (#f\)) show ( ) show (;) show ( ) show (Disable) show ( ) show (for) show ( ) show (release) show  newline
+ newline
+ newline
+(5.2) show ( ) show (Beta) show ( ) show (Mode) show ( ) show (Benefits) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(With) show ( ) show (*beta-build*) show ( ) show (=) show ( ) show (#t:) show  newline
+ newline
+(*) show ( ) show (All) show ( ) show (modules) show ( ) show (compile) show ( ) show (with) show ( ) show (-strict-types) show  newline
+(*) show ( ) show (Type) show ( ) show (mismatches) show ( ) show (are) show ( ) show (compile-time) show ( ) show (errors) show  newline
+(*) show ( ) show (Invalid) show ( ) show (arguments) show ( ) show (are) show ( ) show (detected) show  newline
+(*) show ( ) show (Deprecated) show ( ) show (identifiers) show ( ) show (are) show ( ) show (flagged) show  newline
+(*) show ( ) show (Format) show ( ) show (string) show ( ) show (errors) show ( ) show (are) show ( ) show (caught) show  newline
+ newline
+(Build) show ( ) show (time) show ( ) show (impact:) show ( ) show (~20-25) show ( ) show (seconds) show ( ) show (for) show ( ) show (full) show ( ) show (rebuild) show  newline
+ newline
+ newline
+(5.3) show ( ) show (Production) show ( ) show (Mode) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(With) show ( ) show (*beta-build*) show ( ) show (=) show ( ) show (#f:) show  newline
+ newline
+(*) show ( ) show (Modules) show ( ) show (compile) show ( ) show (without) show ( ) show (-strict-types) show  newline
+(*) show ( ) show (Type) show ( ) show (declarations) show ( ) show (remain) show ( ) show (as) show ( ) show (documentation) show  newline
+(*) show ( ) show (Faster) show ( ) show (compilation) show  newline
+(*) show ( ) show (Smaller) show ( ) show (binaries) show ( ) show (\(no) show ( ) show (type) show ( ) show (metadata\)) show  newline
+ newline
+(Build) show ( ) show (time) show ( ) show (impact:) show ( ) show (~10-15) show ( ) show (seconds) show ( ) show (for) show ( ) show (full) show ( ) show (rebuild) show  newline
+ newline
+ newline
+(5.4) show ( ) show (When) show ( ) show (to) show ( ) show (Use) show ( ) show (Each) show ( ) show (Mode) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+ newline
+(Scenario) show ( ) show (Mode) show ( ) show (Rationale) show  newline
+(Active) show ( ) show (development) show ( ) show (Beta) show ( ) show (Catch) show ( ) show (type) show ( ) show (errors) show ( ) show (early) show  newline
+(CI/CD) show ( ) show (pipeline) show ( ) show (Beta) show ( ) show (Prevent) show ( ) show (type) show ( ) show (regressions) show  newline
+(Release) show ( ) show (builds) show ( ) show (Production) show ( ) show (Optimize) show ( ) show (for) show ( ) show (users) show  newline
+(Debugging) show ( ) show (issues) show ( ) show (Beta) show ( ) show (Better) show ( ) show (error) show ( ) show (context) show  newline
+(Performance) show ( ) show (testing) show ( ) show (Production) show ( ) show (Measure) show ( ) show (real) show ( ) show (performance) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(PART) show ( ) show (II:) show ( ) show (DEBUGGING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(6.) show ( ) show (EXCEPTION) show ( ) show (HANDLING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(6.1) show ( ) show (Condition) show ( ) show (System) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(Chicken) show ( ) show (uses) show ( ) show (the) show ( ) show (SRFI-12) show ( ) show (condition) show ( ) show (system.) show ( ) show (Exceptions) show ( ) show (are) show ( ) show (condition) show  newline
+(objects) show ( ) show (with) show ( ) show (properties:) show  newline
+ newline
+ newline
+(\(handle-exceptions) show ( ) show (exn) show  newline
+(;;) show ( ) show (Handler:) show ( ) show (exn) show ( ) show (is) show ( ) show (the) show ( ) show (condition) show ( ) show (object) show  newline
+(\(print) show ( ) show ("Error:) show ( ) show (") show ( ) show (\(get-condition-property) show ( ) show (exn) show ( ) show ('exn) show ( ) show ('message\)\)) show  newline
+(;;) show ( ) show (Protected) show ( ) show (code) show  newline
+(\(dangerous-operation\)\)) show  newline
+ newline
+ newline
+(6.2) show ( ) show (Standard) show ( ) show (Condition) show ( ) show (Properties) show  newline
+newpath margin ypos moveto margin 198 add ypos lineto stroke
+newline
+ newline
+ newline
+(Property) show ( ) show (Type) show ( ) show (Description) show  newline
+('exn) show ( ) show ('message) show ( ) show (string) show ( ) show (Human-readable) show ( ) show (error) show ( ) show (message) show  newline
+('exn) show ( ) show ('location) show ( ) show (symbol) show ( ) show (Procedure) show ( ) show (where) show ( ) show (error) show ( ) show (occurred) show  newline
+('exn) show ( ) show ('arguments) show ( ) show (list) show ( ) show (Arguments) show ( ) show (that) show ( ) show (caused) show ( ) show (error) show  newline
+('exn) show ( ) show ('call-chain) show ( ) show (list) show ( ) show (Stack) show ( ) show (trace) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(safe-operation) show ( ) show (x\)) show  newline
+(\(handle-exceptions) show ( ) show (exn) show  newline
+(\(let) show ( ) show (\(\(msg) show ( ) show (\(get-condition-property) show ( ) show (exn) show ( ) show ('exn) show ( ) show ('message) show ( ) show ("unknown"\)\)) show  newline
+(\(loc) show ( ) show (\(get-condition-property) show ( ) show (exn) show ( ) show ('exn) show ( ) show ('location) show ( ) show (#f\)\)) show  newline
+(\(chain) show ( ) show (\(get-condition-property) show ( ) show (exn) show ( ) show ('exn) show ( ) show ('call-chain) show ( ) show ('\(\)\)\)\)) show  newline
+(\(printf) show ( ) show ("Error) show ( ) show (in) show ( ) show (~a:) show ( ) show (~a~n") show ( ) show (loc) show ( ) show (msg\)) show  newline
+(\(print-call-chain) show ( ) show (chain\)) show  newline
+(#f\)) show  newline
+(\(actual-operation) show ( ) show (x\)\)\)) show  newline
+ newline
+ newline
+(6.3) show ( ) show (Rich) show ( ) show (Exception) show ( ) show (Display) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (REPL) show ( ) show (provides) show ( ) show (rich) show ( ) show (exception) show ( ) show (display) show ( ) show (with) show ( ) show (box) show ( ) show (formatting:) show  newline
+ newline
+ newline
+gsave
+% box char 250c at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+margin 120 add ypos moveto (Exception) show
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2510 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add ypos lineto stroke
+newpath margin 273 add ypos moveto margin 273 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (division) show
+margin 90 add ypos moveto (by) show
+margin 108 add ypos moveto (zero) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (Location:) show
+margin 96 add ypos moveto (quotient) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (Arguments:) show
+margin 102 add ypos moveto (\(42) show
+margin 126 add ypos moveto (0\)) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2524 at col 46
+newpath margin 279 add ypos 6 sub moveto margin 279 add ypos 6 add lineto stroke
+newpath margin 279 add 3 sub ypos moveto margin 279 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (Call) show
+margin 66 add ypos moveto (Chain:) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 48 add ypos moveto (divide-values) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 48 add ypos moveto (process-input) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 48 add ypos moveto (main-loop) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2518 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add ypos lineto stroke
+newpath margin 279 add ypos 6 add moveto margin 279 add ypos lineto stroke
+grestore
+newline
+ newline
+(Implementation) show ( ) show (uses) show ( ) show (the) show ( ) show (centralized) show ( ) show (box-drawing) show ( ) show (API) show ( ) show (from) show ( ) show (os.scm.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(7.) show ( ) show (TRACING) show ( ) show (AND) show ( ) show (PROFILING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(7.1) show ( ) show (Procedure) show ( ) show (Tracing) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(Trace) show ( ) show (procedure) show ( ) show (calls) show ( ) show (and) show ( ) show (returns:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Enable) show ( ) show (tracing) show  newline
+(\(trace) show ( ) show (foo\)) show  newline
+(\(trace) show ( ) show (bar) show ( ) show (baz\)) show  newline
+(;;) show ( ) show (Disable) show ( ) show (tracing) show  newline
+(\(untrace) show ( ) show (foo\)) show  newline
+(\(untrace\)) show ( ) show (;) show ( ) show (untrace) show ( ) show (all) show  newline
+ newline
+(Trace) show ( ) show (output:) show  newline
+ newline
+ newline
+(\(foo) show ( ) show (1) show ( ) show (2) show ( ) show (3\)) show  newline
+(|\(bar) show ( ) show (1\)) show  newline
+(|) show ( ) show (\(baz) show ( ) show (2\)) show  newline
+(|) show ( ) show (baz) show ( ) show (->) show ( ) show (4) show  newline
+(|bar) show ( ) show (->) show ( ) show (5) show  newline
+(foo) show ( ) show (->) show ( ) show (8) show  newline
+ newline
+ newline
+(7.2) show ( ) show (REPL) show ( ) show (Trace) show ( ) show (Commands) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(CSI) show ( ) show (provides) show ( ) show (trace) show ( ) show (commands:) show  newline
+ newline
+ newline
+(,trace) show ( ) show (proc) show ( ) show (;) show ( ) show (trace) show ( ) show (procedure) show  newline
+(,trace) show ( ) show (;) show ( ) show (show) show ( ) show (traced) show ( ) show (procedures) show  newline
+(,untrace) show ( ) show (proc) show ( ) show (;) show ( ) show (stop) show ( ) show (tracing) show  newline
+(,untrace) show ( ) show (;) show ( ) show (stop) show ( ) show (all) show ( ) show (tracing) show  newline
+ newline
+ newline
+(7.3) show ( ) show (Call) show ( ) show (Chain) show  newline
+newpath margin ypos moveto margin 84 add ypos lineto stroke
+newline
+ newline
+(Get) show ( ) show (the) show ( ) show (current) show ( ) show (call) show ( ) show (chain) show ( ) show (at) show ( ) show (any) show ( ) show (point:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(debug-here\)) show  newline
+(\(print-call-chain) show ( ) show (\(get-call-chain\)\)\)) show  newline
+(;;) show ( ) show (Or) show ( ) show (after) show ( ) show (an) show ( ) show (error) show ( ) show (in) show ( ) show (the) show ( ) show (REPL:) show  newline
+(,n) show ( ) show (;) show ( ) show (show) show ( ) show (call) show ( ) show (chain) show  newline
+(,c) show ( ) show (;) show ( ) show (continue) show  newline
+(,d) show ( ) show (;) show ( ) show (describe) show ( ) show (exception) show  newline
+ newline
+ newline
+(7.4) show ( ) show (Time) show ( ) show (Profiling) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(Measure) show ( ) show (execution) show ( ) show (time:) show  newline
+ newline
+ newline
+(\(time) show ( ) show (\(expensive-operation\)\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (0.142s) show ( ) show (CPU,) show ( ) show (0.145s) show ( ) show (real,) show ( ) show (12345) show ( ) show (bytes) show ( ) show (allocated) show  newline
+ newline
+(For) show ( ) show (more) show ( ) show (detailed) show ( ) show (profiling,) show ( ) show (compile) show ( ) show (with) show ( ) show (-profile) show ( ) show (and) show ( ) show (use) show  newline
+(chicken-profile.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(8.) show ( ) show (INSPECTOR) show ( ) show (DESIGN) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Inspired) show ( ) show (by) show ( ) show (Dylan's) show ( ) show (inspector) show ( ) show (-) show ( ) show (the) show ( ) show gold (gold) show phosphor ( ) show (standard) show ( ) show (for) show ( ) show (interactive) show  newline
+(debugging.) show  newline
+ newline
+ newline
+(8.1) show ( ) show (Design) show ( ) show (Principles) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (Dylan) show ( ) show (inspector) show ( ) show (philosophy:) show  newline
+ newline
+(*) show ( ) show (INSPECT) show ( ) show (EVERYTHING:) show ( ) show (Any) show ( ) show (object) show ( ) show (can) show ( ) show (be) show ( ) show (inspected) show  newline
+(*) show ( ) show (HIDE) show ( ) show (NOTHING:) show ( ) show (Internal) show ( ) show (structure) show ( ) show (is) show ( ) show (visible) show  newline
+(*) show ( ) show (NAVIGATE) show ( ) show (FREELY:) show ( ) show (Drill) show ( ) show (down) show ( ) show (into) show ( ) show (any) show ( ) show (component) show  newline
+(*) show ( ) show (MODIFY) show ( ) show (CAREFULLY:) show ( ) show (Live) show ( ) show (patching) show ( ) show (with) show ( ) show (safety) show ( ) show (checks) show  newline
+(*) show ( ) show (HISTORY) show ( ) show (MATTERS:) show ( ) show (Navigation) show ( ) show (history,) show ( ) show (bookmarks) show  newline
+ newline
+ newline
+(8.2) show ( ) show (Inspector) show ( ) show (Commands) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+(Implemented) show ( ) show (in) show ( ) show (inspector.scm) show ( ) show (and) show ( ) show (repl.scm.) show ( ) show (The) show ( ) show (:m) show ( ) show (\(modify\)) show ( ) show (and) show ( ) show (:r) show  newline
+(\(references\)) show ( ) show (commands) show ( ) show (are) show ( ) show (deferred) show ( ) show (as) show ( ) show (too) show ( ) show (complex.) show  newline
+ newline
+ newline
+(Command) show ( ) show (Action) show  newline
+(:i) show ( ) show (obj) show ( ) show (Inspect) show ( ) show (object,) show ( ) show (enter) show ( ) show (navigation) show ( ) show (mode) show  newline
+(:s) show ( ) show (Show) show ( ) show (current) show ( ) show (object) show  newline
+(:d) show ( ) show (N) show ( ) show (Descend) show ( ) show (into) show ( ) show (slot) show ( ) show (N) show  newline
+(:u) show ( ) show (Up) show ( ) show (to) show ( ) show (parent) show ( ) show (object) show  newline
+(:h) show ( ) show (Show) show ( ) show (inspection) show ( ) show (history) show  newline
+(:b) show ( ) show (Bookmark) show ( ) show (current) show ( ) show (object) show  newline
+(:t) show ( ) show (Show) show ( ) show (object) show ( ) show (type) show ( ) show (info) show  newline
+ newline
+ newline
+(8.3) show ( ) show (Object) show ( ) show (Display) show ( ) show (Format) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+% box char 250c at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+margin 96 add ypos moveto (Inspecting:) show
+margin 168 add ypos moveto (pair) show
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2510 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add ypos lineto stroke
+newpath margin 279 add ypos moveto margin 279 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (Type:) show
+margin 72 add ypos moveto (pair) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (Address:) show
+margin 90 add ypos moveto (0x7fff5fbff8a0) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2524 at col 46
+newpath margin 279 add ypos 6 sub moveto margin 279 add ypos 6 add lineto stroke
+newpath margin 279 add 3 sub ypos moveto margin 279 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto ([0]) show
+margin 60 add ypos moveto (car:) show
+margin 90 add ypos moveto (symbol) show
+margin 132 add ypos moveto ('foo) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto ([1]) show
+margin 60 add ypos moveto (cdr:) show
+margin 90 add ypos moveto (pair) show
+margin 120 add ypos moveto (\(...\)) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 251c at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2524 at col 46
+newpath margin 279 add ypos 6 sub moveto margin 279 add ypos 6 add lineto stroke
+newpath margin 279 add 3 sub ypos moveto margin 279 add ypos lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (:d) show
+margin 54 add ypos moveto (0) show
+margin 72 add ypos moveto (-) show
+margin 84 add ypos moveto (inspect) show
+margin 132 add ypos moveto (car) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (:d) show
+margin 54 add ypos moveto (1) show
+margin 72 add ypos moveto (-) show
+margin 84 add ypos moveto (inspect) show
+margin 132 add ypos moveto (cdr) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (:u) show
+margin 72 add ypos moveto (-) show
+margin 84 add ypos moveto (go) show
+margin 102 add ypos moveto (back) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2518 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add ypos lineto stroke
+newpath margin 279 add ypos 6 add moveto margin 279 add ypos lineto stroke
+grestore
+newline
+ newline
+ newline
+(8.4) show ( ) show (Type-Specific) show ( ) show (Inspectors) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+(Specialized) show ( ) show (display) show ( ) show (for) show ( ) show (common) show ( ) show (types:) show  newline
+ newline
+(*) show ( ) show (Procedures:) show ( ) show (arity,) show ( ) show (source) show ( ) show (location,) show ( ) show (closure) show ( ) show (variables) show  newline
+(*) show ( ) show (Ports:) show ( ) show (direction,) show ( ) show (filename,) show ( ) show (position) show  newline
+(*) show ( ) show (Blobs:) show ( ) show (hex) show ( ) show (dump,) show ( ) show (ASCII) show ( ) show (preview) show  newline
+(*) show ( ) show (Hash) show ( ) show (tables:) show ( ) show (key) show ( ) show (count,) show ( ) show (load) show ( ) show (factor,) show ( ) show (entries) show  newline
+(*) show ( ) show (SPKI) show ( ) show (certs:) show ( ) show (issuer,) show ( ) show (subject,) show ( ) show (validity,) show ( ) show (delegation) show  newline
+(*) show ( ) show (Audit) show ( ) show (entries:) show ( ) show (timestamp,) show ( ) show (actor,) show ( ) show (operation) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(9.) show ( ) show (REPL) show ( ) show (DEBUGGING) show ( ) show (COMMANDS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(9.1) show ( ) show (Built-in) show ( ) show (Commands) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+ newline
+(Command) show ( ) show (Description) show  newline
+(,?) show ( ) show (Show) show ( ) show (help) show  newline
+(,l) show ( ) show (file) show ( ) show (Load) show ( ) show (file) show  newline
+(,r) show ( ) show (Show) show ( ) show (recent) show ( ) show (expressions) show  newline
+(,s) show ( ) show (Show) show ( ) show (current) show ( ) show (module) show  newline
+(,m) show ( ) show (module) show ( ) show (Enter) show ( ) show (module) show  newline
+(,n) show ( ) show (Show) show ( ) show (call) show ( ) show (chain) show ( ) show (after) show ( ) show (error) show  newline
+(,d) show ( ) show (Describe) show ( ) show (last) show ( ) show (exception) show  newline
+(,c) show ( ) show (Continue) show ( ) show (after) show ( ) show (break) show  newline
+(,q) show ( ) show (Quit) show ( ) show (REPL) show  newline
+(,t) show ( ) show (proc) show ( ) show (Trace) show ( ) show (procedure) show  newline
+(,u) show ( ) show (proc) show ( ) show (Untrace) show ( ) show (procedure) show  newline
+ newline
+ newline
+(9.2) show ( ) show (Cyberspace) show ( ) show (Extensions) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+ newline
+(Command) show ( ) show (Description) show  newline
+(:rebuild) show ( ) show (Force) show ( ) show (rebuild) show ( ) show (all) show ( ) show (modules) show  newline
+(:status) show ( ) show (Show) show ( ) show (session) show ( ) show (statistics) show  newline
+(:soup) show ( ) show (Enter) show ( ) show (soup) show ( ) show (browser) show  newline
+(:i) show ( ) show (obj) show ( ) show (Enter) show ( ) show (inspector) show ( ) show (mode) show ( ) show (for) show ( ) show (object) show  newline
+(:s) show ( ) show (Show) show ( ) show (current) show ( ) show (inspected) show ( ) show (object) show  newline
+(:d) show ( ) show (N) show ( ) show (Descend) show ( ) show (into) show ( ) show (slot) show ( ) show (N) show  newline
+(:u) show ( ) show (Go) show ( ) show (up) show ( ) show (to) show ( ) show (parent) show ( ) show (object) show  newline
+(:h) show ( ) show (Show) show ( ) show (navigation) show ( ) show (history) show  newline
+(:b) show ( ) show (Bookmark) show ( ) show (current) show ( ) show (object) show  newline
+(:t) show ( ) show (Show) show ( ) show (object) show ( ) show (type) show ( ) show (info) show  newline
+(:audit) show ( ) show (Show) show ( ) show (recent) show ( ) show (audit) show ( ) show (entries) show  newline
+(:keys) show ( ) show (Show) show ( ) show (loaded) show ( ) show (keys) show  newline
+ newline
+ newline
+(9.3) show ( ) show (Error) show ( ) show (Recovery) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(After) show ( ) show (an) show ( ) show (error,) show ( ) show (the) show ( ) show (REPL) show ( ) show (captures) show ( ) show (context:) show  newline
+ newline
+ newline
+(>) show ( ) show (\(/) show ( ) show (1) show ( ) show (0\)) show  newline
+gsave
+% box char 250c at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos moveto margin 27 add ypos 6 sub lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+margin 120 add ypos moveto (Exception) show
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2510 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add ypos lineto stroke
+newpath margin 273 add ypos moveto margin 273 add ypos 6 sub lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 4
+newpath margin 27 add ypos 6 sub moveto margin 27 add ypos 6 add lineto stroke
+margin 36 add ypos moveto (division) show
+margin 90 add ypos moveto (by) show
+margin 108 add ypos moveto (zero) show
+% box char 2502 at col 45
+newpath margin 273 add ypos 6 sub moveto margin 273 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 4
+newpath margin 27 add ypos moveto margin 27 add 3 add ypos lineto stroke
+newpath margin 27 add ypos 6 add moveto margin 27 add ypos lineto stroke
+% box char 2500 at col 5
+newpath margin 33 add 3 sub ypos moveto margin 33 add 3 add ypos lineto stroke
+% box char 2500 at col 6
+newpath margin 39 add 3 sub ypos moveto margin 39 add 3 add ypos lineto stroke
+% box char 2500 at col 7
+newpath margin 45 add 3 sub ypos moveto margin 45 add 3 add ypos lineto stroke
+% box char 2500 at col 8
+newpath margin 51 add 3 sub ypos moveto margin 51 add 3 add ypos lineto stroke
+% box char 2500 at col 9
+newpath margin 57 add 3 sub ypos moveto margin 57 add 3 add ypos lineto stroke
+% box char 2500 at col 10
+newpath margin 63 add 3 sub ypos moveto margin 63 add 3 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+% box char 2500 at col 13
+newpath margin 81 add 3 sub ypos moveto margin 81 add 3 add ypos lineto stroke
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2500 at col 16
+newpath margin 99 add 3 sub ypos moveto margin 99 add 3 add ypos lineto stroke
+% box char 2500 at col 17
+newpath margin 105 add 3 sub ypos moveto margin 105 add 3 add ypos lineto stroke
+% box char 2500 at col 18
+newpath margin 111 add 3 sub ypos moveto margin 111 add 3 add ypos lineto stroke
+% box char 2500 at col 19
+newpath margin 117 add 3 sub ypos moveto margin 117 add 3 add ypos lineto stroke
+% box char 2500 at col 20
+newpath margin 123 add 3 sub ypos moveto margin 123 add 3 add ypos lineto stroke
+% box char 2500 at col 21
+newpath margin 129 add 3 sub ypos moveto margin 129 add 3 add ypos lineto stroke
+% box char 2500 at col 22
+newpath margin 135 add 3 sub ypos moveto margin 135 add 3 add ypos lineto stroke
+% box char 2500 at col 23
+newpath margin 141 add 3 sub ypos moveto margin 141 add 3 add ypos lineto stroke
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2500 at col 26
+newpath margin 159 add 3 sub ypos moveto margin 159 add 3 add ypos lineto stroke
+% box char 2500 at col 27
+newpath margin 165 add 3 sub ypos moveto margin 165 add 3 add ypos lineto stroke
+% box char 2500 at col 28
+newpath margin 171 add 3 sub ypos moveto margin 171 add 3 add ypos lineto stroke
+% box char 2500 at col 29
+newpath margin 177 add 3 sub ypos moveto margin 177 add 3 add ypos lineto stroke
+% box char 2500 at col 30
+newpath margin 183 add 3 sub ypos moveto margin 183 add 3 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2518 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add ypos lineto stroke
+newpath margin 279 add ypos 6 add moveto margin 279 add ypos lineto stroke
+grestore
+newline
+(>) show ( ) show (,n) show  newline
+(Call) show ( ) show (chain:) show  newline
+(\(/) show ( ) show (1) show ( ) show (0\)) show  newline
+(<toplevel>) show  newline
+(>) show ( ) show (,d) show  newline
+(Condition:) show ( ) show (exn) show  newline
+(message:) show ( ) show ("division) show ( ) show (by) show ( ) show (zero") show  newline
+(location:) show ( ) show (/) show  newline
+(arguments:) show ( ) show (\(1) show ( ) show (0\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(10.) show ( ) show (COMPILER) show ( ) show (WARNINGS) show ( ) show (REFERENCE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(10.1) show ( ) show (Type) show ( ) show (Warnings) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(Warning:) show ( ) show (Invalid) show ( ) show (argument) show  newline
+(Argument) show ( ) show (#1) show ( ) show (to) show ( ) show (procedure) show ( ) show (`tcp-accept') show ( ) show (has) show ( ) show (an) show ( ) show (invalid) show ( ) show (type:) show  newline
+(false) show  newline
+(The) show ( ) show (expected) show ( ) show (type) show ( ) show (is:) show  newline
+(\(struct) show ( ) show (tcp-listener\)) show  newline
+ newline
+(Fix:) show ( ) show (Add) show ( ) show (type) show ( ) show (check) show ( ) show (or) show ( ) show (adjust) show ( ) show (control) show ( ) show (flow) show ( ) show (to) show ( ) show (ensure) show ( ) show (correct) show ( ) show (type.) show  newline
+ newline
+ newline
+(10.2) show ( ) show (Deprecation) show ( ) show (Warnings) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+ newline
+(Warning:) show ( ) show (Deprecated) show ( ) show (identifier) show ( ) show (`current-milliseconds') show  newline
+(Use) show ( ) show (of) show ( ) show (deprecated) show ( ) show (identifier) show ( ) show (from) show ( ) show (module) show ( ) show (`chicken.time'.) show  newline
+ newline
+(Fix:) show ( ) show (Use) show ( ) show (current-process-milliseconds) show ( ) show (instead.) show  newline
+ newline
+ newline
+(10.3) show ( ) show (Format) show ( ) show (String) show ( ) show (Warnings) show  newline
+newpath margin ypos moveto margin 162 add ypos lineto stroke
+newline
+ newline
+ newline
+(Warning:) show ( ) show (`printf',) show ( ) show (in) show ( ) show (format) show ( ) show (string) show ( ) show ("~.2f",) show  newline
+(illegal) show ( ) show (format-string) show ( ) show (character) show ( ) show (`.') show  newline
+ newline
+(Fix:) show ( ) show (Chicken) show ( ) show (format) show ( ) show (doesn't) show ( ) show (support) show ( ) show (precision) show ( ) show (specifiers.) show ( ) show (Use) show ( ) show (manual) show  newline
+(rounding.) show  newline
+ newline
+ newline
+(10.4) show ( ) show (Redefinition) show ( ) show (Warnings) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+ newline
+(Warning:) show ( ) show (redefinition) show ( ) show (of) show ( ) show (imported) show ( ) show (value) show ( ) show (binding:) show ( ) show (blob=?) show  newline
+ newline
+(Fix:) show ( ) show (Either) show ( ) show (don't) show ( ) show (redefine,) show ( ) show (or) show ( ) show (explicitly) show ( ) show (shadow) show ( ) show (with) show ( ) show (\(only) show ( ) show (\(chicken) show  newline
+(blob\)) show ( ) show (\(not) show ( ) show (blob=?\)\)) show  newline
+ newline
+ newline
+(10.5) show ( ) show (Warning) show ( ) show (Policy) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+(For) show ( ) show (production) show ( ) show (code:) show  newline
+ newline
+(*) show ( ) show (Zero) show ( ) show (warnings) show ( ) show (is) show ( ) show (the) show ( ) show (goal) show  newline
+(*) show ( ) show (All) show ( ) show (warnings) show ( ) show (should) show ( ) show (be) show ( ) show (investigated) show  newline
+(*) show ( ) show (Known) show ( ) show (acceptable) show ( ) show (warnings) show ( ) show (should) show ( ) show (be) show ( ) show (documented) show  newline
+(*) show ( ) show (CI) show ( ) show (should) show ( ) show (fail) show ( ) show (on) show ( ) show (new) show ( ) show (warnings) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(11.) show ( ) show (PERFORMANCE) show ( ) show (TUNING) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(11.1) show ( ) show (Compilation) show ( ) show (Performance) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+ newline
+(Module) show ( ) show (Size) show ( ) show (Without) show ( ) show (-strict-types) show ( ) show (With) show ( ) show (-strict-types) show  newline
+(<) show ( ) show (500) show ( ) show (LOC) show ( ) show (~500ms) show ( ) show (~700ms) show  newline
+(500-2000) show ( ) show (LOC) show ( ) show (~1s) show ( ) show (~2s) show  newline
+(>) show ( ) show (2000) show ( ) show (LOC) show ( ) show (\(typed\)) show ( ) show (~2s) show ( ) show (~7s) show  newline
+(>) show ( ) show (2000) show ( ) show (LOC) show ( ) show (\(untyped\)) show ( ) show (~2s) show ( ) show (exponential) show  newline
+ newline
+(Full) show ( ) show (bootstrap) show ( ) show (\(21) show ( ) show (modules\):) show ( ) show (~20-25s) show ( ) show (with) show ( ) show (strict) show ( ) show (types) show  newline
+ newline
+ newline
+(11.2) show ( ) show (Runtime) show ( ) show (Performance) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+(Type) show ( ) show (declarations) show ( ) show (have) show ( ) show (no) show ( ) show (runtime) show ( ) show (cost) show ( ) show (-) show ( ) show (they're) show ( ) show (only) show ( ) show (used) show ( ) show (at) show ( ) show (compile) show  newline
+(time.) show  newline
+ newline
+(For) show ( ) show (runtime) show ( ) show (optimization:) show  newline
+ newline
+(*) show ( ) show (Use) show ( ) show (fixnum) show ( ) show (operations) show ( ) show (for) show ( ) show (integer) show ( ) show (math) show ( ) show (\(fx+,) show ( ) show (fx<,) show ( ) show (etc.\)) show  newline
+(*) show ( ) show (Use) show ( ) show (flonum) show ( ) show (operations) show ( ) show (for) show ( ) show (float) show ( ) show (math) show ( ) show (\(fp+,) show ( ) show (fp<,) show ( ) show (etc.\)) show  newline
+(*) show ( ) show (Avoid) show ( ) show (unnecessary) show ( ) show (string) show ( ) show (allocation) show  newline
+(*) show ( ) show (Prefer) show ( ) show (vectors) show ( ) show (over) show ( ) show (lists) show ( ) show (for) show ( ) show (random) show ( ) show (access) show  newline
+(*) show ( ) show (Use) show ( ) show (hash) show ( ) show (tables) show ( ) show (for) show ( ) show (lookup-heavy) show ( ) show (operations) show  newline
+ newline
+ newline
+(11.3) show ( ) show (Memory) show ( ) show (Profiling) show  newline
+newpath margin ypos moveto margin 126 add ypos lineto stroke
+newline
+ newline
+(Track) show ( ) show (allocations:) show  newline
+ newline
+ newline
+(\(gc) show ( ) show (#t\)) show ( ) show (;) show ( ) show (Force) show ( ) show (GC) show ( ) show (and) show ( ) show (print) show ( ) show (statistics) show  newline
+(\(memory-statistics\)) show ( ) show (;) show ( ) show (Show) show ( ) show (current) show ( ) show (memory) show ( ) show (use) show  newline
+ newline
+(For) show ( ) show (detailed) show ( ) show (profiling,) show ( ) show (compile) show ( ) show (with) show ( ) show (-profile) show ( ) show (flag.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(12.) show ( ) show (MODULE) show ( ) show (CONVENTIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(12.1) show ( ) show (File) show ( ) show (Structure) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;;) show ( ) show (module.scm) show ( ) show (-) show ( ) show (One) show ( ) show (line) show ( ) show (description) show  newline
+(;;;) show  newline
+(;;;) show ( ) show (Longer) show ( ) show (description) show ( ) show (of) show ( ) show (purpose,) show ( ) show (heritage,) show ( ) show (references.) show  newline
+(;;;) show  newline
+(;;;) show ( ) show (Copyright) show ( ) show (\(c\)) show ( ) show (2026) show ( ) show (Author.) show ( ) show (See) show ( ) show (LICENSE.) show  newline
+(\(module) show ( ) show (module-name) show  newline
+(\(;;) show ( ) show (Exports) show ( ) show (grouped) show ( ) show (by) show ( ) show (category) show  newline
+(export1) show  newline
+(export2) show  newline
+(;;) show ( ) show (Internal) show ( ) show (\(for) show ( ) show (testing/debugging\)) show  newline
+(internal-helper\)) show  newline
+(\(import) show ( ) show (scheme) show  newline
+(\(chicken) show ( ) show (base\)) show  newline
+(\(chicken) show ( ) show (type\)) show  newline
+(...\)) show  newline
+(;;;) show ( ) show (============================================================) show  newline
+(;;;) show ( ) show (Type) show ( ) show (Declarations) show  newline
+(;;;) show ( ) show (============================================================) show  newline
+(\(:) show ( ) show (export1) show ( ) show (...\)) show  newline
+(\(:) show ( ) show (export2) show ( ) show (...\)) show  newline
+(;;;) show ( ) show (============================================================) show  newline
+(;;;) show ( ) show (Section) show ( ) show (Name) show  newline
+(;;;) show ( ) show (============================================================) show  newline
+(\(define) show ( ) show (\(export1) show ( ) show (...\)) show ( ) show (...\)) show  newline
+(\)) show ( ) show (;) show ( ) show (end) show ( ) show (module) show  newline
+ newline
+ newline
+(12.2) show ( ) show (Naming) show ( ) show (Conventions) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(Type) show ( ) show (Convention) show ( ) show (Example) show  newline
+(Procedure) show ( ) show (verb-noun) show ( ) show (read-file,) show ( ) show (parse-cert) show  newline
+(Predicate) show ( ) show (noun?) show ( ) show (empty?,) show ( ) show (valid-cert?) show  newline
+(Conversion) show ( ) show (x->y) show ( ) show (string->blob,) show ( ) show (cert->sexp) show  newline
+(Mutator) show ( ) show (verb!) show ( ) show (set-value!,) show ( ) show (init!) show  newline
+(Constant) show ( ) show (*name*) show ( ) show (*default-port*,) show ( ) show (*max-retries*) show  newline
+(Parameter) show ( ) show (current-name) show ( ) show (current-realm,) show ( ) show (current-principal) show  newline
+ newline
+ newline
+(12.3) show ( ) show (Documentation) show ( ) show (Strings) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+(All) show ( ) show (exported) show ( ) show (procedures) show ( ) show (should) show ( ) show (have) show ( ) show (docstrings:) show  newline
+ newline
+ newline
+(\(define) show ( ) show (\(read-file) show ( ) show (path\)) show  newline
+("Read) show ( ) show (entire) show ( ) show (file) show ( ) show (contents) show ( ) show (as) show ( ) show (string.) show  newline
+(Returns) show ( ) show (#f) show ( ) show (if) show ( ) show (file) show ( ) show (doesn't) show ( ) show (exist.") show  newline
+(...\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(13.) show ( ) show (TESTING) show ( ) show (CONVENTIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(13.1) show ( ) show (Test) show ( ) show (File) show ( ) show (Location) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(Tests) show ( ) show (live) show ( ) show (alongside) show ( ) show (source:) show  newline
+ newline
+ newline
+(module.scm) show ( ) show (;) show ( ) show (Source) show  newline
+(module-test.scm) show ( ) show (;) show ( ) show (Tests) show  newline
+ newline
+ newline
+(13.2) show ( ) show (Test) show ( ) show (Structure) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(import) show ( ) show (module\)) show  newline
+(\(import) show ( ) show (test\)) show ( ) show (;) show ( ) show (SRFI-64) show ( ) show (or) show ( ) show (similar) show  newline
+(\(test-begin) show ( ) show ("module"\)) show  newline
+(\(test-group) show ( ) show ("feature-name") show  newline
+(\(test-equal) show ( ) show ("description") show ( ) show (expected) show ( ) show (\(actual\)\)) show  newline
+(\(test-assert) show ( ) show ("predicate") show ( ) show (\(condition?\)\)\)) show  newline
+(\(test-end) show ( ) show ("module"\)) show  newline
+ newline
+ newline
+(13.3) show ( ) show (Running) show ( ) show (Tests) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(csi) show ( ) show (-s) show ( ) show (module-test.scm) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(14.) show ( ) show (REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Chicken) show ( ) show (Scheme) show ( ) show (User's) show ( ) show (Manual:) show ( ) show (Types) show  newline
+(*) show ( ) show (Chicken) show ( ) show (Scheme) show ( ) show (User's) show ( ) show (Manual:) show ( ) show (Debugging) show  newline
+(*) show ( ) show (SRFI-12:) show ( ) show (Exception) show ( ) show (Handling) show  newline
+(*) show ( ) show (Ada) show ( ) show (Reference) show ( ) show (Manual:) show ( ) show (Type) show ( ) show (System) show  newline
+(*) show ( ) show (Dylan) show ( ) show (Reference) show ( ) show (Manual:) show ( ) show (Inspector) show  newline
+(*) show ( ) show (Memo-054) show ( ) show (Terminal) show ( ) show (Interface) show ( ) show (Conventions) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer

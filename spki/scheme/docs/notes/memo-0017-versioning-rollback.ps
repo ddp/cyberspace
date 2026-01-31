@@ -15,455 +15,731 @@
 /ypos topmargin def
 /pagenum 1 def
 
+/phosphor { 0.2 1 0.2 setrgbcolor } def
+/darkbg { 0 0 0 setrgbcolor } def
+/violet { 0.518 0.369 0.761 setrgbcolor } def
+/gold { 1 0.843 0 setrgbcolor } def
+/teal { 0 0.831 0.667 setrgbcolor } def
+/phosphor-color { 0 1 0 setrgbcolor } def
+/neon { 0.224 1 0.078 setrgbcolor } def
+/orange { 1 0.4 0 setrgbcolor } def
+/coral { 1 0.2 0.4 setrgbcolor } def
+/cyan { 0 1 1 setrgbcolor } def
+/fillpage {
+  gsave darkbg
+  0 0 pagewidth pageheight rectfill
+  grestore phosphor
+} def
+
+0.5 setlinewidth
+1 setlinecap
+1 setlinejoin
 /newline {
   /ypos ypos leading sub def
   ypos bottommargin lt {
     showpage
+    fillpage
     /pagenum pagenum 1 add def
     /ypos topmargin def
   } if
   margin ypos moveto
 } def
 
+fillpage
 margin topmargin moveto
-(Memo 0017: Versioning and Rollback) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ABSTRACT) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(This Memo specifies user-visible versioning and rollback semantics for) show newline
-(Cyberspace vaults, providing clear mental models for version management,) show newline
-(safe rollback operations, and recovery from mistakes.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(MOTIVATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Users need simple answers to simple questions:) show newline
-() show newline
-(  * What version am I on?) show newline
-(  * What versions exist?) show newline
-(  * How do I go back?) show newline
-(  * What if I make a mistake?) show newline
-() show newline
-(These questions are universal but git answers them with mechanisms) show newline
-(rather than semantics, requiring users to understand implementation) show newline
-(details.) show newline
-() show newline
-(Git provides mechanisms. Cyberspace provides semantics:) show newline
-() show newline
-() show newline
-(    seal-version         → "2.1.0") show newline
-(    seal-versions        → [1.0.0, 1.1.0, 2.0.0, 2.1.0]) show newline
-(    seal-rollback 2.0.0  → Done. Now at 2.0.0.) show newline
-(    seal-recover         → Here's what you can recover.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SPECIFICATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Version Model) show newline
-(-------------) show newline
-() show newline
-() show newline
-(                             HEAD) show newline
-(                              ↓) show newline
-(        1.0.0 ──→ 1.1.0 ──→ 2.0.0 ──→ 2.1.0) show newline
-(          │                   │) show newline
-(          │                   └── seal-rollback target) show newline
-(          │) show newline
-(          └── seal-archive snapshots) show newline
-() show newline
-(Versions are semantic \(X.Y.Z\), immutable, signed.) show newline
-() show newline
-(HEAD is current working state.) show newline
-() show newline
-(Rollback creates forward commit that restores past state.) show newline
-() show newline
-() show newline
-(Core Operations) show newline
-(---------------) show newline
-() show newline
-(#### seal-version) show newline
-() show newline
-(Report current version.) show newline
-() show newline
-() show newline
-(    \(seal-version\)) show newline
-(    ;; => "2.1.0" or "2.1.0+3" \(3 commits past release\)) show newline
-() show newline
-(Output format: - X.Y.Z - Exactly at release - X.Y.Z+N - N commits past) show newline
-(release - X.Y.Z-dev - Development branch - unversioned - No releases yet) show newline
-() show newline
-(#### seal-versions) show newline
-() show newline
-(List all versions.) show newline
-() show newline
-() show newline
-(    \(seal-versions\)) show newline
-(    ;; => \("1.0.0" "1.1.0" "2.0.0" "2.1.0"\)) show newline
-(    \(seal-versions verbose: #t\)) show newline
-(    ;; =>) show newline
-(    ;; 1.0.0  2026-01-01  "Initial release") show newline
-(    ;; 1.1.0  2026-01-05  "Bug fixes") show newline
-(    ;; 2.0.0  2026-01-10  "New governance model") show newline
-(    ;; 2.1.0  2026-01-15  "Performance improvements") show newline
-() show newline
-(#### seal-rollback) show newline
-() show newline
-(Roll back to specific version.) show newline
-() show newline
-() show newline
-(    \(seal-rollback "2.0.0"\)) show newline
-() show newline
-(Process:) show newline
-() show newline
-(  * Verify version exists) show newline
-(  * Check for uncommitted changes \(abort or stash\)) show newline
-(  * Create rollback commit with contents of target version) show newline
-(  * Record in audit trail) show newline
-(  * Optionally create rollback tag) show newline
-() show newline
-(Rollback commit message:) show newline
-() show newline
-() show newline
-(    Rollback to 2.0.0) show newline
-(    Restored vault state to version 2.0.0.) show newline
-(    Previous HEAD was 2.1.0+3.) show newline
-(    Reason: [user-provided or "Manual rollback"]) show newline
-() show newline
-(NOT a git reset. History preserved. Rollback is a forward operation.) show newline
-() show newline
-(#### seal-diff) show newline
-() show newline
-(Compare versions.) show newline
-() show newline
-() show newline
-(    \(seal-diff "2.0.0" "2.1.0"\)) show newline
-(    ;; Shows what changed between versions) show newline
-(    \(seal-diff "2.0.0"\)) show newline
-(    ;; Shows what changed since 2.0.0) show newline
-() show newline
-(#### seal-recover) show newline
-() show newline
-(Recovery options for mistakes.) show newline
-() show newline
-() show newline
-(    \(seal-recover\)) show newline
-(    ;; =>) show newline
-(    ;; Recovery options:) show newline
-(    ;;   1. Uncommitted changes \(stashed 5 minutes ago\)) show newline
-(    ;;   2. Last commit \(seal-undo\)) show newline
-(    ;;   3. Version 2.1.0 \(seal-rollback "2.1.0"\)) show newline
-(    ;;   4. Archive vault-2.0.0.archive \(seal-restore\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(ROLLBACK SEMANTICS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Forward Rollback \(Default\)) show newline
-(--------------------------) show newline
-() show newline
-() show newline
-(    Before:  1.0.0 → 1.1.0 → 2.0.0 → 2.1.0 → HEAD) show newline
-(                              ↑) show newline
-(                         rollback target) show newline
-(    After:   1.0.0 → 1.1.0 → 2.0.0 → 2.1.0 → [rollback commit]) show newline
-(                              │                      │) show newline
-(                              └──────────────────────┘) show newline
-(                                  contents match) show newline
-() show newline
-(History preserved. Audit trail shows rollback.) show newline
-() show newline
-() show newline
-(Hard Rollback \(Dangerous\)) show newline
-(-------------------------) show newline
-() show newline
-() show newline
-(    \(seal-rollback "2.0.0" hard: #t\)) show newline
-() show newline
-(Actually resets to version. Destroys history.) show newline
-() show newline
-(Requires: - Explicit hard: #t flag - Confirmation prompt - Audit entry) show newline
-(before destruction) show newline
-() show newline
-() show newline
-(Rollback with Stash) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    \(seal-rollback "2.0.0" stash: #t\)) show newline
-() show newline
-(Stashes uncommitted changes before rollback. Can recover with:) show newline
-() show newline
-() show newline
-(    \(seal-stash-pop\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(VERSION TAGS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Automatic Tagging) show newline
-(-----------------) show newline
-() show newline
-() show newline
-(    \(seal-release "2.1.0"\)) show newline
-(    ;; Creates:) show newline
-(    ;;   - Git tag: 2.1.0) show newline
-(    ;;   - Signature: .vault/releases/2.1.0.sig) show newline
-(    ;;   - Audit entry) show newline
-() show newline
-() show newline
-(Rollback Tags) show newline
-(-------------) show newline
-() show newline
-() show newline
-(    \(seal-rollback "2.0.0" tag: "rollback-2026-01-15"\)) show newline
-(    ;; Creates additional tag marking rollback point) show newline
-() show newline
-() show newline
-(Tag Listing) show newline
-(-----------) show newline
-() show newline
-() show newline
-(    \(seal-tags\)) show newline
-(    ;; =>) show newline
-(    ;; 1.0.0              2026-01-01  release) show newline
-(    ;; 1.1.0              2026-01-05  release) show newline
-(    ;; 2.0.0              2026-01-10  release) show newline
-(    ;; 2.1.0              2026-01-15  release) show newline
-(    ;; rollback-2026-01-15 2026-01-15  rollback) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(RECOVERY SCENARIOS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Scenario 1: Bad Commit) show newline
-(----------------------) show newline
-() show newline
-() show newline
-(    ;; Oops, committed broken code) show newline
-(    \(seal-undo\)                    ; Undo last commit) show newline
-(    ;; or) show newline
-(    \(seal-rollback "2.1.0"\)        ; Back to last release) show newline
-() show newline
-() show newline
-(Scenario 2: Bad Release) show newline
-(-----------------------) show newline
-() show newline
-() show newline
-(    ;; Released 2.2.0 but it's broken) show newline
-(    \(seal-rollback "2.1.0"\)        ; Back to good version) show newline
-(    \(seal-release "2.2.1"\)         ; Patch release) show newline
-() show newline
-() show newline
-(Scenario 3: Lost Changes) show newline
-(------------------------) show newline
-() show newline
-() show newline
-(    ;; Accidentally discarded work) show newline
-(    \(seal-recover\)                 ; See options) show newline
-(    \(seal-stash-pop\)               ; If stashed) show newline
-(    ;; or) show newline
-(    \(seal-reflog\)                  ; Find lost commits) show newline
-() show newline
-() show newline
-(Scenario 4: Corrupted Vault) show newline
-(---------------------------) show newline
-() show newline
-() show newline
-(    ;; Something went very wrong) show newline
-(    \(seal-restore "vault-2.0.0.archive" verify-key: "alice.pub"\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(AUDIT INTEGRATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(Every version operation recorded:) show newline
-() show newline
-() show newline
-(    \(audit-entry) show newline
-(      \(action) show newline
-(        \(verb seal-rollback\)) show newline
-(        \(object "2.0.0"\)) show newline
-(        \(parameters) show newline
-(          \(from "2.1.0+3"\)) show newline
-(          \(method forward\)) show newline
-(          \(reason "Production incident"\)\)\)) show newline
-(      \(seal ...\)\)) show newline
-() show newline
-(Audit trail answers: - Who rolled back? - When? - From what version? -) show newline
-(Why? \(if reason provided\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CLI INTERFACE) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(    # Current version) show newline
-(    $ seal version) show newline
-(    2.1.0+3) show newline
-(    # List versions) show newline
-(    $ seal versions) show newline
-(    1.0.0   2026-01-01   Initial release) show newline
-(    1.1.0   2026-01-05   Bug fixes) show newline
-(    2.0.0   2026-01-10   New governance model) show newline
-(    2.1.0   2026-01-15   Performance improvements) show newline
-(    # Rollback) show newline
-(    $ seal rollback 2.0.0) show newline
-(    Rolling back to 2.0.0...) show newline
-(    ✓ Rollback complete. Now at 2.0.0.) show newline
-(    # Rollback with reason) show newline
-(    $ seal rollback 2.0.0 --reason "Production incident #123") show newline
-(    # Compare versions) show newline
-(    $ seal diff 2.0.0 2.1.0) show newline
-(     M config.scm) show newline
-(     A new-feature.scm) show newline
-(     D deprecated.scm) show newline
-(    # Recovery options) show newline
-(    $ seal recover) show newline
-(    Recovery options:) show newline
-(      1. seal undo          - Undo last commit) show newline
-(      2. seal rollback 2.1.0 - Return to last release) show newline
-(      3. seal stash pop     - Recover stashed changes) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SAFETY MECHANISMS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Uncommitted Changes) show newline
-(-------------------) show newline
-() show newline
-() show newline
-(    \(seal-rollback "2.0.0"\)) show newline
-(    ;; Error: Uncommitted changes detected.) show newline
-(    ;; Use --stash to save changes, or --force to discard.) show newline
-() show newline
-() show newline
-(Protected Versions) show newline
-(------------------) show newline
-() show newline
-() show newline
-(    \(vault-config 'protected-versions '\("1.0.0" "2.0.0"\)\)) show newline
-(    \(seal-rollback "0.9.0"\)) show newline
-(    ;; Warning: Rolling back past protected version 1.0.0) show newline
-(    ;; This may break compatibility. Continue? [y/N]) show newline
-() show newline
-() show newline
-(Rollback Limits) show newline
-(---------------) show newline
-() show newline
-() show newline
-(    \(vault-config 'max-rollback-distance 10\)) show newline
-(    \(seal-rollback "0.1.0"\)) show newline
-(    ;; Error: Rollback distance \(20 versions\) exceeds limit \(10\).) show newline
-(    ;; Use --force to override.) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(IMPLEMENTATION) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(seal-rollback Implementation) show newline
-(----------------------------) show newline
-() show newline
-() show newline
-(    \(define \(seal-rollback version #!key hard stash force reason tag\)) show newline
-(      "Roll back vault to specified version") show newline
-(      ;; Validate version exists) show newline
-(      \(unless \(tag-exists? version\)) show newline
-(        \(error "Version not found" version\)\)) show newline
-(      ;; Check for uncommitted changes) show newline
-(      \(when \(uncommitted-changes?\)) show newline
-(        \(cond) show newline
-(          \(stash \(seal-stash\)\)) show newline
-(          \(force \(void\)\)) show newline
-(          \(else \(error "Uncommitted changes. Use stash: or force:"\)\)\)\)) show newline
-(      ;; Record current state) show newline
-(      \(let \(\(current \(seal-version\)\)\)) show newline
-(        ;; Perform rollback) show newline
-(        \(if hard) show newline
-(            \(hard-rollback! version\)) show newline
-(            \(forward-rollback! version reason\)\)) show newline
-(        ;; Create tag if requested) show newline
-(        \(when tag) show newline
-(          \(run-command "git" "tag" tag\)\)) show newline
-(        ;; Audit) show newline
-(        \(audit-append) show newline
-(          actor: \(get-vault-principal \(vault-config 'signing-key\)\)) show newline
-(          action: \(list 'seal-rollback version\)) show newline
-(          motivation: \(or reason \(sprintf "Rollback from ~a to ~a" current version\)\)\)) show newline
-(        \(print "✓ Rolled back to " version\)\)\)) show newline
-(    \(define \(forward-rollback! version reason\)) show newline
-(      "Create rollback commit \(preserves history\)") show newline
-(      \(run-command "git" "checkout" version "--" "."\)) show newline
-(      \(run-command "git" "commit" "-m") show newline
-(        \(sprintf "Rollback to ~a\\n\\n~a" version \(or reason ""\)\)\)\)) show newline
-(    \(define \(hard-rollback! version\)) show newline
-(      "Reset to version \(destroys history\)") show newline
-(      \(print "WARNING: Hard rollback destroys history"\)) show newline
-(      \(run-command "git" "reset" "--hard" version\)\)) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(SECURITY CONSIDERATIONS) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-() show newline
-(Rollback Attacks) show newline
-(----------------) show newline
-() show newline
-(Attacker forces rollback to vulnerable version.) show newline
-() show newline
-(Mitigation: - Threshold signatures for rollback \(Memo-008\) - Protected) show newline
-(version list - Audit trail detection) show newline
-() show newline
-() show newline
-(History Manipulation) show newline
-(--------------------) show newline
-() show newline
-(Hard rollback can hide evidence.) show newline
-() show newline
-(Mitigation: - Prefer forward rollback - Audit before hard rollback -) show newline
-(Federation replication preserves history) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(REFERENCES) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * Semantic Versioning 2.0.0 \(semver.org\)) show newline
-(  * Git Reset, Checkout, and Revert \(git-scm.com\)) show newline
-(  * Memo-003: Cryptographic Audit Trail) show newline
-(  * Memo-006: Vault System Architecture) show newline
-() show newline
-() show newline
-(------------------------------------------------------------------------) show newline
-(CHANGELOG) show newline
-(------------------------------------------------------------------------) show newline
-() show newline
-(  * 2026-01-06) show newline
-(  * Initial specification) show newline
-() show newline
-(------------------------------------------------------------------------) show newline
+(Memo) show ( ) show (0017:) show ( ) show (Versioning) show ( ) show (and) show ( ) show (Rollback) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ABSTRACT) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(This) show ( ) show (Memo) show ( ) show (specifies) show ( ) show (user-visible) show ( ) show (versioning) show ( ) show (and) show ( ) show (rollback) show ( ) show (semantics) show ( ) show (for) show  newline
+(Cyberspace) show ( ) show (vaults,) show ( ) show (providing) show ( ) show (clear) show ( ) show (mental) show ( ) show (models) show ( ) show (for) show ( ) show (version) show ( ) show (management,) show  newline
+(safe) show ( ) show (rollback) show ( ) show (operations,) show ( ) show (and) show ( ) show (recovery) show ( ) show (from) show ( ) show (mistakes.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(MOTIVATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Users) show ( ) show (need) show ( ) show (simple) show ( ) show (answers) show ( ) show (to) show ( ) show (simple) show ( ) show (questions:) show  newline
+ newline
+(*) show ( ) show (What) show ( ) show (version) show ( ) show (am) show ( ) show (I) show ( ) show (on?) show  newline
+(*) show ( ) show (What) show ( ) show (versions) show ( ) show (exist?) show  newline
+(*) show ( ) show (How) show ( ) show (do) show ( ) show (I) show ( ) show (go) show ( ) show (back?) show  newline
+(*) show ( ) show (What) show ( ) show (if) show ( ) show (I) show ( ) show (make) show ( ) show (a) show ( ) show (mistake?) show  newline
+ newline
+(These) show ( ) show (questions) show ( ) show (are) show ( ) show (universal) show ( ) show (but) show ( ) show (git) show ( ) show (answers) show ( ) show (them) show ( ) show (with) show ( ) show (mechanisms) show  newline
+(rather) show ( ) show (than) show ( ) show (semantics,) show ( ) show (requiring) show ( ) show (users) show ( ) show (to) show ( ) show (understand) show ( ) show (implementation) show  newline
+(details.) show  newline
+ newline
+(Git) show ( ) show (provides) show ( ) show (mechanisms.) show ( ) show (Cyberspace) show ( ) show (provides) show ( ) show (semantics:) show  newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto (seal-version) show
+% box char 2192 at col 25
+newpath margin 153 add 3 sub ypos 2 add moveto margin 153 add 3 add ypos lineto margin 153 add 3 sub ypos 2 sub lineto closepath fill
+margin 162 add ypos moveto ("2.1.0") show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (seal-versions) show
+% box char 2192 at col 25
+newpath margin 153 add 3 sub ypos 2 add moveto margin 153 add 3 add ypos lineto margin 153 add 3 sub ypos 2 sub lineto closepath fill
+margin 162 add ypos moveto ([1.0.0,) show
+margin 210 add ypos moveto (1.1.0,) show
+margin 252 add ypos moveto (2.0.0,) show
+margin 294 add ypos moveto (2.1.0]) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (seal-rollback) show
+margin 108 add ypos moveto (2.0.0) show
+% box char 2192 at col 25
+newpath margin 153 add 3 sub ypos 2 add moveto margin 153 add 3 add ypos lineto margin 153 add 3 sub ypos 2 sub lineto closepath fill
+margin 162 add ypos moveto (Done.) show
+margin 198 add ypos moveto (Now) show
+margin 222 add ypos moveto (at) show
+margin 240 add ypos moveto (2.0.0.) show
+grestore
+newline
+gsave
+margin 24 add ypos moveto (seal-recover) show
+% box char 2192 at col 25
+newpath margin 153 add 3 sub ypos 2 add moveto margin 153 add 3 add ypos lineto margin 153 add 3 sub ypos 2 sub lineto closepath fill
+margin 162 add ypos moveto (Here's) show
+margin 204 add ypos moveto (what) show
+margin 234 add ypos moveto (you) show
+margin 258 add ypos moveto (can) show
+margin 282 add ypos moveto (recover.) show
+grestore
+newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SPECIFICATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Version) show ( ) show (Model) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(HEAD) show  newline
+gsave
+% box char 2193 at col 30
+newpath margin 183 add 2 sub ypos 6 add moveto margin 183 add ypos 6 sub lineto margin 183 add 2 add ypos 6 add lineto closepath fill
+grestore
+newline
+gsave
+margin 48 add ypos moveto (1.0.0) show
+% box char 2500 at col 14
+newpath margin 87 add 3 sub ypos moveto margin 87 add 3 add ypos lineto stroke
+% box char 2500 at col 15
+newpath margin 93 add 3 sub ypos moveto margin 93 add 3 add ypos lineto stroke
+% box char 2192 at col 16
+newpath margin 99 add 3 sub ypos 2 add moveto margin 99 add 3 add ypos lineto margin 99 add 3 sub ypos 2 sub lineto closepath fill
+margin 108 add ypos moveto (1.1.0) show
+% box char 2500 at col 24
+newpath margin 147 add 3 sub ypos moveto margin 147 add 3 add ypos lineto stroke
+% box char 2500 at col 25
+newpath margin 153 add 3 sub ypos moveto margin 153 add 3 add ypos lineto stroke
+% box char 2192 at col 26
+newpath margin 159 add 3 sub ypos 2 add moveto margin 159 add 3 add ypos lineto margin 159 add 3 sub ypos 2 sub lineto closepath fill
+margin 168 add ypos moveto (2.0.0) show
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2192 at col 36
+newpath margin 219 add 3 sub ypos 2 add moveto margin 219 add 3 add ypos lineto margin 219 add 3 sub ypos 2 sub lineto closepath fill
+margin 228 add ypos moveto (2.1.0) show
+grestore
+newline
+gsave
+% box char 2502 at col 10
+newpath margin 63 add ypos 6 sub moveto margin 63 add ypos 6 add lineto stroke
+% box char 2502 at col 30
+newpath margin 183 add ypos 6 sub moveto margin 183 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2502 at col 10
+newpath margin 63 add ypos 6 sub moveto margin 63 add ypos 6 add lineto stroke
+% box char 2514 at col 30
+newpath margin 183 add ypos moveto margin 183 add 3 add ypos lineto stroke
+newpath margin 183 add ypos 6 add moveto margin 183 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+margin 204 add ypos moveto (seal-rollback) show
+margin 288 add ypos moveto (target) show
+grestore
+newline
+gsave
+% box char 2502 at col 10
+newpath margin 63 add ypos 6 sub moveto margin 63 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 10
+newpath margin 63 add ypos moveto margin 63 add 3 add ypos lineto stroke
+newpath margin 63 add ypos 6 add moveto margin 63 add ypos lineto stroke
+% box char 2500 at col 11
+newpath margin 69 add 3 sub ypos moveto margin 69 add 3 add ypos lineto stroke
+% box char 2500 at col 12
+newpath margin 75 add 3 sub ypos moveto margin 75 add 3 add ypos lineto stroke
+margin 84 add ypos moveto (seal-archive) show
+margin 162 add ypos moveto (snapshots) show
+grestore
+newline
+ newline
+(Versions) show ( ) show (are) show ( ) show (semantic) show ( ) show (\(X.Y.Z\),) show ( ) show (immutable,) show ( ) show (signed.) show  newline
+ newline
+(HEAD) show ( ) show (is) show ( ) show (current) show ( ) show (working) show ( ) show (state.) show  newline
+ newline
+(Rollback) show ( ) show (creates) show ( ) show (forward) show ( ) show (commit) show ( ) show (that) show ( ) show (restores) show ( ) show (past) show ( ) show (state.) show  newline
+ newline
+ newline
+(Core) show ( ) show (Operations) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+(####) show ( ) show (seal-version) show  newline
+ newline
+(Report) show ( ) show (current) show ( ) show (version.) show  newline
+ newline
+ newline
+(\(seal-version\)) show  newline
+(;;) show ( ) show (=>) show ( ) show ("2.1.0") show ( ) show (or) show ( ) show ("2.1.0+3") show ( ) show (\(3) show ( ) show (commits) show ( ) show (past) show ( ) show (release\)) show  newline
+ newline
+(Output) show ( ) show (format:) show ( ) show (-) show ( ) show (X.Y.Z) show ( ) show (-) show ( ) show (Exactly) show ( ) show (at) show ( ) show (release) show ( ) show (-) show ( ) show (X.Y.Z+N) show ( ) show (-) show ( ) show (N) show ( ) show (commits) show ( ) show (past) show  newline
+(release) show ( ) show (-) show ( ) show (X.Y.Z-dev) show ( ) show (-) show ( ) show (Development) show ( ) show (branch) show ( ) show (-) show ( ) show (unversioned) show ( ) show (-) show ( ) show (No) show ( ) show (releases) show ( ) show (yet) show  newline
+ newline
+(####) show ( ) show (seal-versions) show  newline
+ newline
+(List) show ( ) show (all) show ( ) show (versions.) show  newline
+ newline
+ newline
+(\(seal-versions\)) show  newline
+(;;) show ( ) show (=>) show ( ) show (\("1.0.0") show ( ) show ("1.1.0") show ( ) show ("2.0.0") show ( ) show ("2.1.0"\)) show  newline
+(\(seal-versions) show ( ) show (verbose:) show ( ) show (#t\)) show  newline
+(;;) show ( ) show (=>) show  newline
+(;;) show ( ) show (1.0.0) show ( ) show (2026-01-01) show ( ) show ("Initial) show ( ) show (release") show  newline
+(;;) show ( ) show (1.1.0) show ( ) show (2026-01-05) show ( ) show ("Bug) show ( ) show (fixes") show  newline
+(;;) show ( ) show (2.0.0) show ( ) show (2026-01-10) show ( ) show ("New) show ( ) show (governance) show ( ) show (model") show  newline
+(;;) show ( ) show (2.1.0) show ( ) show (2026-01-15) show ( ) show ("Performance) show ( ) show (improvements") show  newline
+ newline
+(####) show ( ) show (seal-rollback) show  newline
+ newline
+(Roll) show ( ) show (back) show ( ) show (to) show ( ) show (specific) show ( ) show (version.) show  newline
+ newline
+ newline
+(\(seal-rollback) show ( ) show ("2.0.0"\)) show  newline
+ newline
+(Process:) show  newline
+ newline
+(*) show ( ) show (Verify) show ( ) show (version) show ( ) show (exists) show  newline
+(*) show ( ) show (Check) show ( ) show (for) show ( ) show (uncommitted) show ( ) show (changes) show ( ) show (\(abort) show ( ) show (or) show ( ) show (stash\)) show  newline
+(*) show ( ) show (Create) show ( ) show (rollback) show ( ) show (commit) show ( ) show (with) show ( ) show (contents) show ( ) show (of) show ( ) show (target) show ( ) show (version) show  newline
+(*) show ( ) show (Record) show ( ) show (in) show ( ) show (audit) show ( ) show (trail) show  newline
+(*) show ( ) show (Optionally) show ( ) show (create) show ( ) show (rollback) show ( ) show (tag) show  newline
+ newline
+(Rollback) show ( ) show (commit) show ( ) show (message:) show  newline
+ newline
+ newline
+(Rollback) show ( ) show (to) show ( ) show (2.0.0) show  newline
+(Restored) show ( ) show (vault) show ( ) show (state) show ( ) show (to) show ( ) show (version) show ( ) show (2.0.0.) show  newline
+(Previous) show ( ) show (HEAD) show ( ) show (was) show ( ) show (2.1.0+3.) show  newline
+(Reason:) show ( ) show ([user-provided) show ( ) show (or) show ( ) show ("Manual) show ( ) show (rollback"]) show  newline
+ newline
+(NOT) show ( ) show (a) show ( ) show (git) show ( ) show (reset.) show ( ) show (History) show ( ) show (preserved.) show ( ) show (Rollback) show ( ) show (is) show ( ) show (a) show ( ) show (forward) show ( ) show (operation.) show  newline
+ newline
+(####) show ( ) show (seal-diff) show  newline
+ newline
+(Compare) show ( ) show (versions.) show  newline
+ newline
+ newline
+(\(seal-diff) show ( ) show ("2.0.0") show ( ) show ("2.1.0"\)) show  newline
+(;;) show ( ) show (Shows) show ( ) show (what) show ( ) show (changed) show ( ) show (between) show ( ) show (versions) show  newline
+(\(seal-diff) show ( ) show ("2.0.0"\)) show  newline
+(;;) show ( ) show (Shows) show ( ) show (what) show ( ) show (changed) show ( ) show (since) show ( ) show (2.0.0) show  newline
+ newline
+(####) show ( ) show (seal-recover) show  newline
+ newline
+(Recovery) show ( ) show (options) show ( ) show (for) show ( ) show (mistakes.) show  newline
+ newline
+ newline
+(\(seal-recover\)) show  newline
+(;;) show ( ) show (=>) show  newline
+(;;) show ( ) show (Recovery) show ( ) show (options:) show  newline
+(;;) show ( ) show (1.) show ( ) show (Uncommitted) show ( ) show (changes) show ( ) show (\(stashed) show ( ) show (5) show ( ) show (minutes) show ( ) show (ago\)) show  newline
+(;;) show ( ) show (2.) show ( ) show (Last) show ( ) show (commit) show ( ) show (\(seal-undo\)) show  newline
+(;;) show ( ) show (3.) show ( ) show (Version) show ( ) show (2.1.0) show ( ) show (\(seal-rollback) show ( ) show ("2.1.0"\)) show  newline
+(;;) show ( ) show (4.) show ( ) show (Archive) show ( ) show (vault-2.0.0.archive) show ( ) show (\(seal-restore\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(ROLLBACK) show ( ) show (SEMANTICS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Forward) show ( ) show (Rollback) show ( ) show (\(Default\)) show  newline
+newpath margin ypos moveto margin 156 add ypos lineto stroke
+newline
+ newline
+ newline
+gsave
+margin 24 add ypos moveto (Before:) show
+margin 78 add ypos moveto (1.0.0) show
+% box char 2192 at col 19
+newpath margin 117 add 3 sub ypos 2 add moveto margin 117 add 3 add ypos lineto margin 117 add 3 sub ypos 2 sub lineto closepath fill
+margin 126 add ypos moveto (1.1.0) show
+% box char 2192 at col 27
+newpath margin 165 add 3 sub ypos 2 add moveto margin 165 add 3 add ypos lineto margin 165 add 3 sub ypos 2 sub lineto closepath fill
+margin 174 add ypos moveto (2.0.0) show
+% box char 2192 at col 35
+newpath margin 213 add 3 sub ypos 2 add moveto margin 213 add 3 add ypos lineto margin 213 add 3 sub ypos 2 sub lineto closepath fill
+margin 222 add ypos moveto (2.1.0) show
+% box char 2192 at col 43
+newpath margin 261 add 3 sub ypos 2 add moveto margin 261 add 3 add ypos lineto margin 261 add 3 sub ypos 2 sub lineto closepath fill
+margin 270 add ypos moveto (HEAD) show
+grestore
+newline
+gsave
+% box char 2191 at col 30
+newpath margin 183 add 2 sub ypos 6 sub moveto margin 183 add ypos 6 add lineto margin 183 add 2 add ypos 6 sub lineto closepath fill
+grestore
+newline
+(rollback) show ( ) show (target) show  newline
+gsave
+margin 24 add ypos moveto (After:) show
+margin 78 add ypos moveto (1.0.0) show
+% box char 2192 at col 19
+newpath margin 117 add 3 sub ypos 2 add moveto margin 117 add 3 add ypos lineto margin 117 add 3 sub ypos 2 sub lineto closepath fill
+margin 126 add ypos moveto (1.1.0) show
+% box char 2192 at col 27
+newpath margin 165 add 3 sub ypos 2 add moveto margin 165 add 3 add ypos lineto margin 165 add 3 sub ypos 2 sub lineto closepath fill
+margin 174 add ypos moveto (2.0.0) show
+% box char 2192 at col 35
+newpath margin 213 add 3 sub ypos 2 add moveto margin 213 add 3 add ypos lineto margin 213 add 3 sub ypos 2 sub lineto closepath fill
+margin 222 add ypos moveto (2.1.0) show
+% box char 2192 at col 43
+newpath margin 261 add 3 sub ypos 2 add moveto margin 261 add 3 add ypos lineto margin 261 add 3 sub ypos 2 sub lineto closepath fill
+margin 270 add ypos moveto ([rollback) show
+margin 330 add ypos moveto (commit]) show
+grestore
+newline
+gsave
+% box char 2502 at col 30
+newpath margin 183 add ypos 6 sub moveto margin 183 add ypos 6 add lineto stroke
+% box char 2502 at col 53
+newpath margin 321 add ypos 6 sub moveto margin 321 add ypos 6 add lineto stroke
+grestore
+newline
+gsave
+% box char 2514 at col 30
+newpath margin 183 add ypos moveto margin 183 add 3 add ypos lineto stroke
+newpath margin 183 add ypos 6 add moveto margin 183 add ypos lineto stroke
+% box char 2500 at col 31
+newpath margin 189 add 3 sub ypos moveto margin 189 add 3 add ypos lineto stroke
+% box char 2500 at col 32
+newpath margin 195 add 3 sub ypos moveto margin 195 add 3 add ypos lineto stroke
+% box char 2500 at col 33
+newpath margin 201 add 3 sub ypos moveto margin 201 add 3 add ypos lineto stroke
+% box char 2500 at col 34
+newpath margin 207 add 3 sub ypos moveto margin 207 add 3 add ypos lineto stroke
+% box char 2500 at col 35
+newpath margin 213 add 3 sub ypos moveto margin 213 add 3 add ypos lineto stroke
+% box char 2500 at col 36
+newpath margin 219 add 3 sub ypos moveto margin 219 add 3 add ypos lineto stroke
+% box char 2500 at col 37
+newpath margin 225 add 3 sub ypos moveto margin 225 add 3 add ypos lineto stroke
+% box char 2500 at col 38
+newpath margin 231 add 3 sub ypos moveto margin 231 add 3 add ypos lineto stroke
+% box char 2500 at col 39
+newpath margin 237 add 3 sub ypos moveto margin 237 add 3 add ypos lineto stroke
+% box char 2500 at col 40
+newpath margin 243 add 3 sub ypos moveto margin 243 add 3 add ypos lineto stroke
+% box char 2500 at col 41
+newpath margin 249 add 3 sub ypos moveto margin 249 add 3 add ypos lineto stroke
+% box char 2500 at col 42
+newpath margin 255 add 3 sub ypos moveto margin 255 add 3 add ypos lineto stroke
+% box char 2500 at col 43
+newpath margin 261 add 3 sub ypos moveto margin 261 add 3 add ypos lineto stroke
+% box char 2500 at col 44
+newpath margin 267 add 3 sub ypos moveto margin 267 add 3 add ypos lineto stroke
+% box char 2500 at col 45
+newpath margin 273 add 3 sub ypos moveto margin 273 add 3 add ypos lineto stroke
+% box char 2500 at col 46
+newpath margin 279 add 3 sub ypos moveto margin 279 add 3 add ypos lineto stroke
+% box char 2500 at col 47
+newpath margin 285 add 3 sub ypos moveto margin 285 add 3 add ypos lineto stroke
+% box char 2500 at col 48
+newpath margin 291 add 3 sub ypos moveto margin 291 add 3 add ypos lineto stroke
+% box char 2500 at col 49
+newpath margin 297 add 3 sub ypos moveto margin 297 add 3 add ypos lineto stroke
+% box char 2500 at col 50
+newpath margin 303 add 3 sub ypos moveto margin 303 add 3 add ypos lineto stroke
+% box char 2500 at col 51
+newpath margin 309 add 3 sub ypos moveto margin 309 add 3 add ypos lineto stroke
+% box char 2500 at col 52
+newpath margin 315 add 3 sub ypos moveto margin 315 add 3 add ypos lineto stroke
+% box char 2518 at col 53
+newpath margin 321 add 3 sub ypos moveto margin 321 add ypos lineto stroke
+newpath margin 321 add ypos 6 add moveto margin 321 add ypos lineto stroke
+grestore
+newline
+(contents) show ( ) show (match) show  newline
+ newline
+(History) show ( ) show (preserved.) show ( ) show (Audit) show ( ) show (trail) show ( ) show (shows) show ( ) show (rollback.) show  newline
+ newline
+ newline
+(Hard) show ( ) show (Rollback) show ( ) show (\(Dangerous\)) show  newline
+newpath margin ypos moveto margin 150 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(seal-rollback) show ( ) show ("2.0.0") show ( ) show (hard:) show ( ) show (#t\)) show  newline
+ newline
+(Actually) show ( ) show (resets) show ( ) show (to) show ( ) show (version.) show ( ) show (Destroys) show ( ) show (history.) show  newline
+ newline
+(Requires:) show ( ) show (-) show ( ) show (Explicit) show ( ) show (hard:) show ( ) show (#t) show ( ) show (flag) show ( ) show (-) show ( ) show (Confirmation) show ( ) show (prompt) show ( ) show (-) show ( ) show (Audit) show ( ) show (entry) show  newline
+(before) show ( ) show (destruction) show  newline
+ newline
+ newline
+(Rollback) show ( ) show (with) show ( ) show (Stash) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(seal-rollback) show ( ) show ("2.0.0") show ( ) show (stash:) show ( ) show (#t\)) show  newline
+ newline
+(Stashes) show ( ) show (uncommitted) show ( ) show (changes) show ( ) show (before) show ( ) show (rollback.) show ( ) show (Can) show ( ) show (recover) show ( ) show (with:) show  newline
+ newline
+ newline
+(\(seal-stash-pop\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(VERSION) show ( ) show (TAGS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Automatic) show ( ) show (Tagging) show  newline
+newpath margin ypos moveto margin 102 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(seal-release) show ( ) show ("2.1.0"\)) show  newline
+(;;) show ( ) show (Creates:) show  newline
+(;;) show ( ) show (-) show ( ) show (Git) show ( ) show (tag:) show ( ) show (2.1.0) show  newline
+(;;) show ( ) show (-) show ( ) show (Signature:) show ( ) show (.vault/releases/2.1.0.sig) show  newline
+(;;) show ( ) show (-) show ( ) show (Audit) show ( ) show (entry) show  newline
+ newline
+ newline
+(Rollback) show ( ) show (Tags) show  newline
+newpath margin ypos moveto margin 78 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(seal-rollback) show ( ) show ("2.0.0") show ( ) show (tag:) show ( ) show ("rollback-2026-01-15"\)) show  newline
+(;;) show ( ) show (Creates) show ( ) show (additional) show ( ) show (tag) show ( ) show (marking) show ( ) show (rollback) show ( ) show (point) show  newline
+ newline
+ newline
+(Tag) show ( ) show (Listing) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(seal-tags\)) show  newline
+(;;) show ( ) show (=>) show  newline
+(;;) show ( ) show (1.0.0) show ( ) show (2026-01-01) show ( ) show (release) show  newline
+(;;) show ( ) show (1.1.0) show ( ) show (2026-01-05) show ( ) show (release) show  newline
+(;;) show ( ) show (2.0.0) show ( ) show (2026-01-10) show ( ) show (release) show  newline
+(;;) show ( ) show (2.1.0) show ( ) show (2026-01-15) show ( ) show (release) show  newline
+(;;) show ( ) show (rollback-2026-01-15) show ( ) show (2026-01-15) show ( ) show (rollback) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(RECOVERY) show ( ) show (SCENARIOS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Scenario) show ( ) show (1:) show ( ) show (Bad) show ( ) show (Commit) show  newline
+newpath margin ypos moveto margin 132 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Oops,) show ( ) show (committed) show ( ) show (broken) show ( ) show (code) show  newline
+(\(seal-undo\)) show ( ) show (;) show ( ) show (Undo) show ( ) show (last) show ( ) show (commit) show  newline
+(;;) show ( ) show (or) show  newline
+(\(seal-rollback) show ( ) show ("2.1.0"\)) show ( ) show (;) show ( ) show (Back) show ( ) show (to) show ( ) show (last) show ( ) show (release) show  newline
+ newline
+ newline
+(Scenario) show ( ) show (2:) show ( ) show (Bad) show ( ) show (Release) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Released) show ( ) show (2.2.0) show ( ) show (but) show ( ) show (it's) show ( ) show (broken) show  newline
+(\(seal-rollback) show ( ) show ("2.1.0"\)) show ( ) show (;) show ( ) show (Back) show ( ) show (to) show ( ) show (good) show ( ) show (version) show  newline
+(\(seal-release) show ( ) show ("2.2.1"\)) show ( ) show (;) show ( ) show (Patch) show ( ) show (release) show  newline
+ newline
+ newline
+(Scenario) show ( ) show (3:) show ( ) show (Lost) show ( ) show (Changes) show  newline
+newpath margin ypos moveto margin 144 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Accidentally) show ( ) show (discarded) show ( ) show (work) show  newline
+(\(seal-recover\)) show ( ) show (;) show ( ) show (See) show ( ) show (options) show  newline
+(\(seal-stash-pop\)) show ( ) show (;) show ( ) show (If) show ( ) show (stashed) show  newline
+(;;) show ( ) show (or) show  newline
+(\(seal-reflog\)) show ( ) show (;) show ( ) show (Find) show ( ) show (lost) show ( ) show (commits) show  newline
+ newline
+ newline
+(Scenario) show ( ) show (4:) show ( ) show (Corrupted) show ( ) show (Vault) show  newline
+newpath margin ypos moveto margin 162 add ypos lineto stroke
+newline
+ newline
+ newline
+(;;) show ( ) show (Something) show ( ) show (went) show ( ) show (very) show ( ) show (wrong) show  newline
+(\(seal-restore) show ( ) show ("vault-2.0.0.archive") show ( ) show (verify-key:) show ( ) show ("alice.pub"\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(AUDIT) show ( ) show (INTEGRATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(Every) show ( ) show (version) show ( ) show (operation) show ( ) show (recorded:) show  newline
+ newline
+ newline
+(\(audit-entry) show  newline
+(\(action) show  newline
+(\(verb) show ( ) show (seal-rollback\)) show  newline
+(\(object) show ( ) show ("2.0.0"\)) show  newline
+(\(parameters) show  newline
+(\(from) show ( ) show ("2.1.0+3"\)) show  newline
+(\(method) show ( ) show (forward\)) show  newline
+(\(reason) show ( ) show ("Production) show ( ) show (incident"\)\)\)) show  newline
+(\(seal) show ( ) show (...\)\)) show  newline
+ newline
+(Audit) show ( ) show (trail) show ( ) show (answers:) show ( ) show (-) show ( ) show (Who) show ( ) show (rolled) show ( ) show (back?) show ( ) show (-) show ( ) show (When?) show ( ) show (-) show ( ) show (From) show ( ) show (what) show ( ) show (version?) show ( ) show (-) show  newline
+(Why?) show ( ) show (\(if) show ( ) show (reason) show ( ) show (provided\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CLI) show ( ) show (INTERFACE) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(#) show ( ) show (Current) show ( ) show (version) show  newline
+($) show ( ) show (seal) show ( ) show (version) show  newline
+(2.1.0+3) show  newline
+(#) show ( ) show (List) show ( ) show (versions) show  newline
+($) show ( ) show (seal) show ( ) show (versions) show  newline
+(1.0.0) show ( ) show (2026-01-01) show ( ) show (Initial) show ( ) show (release) show  newline
+(1.1.0) show ( ) show (2026-01-05) show ( ) show (Bug) show ( ) show (fixes) show  newline
+(2.0.0) show ( ) show (2026-01-10) show ( ) show (New) show ( ) show (governance) show ( ) show (model) show  newline
+(2.1.0) show ( ) show (2026-01-15) show ( ) show (Performance) show ( ) show (improvements) show  newline
+(#) show ( ) show (Rollback) show  newline
+($) show ( ) show (seal) show ( ) show (rollback) show ( ) show (2.0.0) show  newline
+(Rolling) show ( ) show (back) show ( ) show (to) show ( ) show (2.0.0...) show  newline
+gsave
+margin 24 add ypos moveto () show
+margin 36 add ypos moveto (Rollback) show
+margin 90 add ypos moveto (complete.) show
+margin 150 add ypos moveto (Now) show
+margin 174 add ypos moveto (at) show
+margin 192 add ypos moveto (2.0.0.) show
+grestore
+newline
+(#) show ( ) show (Rollback) show ( ) show (with) show ( ) show (reason) show  newline
+($) show ( ) show (seal) show ( ) show (rollback) show ( ) show (2.0.0) show ( ) show (--reason) show ( ) show ("Production) show ( ) show (incident) show ( ) show (#123") show  newline
+(#) show ( ) show (Compare) show ( ) show (versions) show  newline
+($) show ( ) show (seal) show ( ) show (diff) show ( ) show (2.0.0) show ( ) show (2.1.0) show  newline
+(M) show ( ) show (config.scm) show  newline
+(A) show ( ) show (new-feature.scm) show  newline
+(D) show ( ) show (deprecated.scm) show  newline
+(#) show ( ) show (Recovery) show ( ) show (options) show  newline
+($) show ( ) show (seal) show ( ) show (recover) show  newline
+(Recovery) show ( ) show (options:) show  newline
+(1.) show ( ) show (seal) show ( ) show (undo) show ( ) show (-) show ( ) show (Undo) show ( ) show (last) show ( ) show (commit) show  newline
+(2.) show ( ) show (seal) show ( ) show (rollback) show ( ) show (2.1.0) show ( ) show (-) show ( ) show (Return) show ( ) show (to) show ( ) show (last) show ( ) show (release) show  newline
+(3.) show ( ) show (seal) show ( ) show (stash) show ( ) show (pop) show ( ) show (-) show ( ) show (Recover) show ( ) show (stashed) show ( ) show (changes) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SAFETY) show ( ) show (MECHANISMS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Uncommitted) show ( ) show (Changes) show  newline
+newpath margin ypos moveto margin 114 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(seal-rollback) show ( ) show ("2.0.0"\)) show  newline
+(;;) show ( ) show (Error:) show ( ) show (Uncommitted) show ( ) show (changes) show ( ) show (detected.) show  newline
+(;;) show ( ) show (Use) show ( ) show (--stash) show ( ) show (to) show ( ) show (save) show ( ) show (changes,) show ( ) show (or) show ( ) show (--force) show ( ) show (to) show ( ) show (discard.) show  newline
+ newline
+ newline
+(Protected) show ( ) show (Versions) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(vault-config) show ( ) show ('protected-versions) show ( ) show ('\("1.0.0") show ( ) show ("2.0.0"\)\)) show  newline
+(\(seal-rollback) show ( ) show ("0.9.0"\)) show  newline
+(;;) show ( ) show (Warning:) show ( ) show (Rolling) show ( ) show (back) show ( ) show (past) show ( ) show (protected) show ( ) show (version) show ( ) show (1.0.0) show  newline
+(;;) show ( ) show (This) show ( ) show (may) show ( ) show (break) show ( ) show (compatibility.) show ( ) show (Continue?) show ( ) show ([y/N]) show  newline
+ newline
+ newline
+(Rollback) show ( ) show (Limits) show  newline
+newpath margin ypos moveto margin 90 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(vault-config) show ( ) show ('max-rollback-distance) show ( ) show (10\)) show  newline
+(\(seal-rollback) show ( ) show ("0.1.0"\)) show  newline
+(;;) show ( ) show (Error:) show ( ) show (Rollback) show ( ) show (distance) show ( ) show (\(20) show ( ) show (versions\)) show ( ) show (exceeds) show ( ) show (limit) show ( ) show (\(10\).) show  newline
+(;;) show ( ) show (Use) show ( ) show (--force) show ( ) show (to) show ( ) show (override.) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(IMPLEMENTATION) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(seal-rollback) show ( ) show (Implementation) show  newline
+newpath margin ypos moveto margin 168 add ypos lineto stroke
+newline
+ newline
+ newline
+(\(define) show ( ) show (\(seal-rollback) show ( ) show (version) show ( ) show (#!key) show ( ) show (hard) show ( ) show (stash) show ( ) show (force) show ( ) show (reason) show ( ) show (tag\)) show  newline
+("Roll) show ( ) show (back) show ( ) show (vault) show ( ) show (to) show ( ) show (specified) show ( ) show (version") show  newline
+(;;) show ( ) show (Validate) show ( ) show (version) show ( ) show (exists) show  newline
+(\(unless) show ( ) show (\(tag-exists?) show ( ) show (version\)) show  newline
+(\(error) show ( ) show ("Version) show ( ) show (not) show ( ) show (found") show ( ) show (version\)\)) show  newline
+(;;) show ( ) show (Check) show ( ) show (for) show ( ) show (uncommitted) show ( ) show (changes) show  newline
+(\(when) show ( ) show (\(uncommitted-changes?\)) show  newline
+(\(cond) show  newline
+(\(stash) show ( ) show (\(seal-stash\)\)) show  newline
+(\(force) show ( ) show (\(void\)\)) show  newline
+(\(else) show ( ) show (\(error) show ( ) show ("Uncommitted) show ( ) show (changes.) show ( ) show (Use) show ( ) show (stash:) show ( ) show (or) show ( ) show (force:"\)\)\)\)) show  newline
+(;;) show ( ) show (Record) show ( ) show (current) show ( ) show (state) show  newline
+(\(let) show ( ) show (\(\(current) show ( ) show (\(seal-version\)\)\)) show  newline
+(;;) show ( ) show (Perform) show ( ) show (rollback) show  newline
+(\(if) show ( ) show (hard) show  newline
+(\(hard-rollback!) show ( ) show (version\)) show  newline
+(\(forward-rollback!) show ( ) show (version) show ( ) show (reason\)\)) show  newline
+(;;) show ( ) show (Create) show ( ) show (tag) show ( ) show (if) show ( ) show (requested) show  newline
+(\(when) show ( ) show (tag) show  newline
+(\(run-command) show ( ) show ("git") show ( ) show ("tag") show ( ) show (tag\)\)) show  newline
+(;;) show ( ) show (Audit) show  newline
+(\(audit-append) show  newline
+(actor:) show ( ) show (\(get-vault-principal) show ( ) show (\(vault-config) show ( ) show ('signing-key\)\)) show  newline
+(action:) show ( ) show (\(list) show ( ) show ('seal-rollback) show ( ) show (version\)) show  newline
+(motivation:) show ( ) show (\(or) show ( ) show (reason) show ( ) show (\(sprintf) show ( ) show ("Rollback) show ( ) show (from) show ( ) show (~a) show ( ) show (to) show ( ) show (~a") show ( ) show (current) show ( ) show (version\)\)\)) show  newline
+gsave
+margin 48 add ypos moveto (\(print) show
+margin 90 add ypos moveto (") show
+margin 108 add ypos moveto (Rolled) show
+margin 150 add ypos moveto (back) show
+margin 180 add ypos moveto (to) show
+margin 198 add ypos moveto (") show
+margin 210 add ypos moveto (version\)\)\)) show
+grestore
+newline
+(\(define) show ( ) show (\(forward-rollback!) show ( ) show (version) show ( ) show (reason\)) show  newline
+("Create) show ( ) show (rollback) show ( ) show (commit) show ( ) show (\(preserves) show ( ) show (history\)") show  newline
+(\(run-command) show ( ) show ("git") show ( ) show ("checkout") show ( ) show (version) show ( ) show ("--") show ( ) show ("."\)) show  newline
+(\(run-command) show ( ) show ("git") show ( ) show ("commit") show ( ) show ("-m") show  newline
+(\(sprintf) show ( ) show ("Rollback) show ( ) show (to) show ( ) show (~a\\n\\n~a") show ( ) show (version) show ( ) show (\(or) show ( ) show (reason) show ( ) show (""\)\)\)\)) show  newline
+(\(define) show ( ) show (\(hard-rollback!) show ( ) show (version\)) show  newline
+("Reset) show ( ) show (to) show ( ) show (version) show ( ) show (\(destroys) show ( ) show (history\)") show  newline
+(\(print) show ( ) show ("WARNING:) show ( ) show (Hard) show ( ) show (rollback) show ( ) show (destroys) show ( ) show (history"\)) show  newline
+(\(run-command) show ( ) show ("git") show ( ) show ("reset") show ( ) show ("--hard") show ( ) show (version\)\)) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(SECURITY) show ( ) show (CONSIDERATIONS) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+ newline
+(Rollback) show ( ) show (Attacks) show  newline
+newpath margin ypos moveto margin 96 add ypos lineto stroke
+newline
+ newline
+(Attacker) show ( ) show (forces) show ( ) show (rollback) show ( ) show (to) show ( ) show (vulnerable) show ( ) show (version.) show  newline
+ newline
+(Mitigation:) show ( ) show (-) show ( ) show (Threshold) show ( ) show (signatures) show ( ) show (for) show ( ) show (rollback) show ( ) show (\(Memo-008\)) show ( ) show (-) show ( ) show (Protected) show  newline
+(version) show ( ) show (list) show ( ) show (-) show ( ) show (Audit) show ( ) show (trail) show ( ) show (detection) show  newline
+ newline
+ newline
+(History) show ( ) show (Manipulation) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(Hard) show ( ) show (rollback) show ( ) show (can) show ( ) show (hide) show ( ) show (evidence.) show  newline
+ newline
+(Mitigation:) show ( ) show (-) show ( ) show (Prefer) show ( ) show (forward) show ( ) show (rollback) show ( ) show (-) show ( ) show (Audit) show ( ) show (before) show ( ) show (hard) show ( ) show (rollback) show ( ) show (-) show  newline
+(Federation) show ( ) show (replication) show ( ) show (preserves) show ( ) show (history) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(REFERENCES) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (Semantic) show ( ) show (Versioning) show ( ) show (2.0.0) show ( ) show (\(semver.org\)) show  newline
+(*) show ( ) show (Git) show ( ) show (Reset,) show ( ) show (Checkout,) show ( ) show (and) show ( ) show (Revert) show ( ) show (\(git-scm.com\)) show  newline
+(*) show ( ) show (Memo-003:) show ( ) show (Cryptographic) show ( ) show (Audit) show ( ) show (Trail) show  newline
+(*) show ( ) show (Memo-006:) show ( ) show (Vault) show ( ) show (System) show ( ) show (Architecture) show  newline
+ newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+(CHANGELOG) show  newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
+ newline
+(*) show ( ) show (2026-01-06) show  newline
+(*) show ( ) show (Initial) show ( ) show (specification) show  newline
+ newline
+newpath margin ypos moveto margin 432 add ypos lineto stroke
+newline
 
 showpage
 %%Trailer
