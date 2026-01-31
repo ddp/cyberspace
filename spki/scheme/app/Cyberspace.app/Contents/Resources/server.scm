@@ -19,6 +19,7 @@
         (chicken string)
         (chicken tcp)
         (chicken time)
+        (chicken time posix)
         (chicken file)
         (chicken pathname)
         (chicken process-context)
@@ -36,7 +37,7 @@
 ;; Configuration
 ;; ============================================================
 
-(define *server-port* 7780)
+(define *server-port* 4321)  ; Network Alchemy clustering port
 (define *server-host* "127.0.0.1")
 (define *static-dir* #f)  ; set at startup
 
@@ -149,6 +150,15 @@
 ;; WebSocket Support
 ;; ============================================================
 
+;; Timestamp for connection health logging
+(define (timestamp)
+  (let* ((t (seconds->utc-time (current-seconds)))
+         (pad (lambda (n) (if (< n 10) (sprintf "0~a" n) (sprintf "~a" n)))))
+    (sprintf "~a:~a:~a"
+             (pad (vector-ref t 2))
+             (pad (vector-ref t 1))
+             (pad (vector-ref t 0)))))
+
 (define *ws-magic* "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
 
 (define (ws-accept-key key)
@@ -165,13 +175,13 @@
 
 (define (handle-websocket in out headers)
   ;; Upgrade to WebSocket
-  (printf "[ws] Upgrading connection~n")
+  (printf "[~a][ws] Upgrading connection~n" (timestamp))
   (flush-output)
   (let* ((key (cdr (or (assoc "sec-websocket-key" headers) '(#f . "")))))
-    (printf "[ws] Key: ~a~n" key)
+    (printf "[~a][ws] Key: ~a~n" (timestamp) key)
     (flush-output)
     (let ((accept (ws-accept-key key)))
-      (printf "[ws] Accept: ~a~n" accept)
+      (printf "[~a][ws] Accept: ~a~n" (timestamp) accept)
       (flush-output)
       (display "HTTP/1.1 101 Switching Protocols\r\n" out)
       (display "Upgrade: websocket\r\n" out)
@@ -185,9 +195,11 @@
 (define (ws-loop in out)
   ;; Simple WebSocket frame handling
   ;; Frame format: [fin+opcode] [mask+len] [mask-key if masked] [payload]
-  (let loop ()
-    (let ((b1 (read-byte in)))
-      (when (and b1 (not (eof-object? b1)))
+  (handle-exceptions exn
+    (printf "[~a][ws] Loop error: ~a~n" (timestamp) ((condition-property-accessor 'exn 'message) exn))
+    (let loop ()
+      (let ((b1 (read-byte in)))
+        (when (and b1 (not (eof-object? b1)))
         (let* ((fin (bitwise-and b1 #x80))
                (opcode (bitwise-and b1 #x0f))
                (b2 (read-byte in))
@@ -236,10 +248,12 @@
                    (ws-send-pong out unmasked)
                    (loop))
                   (else
-                   (loop)))))))))))
+                   (loop))))))))))))  ; Extra paren for handle-exceptions
 
 (define (ws-send-frame out opcode payload)
-  (let ((len (string-length payload)))
+  ;; WebSocket frame length is in BYTES, not characters
+  ;; string->blob gives UTF-8 bytes in Chicken
+  (let ((len (blob-size (string->blob payload))))
     (write-byte (bitwise-ior #x80 opcode) out)  ; FIN + opcode
     (cond
       ((< len 126)
@@ -258,7 +272,14 @@
     (flush-output out)))
 
 (define (ws-send-text out msg)
-  (ws-send-frame out 1 msg))
+  (handle-exceptions exn
+    (begin
+      (printf "[~a][ws] Send failed: ~a~n" (timestamp) ((condition-property-accessor 'exn 'message) exn))
+      (flush-output)
+      #f)  ; Return #f on failure
+    (begin
+      (ws-send-frame out 1 msg)
+      #t)))  ; Return #t on success
 
 (define (ws-send-close out)
   (ws-send-frame out 8 ""))
@@ -274,22 +295,24 @@
 
 (define (start-pty-repl)
   "Start REPL with PTY via script(1) for VT100."
-  (let* ((cwd (current-directory))
-         (repl (cond ((file-exists? (make-pathname cwd "repl"))
-                      (list (make-pathname cwd "repl")))
-                     (else (list "/opt/homebrew/bin/csi" "-q" "-w"
-                                 (make-pathname cwd "repl.scm"))))))
+  (let* ((scheme-dir "/Users/ddp/cyberspace/spki/scheme")
+         (repl-bin (make-pathname scheme-dir "repl"))
+         (repl (if (file-exists? repl-bin)
+                   (list repl-bin "--boot=whisper")
+                   (list "/opt/homebrew/bin/csi" "-q" "-w"
+                         (make-pathname scheme-dir "repl.scm")))))
     (receive (stdout stdin pid) (process "/usr/bin/script" (cons* "-q" "/dev/null" repl))
       (set! *pty-pid* pid)
       (set! *pty-master* (cons stdout stdin))
-      (printf "[pty] REPL started~n"))))
+      (printf "[pty] REPL started: ~a~n" repl)
+      (flush-output))))
 
 (define (ensure-repl-running ws-out)
   "Start the REPL if not running, connect output to WebSocket"
+  ;; Always update the WebSocket output for new connections
+  (set! *ws-out* ws-out)
   (unless (and *pty-pid* *pty-master*)
     (start-pty-repl)
-    (set! *ws-out* ws-out)
-
     ;; Start reader thread - robust: auto-restart REPL on EOF
     (set! *reader-thread*
       (thread-start!
@@ -303,31 +326,71 @@
                   (thread-sleep! 1)
                   (restart))
                 (let ((in (car *pty-master*)))
-                  (let loop ((buf '()))
-                    (let ((ch (read-char in)))
-                      (cond
-                        ((eof-object? ch)
-                         ;; Flush remaining
-                         (when (and (pair? buf) *ws-out*)
-                           (ws-send-text *ws-out*
-                             (sprintf "{\"type\":\"output\",\"data\":~s}"
-                                      (list->string (reverse buf)))))
-                         ;; Restart REPL
-                         (printf "[reader] EOF, restarting REPL~n")
-                         (set! *pty-master* #f)
-                         (set! *pty-pid* #f)
-                         (thread-sleep! 0.5)
-                         (start-pty-repl)
-                         (restart))
-                        ((not *ws-out*)
-                         (loop '()))
-                        ((or (char=? ch #\newline) (> (length buf) 200))
-                         (ws-send-text *ws-out*
-                           (sprintf "{\"type\":\"output\",\"data\":~s}"
-                                    (list->string (reverse (cons ch buf)))))
-                         (loop '()))
-                        (else
-                         (loop (cons ch buf)))))))))))))))
+                  (let loop ((buf '()) (idle 0))
+                    (cond
+                      ;; Data available - read it
+                      ((char-ready? in)
+                       (let ((ch (read-char in)))
+                         (cond
+                           ((eof-object? ch)
+                            ;; Flush remaining
+                            (when (and (pair? buf) *ws-out*)
+                              (ws-send-text *ws-out*
+                                (string-append "{\"type\":\"output\",\"data\":\""
+                                               (json-escape-string (list->string (reverse buf)))
+                                               "\"}")))
+                            ;; Restart REPL
+                            (printf "[reader] EOF, restarting REPL~n")
+                            (set! *pty-master* #f)
+                            (set! *pty-pid* #f)
+                            (thread-sleep! 0.5)
+                            (start-pty-repl)
+                            (restart))
+                           ((not *ws-out*)
+                            (loop '() 0))
+                           ((or (char=? ch #\newline) (> (length buf) 200))
+                            (ws-send-text *ws-out*
+                              (string-append "{\"type\":\"output\",\"data\":\""
+                                             (json-escape-string (list->string (reverse (cons ch buf))))
+                                             "\"}"))
+                            (loop '() 0))
+                           (else
+                            (loop (cons ch buf) 0)))))
+                      ;; No data, buffer has content, idle long enough - flush
+                      ((and (pair? buf) *ws-out* (> idle 3))
+                       (ws-send-text *ws-out*
+                         (string-append "{\"type\":\"output\",\"data\":\""
+                                        (json-escape-string (list->string (reverse buf)))
+                                        "\"}"))
+                       (loop '() 0))
+                      ;; Wait and check again
+                      (else
+                       (thread-sleep! 0.01)
+                       (loop buf (+ idle 1))))))))))))))
+
+(define (json-escape-string str)
+  "Escape string for JSON output - escape non-ASCII as \\uXXXX"
+  (let loop ((chars (string->list str)) (result '()))
+    (if (null? chars)
+        (list->string (reverse result))
+        (let* ((c (car chars))
+               (code (char->integer c))
+               (rest (cdr chars)))
+          (cond
+            ((char=? c #\") (loop rest (append '(#\" #\\) result)))
+            ((char=? c #\\) (loop rest (append '(#\\ #\\) result)))
+            ((char=? c #\newline) (loop rest (append '(#\n #\\) result)))
+            ((char=? c #\return) (loop rest (append '(#\r #\\) result)))
+            ((char=? c #\tab) (loop rest (append '(#\t #\\) result)))
+            ((< code 32)
+             ;; Control character - use \u00XX format
+             (let ((hex (number->string code 16)))
+               (loop rest (append (reverse (string->list (string-append "\\u" (make-string (- 4 (string-length hex)) #\0) hex)))
+                                  result))))
+            ((> code 127)
+             ;; Non-ASCII byte - pass through as-is (UTF-8 is valid in JSON)
+             (loop rest (cons c result)))
+            (else (loop rest (cons c result))))))))
 
 (define (send-to-repl data)
   "Send raw data to REPL stdin"
@@ -337,7 +400,7 @@
 
 (define (ws-handle-message msg in out)
   "Handle incoming WebSocket message (JSON with type field)"
-  (printf "[ws] Received: ~a~n" msg)
+  (printf "[~a][ws] Received: ~a~n" (timestamp) msg)
 
   ;; Parse JSON message
   (let* ((type (extract-json-field "type" msg))
@@ -519,21 +582,23 @@
 
 (define (handle-request in out)
   (let ((request-line (read-line in)))
-    (when (and request-line (not (eof-object? request-line)))
-      (let-values (((method path) (parse-request-line request-line)))
-        (let ((headers (parse-headers in)))
-          (printf "[http] ~a ~a~n" method path)
+    (if (or (not request-line) (eof-object? request-line))
+        #f
+        (let-values (((method path) (parse-request-line request-line)))
+          (let ((headers (parse-headers in)))
+            (printf "[~a][http] ~a ~a~n" (timestamp) method path)
 
-          (cond
-            ;; WebSocket upgrade
-            ((and (equal? path "/ws")
-                  (assoc "upgrade" headers)
-                  (string-ci=? (cdr (assoc "upgrade" headers)) "websocket"))
-             (handle-websocket in out headers))
+            (cond
+              ;; WebSocket upgrade - returns 'websocket to keep connection open
+              ((and (equal? path "/ws")
+                    (assoc "upgrade" headers)
+                    (string-ci=? (cdr (assoc "upgrade" headers)) "websocket"))
+               (handle-websocket in out headers)
+               'websocket)
 
-            ;; Main page
-            ((or (equal? path "/") (equal? path "/index.html"))
-             (http-ok out "text/html; charset=utf-8" (index-html)))
+              ;; Main page
+              ((or (equal? path "/") (equal? path "/index.html"))
+               (http-ok out "text/html; charset=utf-8" (index-html)))
 
             ;; API: system info
             ((equal? path "/api/info")
@@ -587,27 +652,34 @@
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
   <style>
     :root {
-      --bg: #1a1a2e;
-      --fg: #eee;
-      --accent: #0f3460;
-      --highlight: #e94560;
-      --border: #333;
+      /* VT220 phosphor P31 - pure black and green */
+      --bg: #000;
+      --bg-secondary: #000;
+      --fg: #0f0;
+      --fg-dim: #090;
+      --accent: #000;
+      --highlight: #0f0;
+      --border: #030;
       --mono: 'SF Mono', 'Monaco', 'Menlo', monospace;
       --font-size: 13px;
     }
-    :root.theme-light {
-      --bg: #f5f5f5;
-      --fg: #333;
-      --accent: #e0e0e0;
-      --highlight: #d63384;
-      --border: #ccc;
+    :root.theme-amber {
+      --bg: #0a0a08;
+      --bg-secondary: #12120e;
+      --fg: #ffb000;
+      --fg-dim: #8a6000;
+      --accent: #1a1a10;
+      --highlight: #ffc000;
+      --border: #3a3a20;
     }
-    :root.theme-solarized {
-      --bg: #002b36;
-      --fg: #839496;
-      --accent: #073642;
-      --highlight: #cb4b16;
-      --border: #586e75;
+    :root.theme-dark {
+      --bg: #121212;
+      --bg-secondary: #1e1e1e;
+      --fg: #e0e0e0;
+      --fg-dim: #888;
+      --accent: #1a1a1a;
+      --highlight: #00cc66;
+      --border: #2a2a2a;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -633,28 +705,15 @@
     }
     .status {
       font-size: 12px;
-      color: #888;
+      color: var(--fg-dim);
     }
-    .status.connected { color: #4caf50; }
-    .status.disconnected { color: var(--highlight); }
+    .status.connected { color: var(--highlight); }
+    .status.disconnected { color: #cc4444; }
     main {
       flex: 1;
       display: flex;
       overflow: hidden;
     }
-    .sidebar {
-      width: 200px;
-      background: rgba(0,0,0,0.2);
-      border-right: 1px solid var(--border);
-      padding: 10px 0;
-    }
-    .sidebar-item {
-      padding: 10px 20px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .sidebar-item:hover { background: rgba(255,255,255,0.05); }
-    .sidebar-item.active { background: var(--accent); }
     .content {
       flex: 1;
       display: flex;
@@ -666,15 +725,16 @@
       display: flex;
       flex-direction: column;
       padding: 10px;
-      min-height: 0;  /* Allow flex child to shrink below content size */
+      min-height: 0;
     }
     #terminal {
       flex: 1;
-      min-height: 200px;  /* Ensure minimum height for xterm */
-      background: rgba(0,0,0,0.3);
+      min-height: 200px;
+      background: var(--bg);
       border-radius: 4px;
       padding: 5px;
       position: relative;
+      border: 1px solid var(--border);
     }
     .view { display: none; flex-direction: column; height: 100%; }
     .view.active { display: flex; }
@@ -704,12 +764,13 @@
     }
     .item:hover { background: rgba(255,255,255,0.05); }
     .item-hash { color: var(--highlight); }
-    .item-meta { color: #666; font-size: 11px; margin-top: 4px; }
+    .item-meta { color: var(--fg-dim); font-size: 11px; margin-top: 4px; }
     footer {
       padding: 8px 20px;
       font-size: 11px;
-      color: #666;
+      color: var(--fg-dim);
       border-top: 1px solid var(--border);
+      background: var(--bg-secondary);
       display: flex;
       justify-content: space-between;
     }
@@ -731,32 +792,14 @@
     <span class="status disconnected" id="status">Disconnected</span>
   </header>
   <main>
-    <nav class="sidebar">
-      <div class="sidebar-item active" data-view="repl">REPL</div>
-      <div class="sidebar-item" data-view="vault">Vault</div>
-      <div class="sidebar-item" data-view="keys">Keys</div>
-      <div class="sidebar-item" data-view="peers">Federation</div>
-    </nav>
     <div class="content">
       <div id="repl" class="view active">
         <div id="terminal"></div>
       </div>
-      <div id="vault" class="view">
-        <div class="view-header">Vault Objects</div>
-        <div id="vault-list" class="item-list">Loading...</div>
-      </div>
-      <div id="keys" class="view">
-        <div class="view-header">Keys</div>
-        <div id="keys-list" class="item-list">Loading...</div>
-      </div>
-      <div id="peers" class="view">
-        <div class="view-header">Federation</div>
-        <div id="peers-list" class="item-list">No peers discovered.</div>
-      </div>
     </div>
   </main>
   <footer>
-    <span>Library of Cyberspace</span>
+    <span id="theme-toggle" style="cursor:pointer;" title="Click to change theme">Library of Cyberspace</span>
     <span id="info"></span>
   </footer>
   <script>
@@ -765,34 +808,47 @@
     let term = null;
     let fitAddon = null;
 
+    // Reconnect state with exponential backoff
+    let reconnectAttempts = 0;
+    let reconnectDelay = 1000;
+    const maxReconnectAttempts = 5;
+    const maxReconnectDelay = 16000;
+
+    // Terminal themes
+    const terminalThemes = {
+      phosphor: {
+        background: '#000', foreground: '#0f0', cursor: '#0f0', cursorAccent: '#000',
+        selection: 'rgba(0, 255, 0, 0.3)',
+        black: '#000', red: '#0f0', green: '#0f0', yellow: '#0f0',
+        blue: '#0f0', magenta: '#0f0', cyan: '#0f0', white: '#0f0',
+        brightBlack: '#090', brightRed: '#0f0', brightGreen: '#0f0', brightYellow: '#0f0',
+        brightBlue: '#0f0', brightMagenta: '#0f0', brightCyan: '#0f0', brightWhite: '#0f0'
+      },
+      amber: {
+        background: '#0a0a08', foreground: '#ffb000', cursor: '#ffc000', cursorAccent: '#0a0a08',
+        selection: 'rgba(51, 34, 0, 0.85)', selectionForeground: '#ffb000',
+        black: '#0a0a08', red: '#ff6600', green: '#ffb000', yellow: '#ffc000',
+        blue: '#cc8800', magenta: '#ff8844', cyan: '#ffcc00', white: '#ffb000',
+        brightBlack: '#8a6000', brightRed: '#ff8833', brightGreen: '#ffcc33', brightYellow: '#ffdd33',
+        brightBlue: '#ddaa33', brightMagenta: '#ffaa66', brightCyan: '#ffdd66', brightWhite: '#ffc000'
+      },
+      dark: {
+        background: '#121212', foreground: '#e0e0e0', cursor: '#00cc66', cursorAccent: '#121212',
+        selection: 'rgba(0, 204, 102, 0.3)',
+        black: '#121212', red: '#ff5555', green: '#50fa7b', yellow: '#f1fa8c',
+        blue: '#6272a4', magenta: '#ff79c6', cyan: '#8be9fd', white: '#e0e0e0',
+        brightBlack: '#555555', brightRed: '#ff6e6e', brightGreen: '#69ff94', brightYellow: '#ffffa5',
+        brightBlue: '#d6acff', brightMagenta: '#ff92df', brightCyan: '#a4ffff', brightWhite: '#ffffff'
+      }
+    };
+
     // Initialize xterm.js
     function initTerminal() {
+      const currentTheme = localStorage.getItem('theme') || 'phosphor';
       term = new Terminal({
         fontFamily: "'SF Mono', 'Monaco', 'Menlo', monospace",
         fontSize: 13,
-        theme: {
-          background: '#1a1a2e',
-          foreground: '#eeeeee',
-          cursor: '#e94560',
-          cursorAccent: '#1a1a2e',
-          selection: 'rgba(233, 69, 96, 0.3)',
-          black: '#1a1a2e',
-          red: '#e94560',
-          green: '#4caf50',
-          yellow: '#ffb74d',
-          blue: '#42a5f5',
-          magenta: '#ab47bc',
-          cyan: '#26c6da',
-          white: '#eeeeee',
-          brightBlack: '#555555',
-          brightRed: '#ff6b6b',
-          brightGreen: '#69f0ae',
-          brightYellow: '#ffd54f',
-          brightBlue: '#64b5f6',
-          brightMagenta: '#ce93d8',
-          brightCyan: '#4dd0e1',
-          brightWhite: '#ffffff'
-        },
+        theme: terminalThemes[currentTheme] || terminalThemes.phosphor,
         cursorBlink: true,
         scrollback: 10000,
         allowProposedApi: true
@@ -807,7 +863,9 @@
       setTimeout(() => {
         fitAddon.fit();
         term.focus();
-      }, 100);
+      }, 200);
+      // Also focus when window gets focus
+      window.addEventListener('focus', () => { if(term) term.focus(); });
 
       // Handle window resize
       window.addEventListener('resize', () => {
@@ -828,25 +886,18 @@
         }
       });
 
-      // Ctrl-L: clear screen
-      term.attachCustomKeyEventHandler((e) => {
-        if (e.ctrlKey && e.key === 'l') {
-          term.clear();
-          return false; // Prevent default
-        }
-        return true;
-      });
-
-      term.writeln('\x1b[1;36mWelcome to Cyberspace.\x1b[0m');
-      term.writeln('\x1b[90mLibrary of Cyberspace v0.9.12\x1b[0m');
+      term.writeln('\x1b[1mWelcome to Cyberspace.\x1b[0m');
+      term.writeln('\x1b[2mLibrary of Cyberspace v0.9.12\x1b[0m');
       term.writeln('');
       term.writeln('Connecting to REPL...');
-      term.writeln('');
     }
 
     function connect() {
       ws = new WebSocket('ws://' + location.host + '/ws');
       ws.onopen = () => {
+        // Reset reconnect state on successful connection
+        reconnectAttempts = 0;
+        reconnectDelay = 1000;
         status.textContent = 'Connected';
         status.className = 'status connected';
         term.writeln('\x1b[32mConnected.\x1b[0m');
@@ -862,8 +913,16 @@
       ws.onclose = () => {
         status.textContent = 'Disconnected';
         status.className = 'status disconnected';
-        term.writeln('\x1b[31mDisconnected. Reconnecting...\x1b[0m');
-        setTimeout(connect, 2000);
+        if (reconnectAttempts < maxReconnectAttempts) {
+          term.writeln(`\x1b[31mDisconnected. Reconnecting in ${reconnectDelay/1000}s... (${reconnectAttempts + 1}/${maxReconnectAttempts})\x1b[0m`);
+          setTimeout(() => {
+            reconnectAttempts++;
+            connect();
+            reconnectDelay = Math.min(reconnectDelay * 2, maxReconnectDelay);
+          }, reconnectDelay);
+        } else {
+          term.writeln('\x1b[31mConnection lost. Reload page to reconnect.\x1b[0m');
+        }
       };
       ws.onerror = (err) => {
         term.writeln('\x1b[31mConnection error\x1b[0m');
@@ -900,20 +959,15 @@
 
     function applyTheme(theme) {
       document.documentElement.className = '';
-      if (theme !== 'dark') {
+      if (theme !== 'phosphor') {
         document.documentElement.classList.add('theme-' + theme);
       }
       localStorage.setItem('theme', theme);
 
       // Update terminal theme
       if (term) {
-        const themes = {
-          dark: { background: '#1a1a2e', foreground: '#eeeeee' },
-          light: { background: '#f5f5f5', foreground: '#333333' },
-          solarized: { background: '#002b36', foreground: '#839496' }
-        };
-        const t = themes[theme] || themes.dark;
-        term.options.theme = { ...term.options.theme, ...t };
+        const t = terminalThemes[theme] || terminalThemes.phosphor;
+        term.options.theme = t;
       }
     }
 
@@ -931,75 +985,22 @@
     }
 
     function loadPreferences() {
-      const theme = localStorage.getItem('theme') || 'dark';
+      const theme = localStorage.getItem('theme') || 'phosphor';
       const fontName = localStorage.getItem('fontName') || 'SF Mono';
       const fontSize = localStorage.getItem('fontSize') || 13;
       applyTheme(theme);
       applyFont(fontName, parseInt(fontSize));
     }
 
-    // View switching
-    document.querySelectorAll('.sidebar-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const viewId = item.dataset.view;
-        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        item.classList.add('active');
-        document.getElementById(viewId).classList.add('active');
-        if (viewId === 'vault') loadVault();
-        if (viewId === 'keys') loadKeys();
-        if (viewId === 'peers') loadPeers();
-        if (viewId === 'repl' && term) {
-          fitAddon.fit();
-          term.focus();
-        }
-      });
+    // Theme toggle - cycles through themes
+    const themeOrder = ['phosphor', 'amber', 'dark'];
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const current = localStorage.getItem('theme') || 'phosphor';
+      const idx = themeOrder.indexOf(current);
+      const next = themeOrder[(idx + 1) % themeOrder.length];
+      applyTheme(next);
+      if (fitAddon) fitAddon.fit();
     });
-
-    function loadVault() {
-      fetch('/api/vault').then(r => r.json()).then(data => {
-        const list = document.getElementById('vault-list');
-        if (data.objects && data.objects.length > 0) {
-          list.innerHTML = data.objects.map(obj =>
-            `<div class="item"><span class="item-hash">${obj.hash.substring(0,12)}...</span><div class="item-meta">${obj.size} bytes</div></div>`
-          ).join('');
-        } else {
-          list.innerHTML = '<div style="color:#666;padding:20px;">No objects in vault.</div>';
-        }
-      }).catch(() => {
-        document.getElementById('vault-list').innerHTML = '<div style="color:#666;padding:20px;">Vault not available.</div>';
-      });
-    }
-
-    function loadKeys() {
-      fetch('/api/keys').then(r => r.json()).then(data => {
-        const list = document.getElementById('keys-list');
-        if (data.keys && data.keys.length > 0) {
-          list.innerHTML = data.keys.map(key =>
-            `<div class="item"><span class="item-hash">${key.name}</span><div class="item-meta">${key.type}</div></div>`
-          ).join('');
-        } else {
-          list.innerHTML = '<div style="color:#666;padding:20px;">No keys stored.</div>';
-        }
-      }).catch(() => {
-        document.getElementById('keys-list').innerHTML = '<div style="color:#666;padding:20px;">Keys not available.</div>';
-      });
-    }
-
-    function loadPeers() {
-      fetch('/api/peers').then(r => r.json()).then(data => {
-        const list = document.getElementById('peers-list');
-        if (data.peers && data.peers.length > 0) {
-          list.innerHTML = data.peers.map(peer =>
-            `<div class="item"><span class="item-hash">${peer.name}</span><div class="item-meta">${peer.address}</div></div>`
-          ).join('');
-        } else {
-          list.innerHTML = '<div style="color:#666;padding:20px;">No peers discovered.</div>';
-        }
-      }).catch(() => {
-        document.getElementById('peers-list').innerHTML = '<div style="color:#666;padding:20px;">Federation not available.</div>';
-      });
-    }
 
     // Initialize
     loadPreferences();
@@ -1032,6 +1033,7 @@ EOF
 
   (let ((listener (tcp-listen port)))
     (printf "  Listening on http://~a:~a/~n~n" *server-host* port)
+    (flush-output)  ; Signal app that backend is ready
 
     (let loop ()
       (let-values (((in out) (tcp-accept listener)))
@@ -1041,14 +1043,16 @@ EOF
             (lambda ()
               (handle-exceptions exn
                 (begin
-                  (printf "[error] ~a~n"
+                  (printf "[~a][error] ~a~n" (timestamp)
                     ((condition-property-accessor 'exn 'message) exn))
+                  (flush-output)
                   (close-input-port in)
                   (close-output-port out))
-                (begin
-                  (handle-request in out)
-                  (close-input-port in)
-                  (close-output-port out))))))
+                (let ((keep-alive (handle-request in out)))
+                  ;; WebSocket connections return 'websocket and manage their own lifecycle
+                  (unless (eq? keep-alive 'websocket)
+                    (close-input-port in)
+                    (close-output-port out)))))))
         (loop)))))
 
 ;; ============================================================
@@ -1056,8 +1060,8 @@ EOF
 ;; ============================================================
 
 (define (main args)
-  (let ((port (if (and (pair? args) (pair? (cdr args)))
-                  (string->number (cadr args))
+  (let ((port (if (and (pair? args) (string->number (car args)))
+                  (string->number (car args))
                   *server-port*)))
     (start-server port)))
 

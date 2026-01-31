@@ -115,6 +115,8 @@ didFailNavigation:(WKNavigation *)navigation
 - (void)webView:(WKWebView *)webView
 didFinishNavigation:(WKNavigation *)navigation {
     NSLog(@"[Cyberspace] Page loaded");
+    // Make WebView first responder to receive keyboard input
+    [webView.window makeFirstResponder:webView];
 }
 
 @end
@@ -382,6 +384,7 @@ didFinishNavigation:(WKNavigation *)navigation {
 @property (nonatomic, strong) id<CyberWebView> webView;
 @property (nonatomic, strong) NSTask *schemeBackend;
 @property (nonatomic, assign) int backendPort;
+@property (nonatomic, assign) BOOL uiLoaded;
 @end
 
 @implementation AppDelegate
@@ -422,16 +425,9 @@ didFinishNavigation:(WKNavigation *)navigation {
     webViewNS.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [self.window.contentView addSubview:webViewNS];
 
-    // Start Scheme backend
+    // Start Scheme backend (UI loading triggered by backend readiness signal)
+    self.uiLoaded = NO;
     [self startSchemeBackend];
-
-    // Load UI after brief delay for backend to start
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
-                   dispatch_get_main_queue(), ^{
-        NSURL *url = [NSURL URLWithString:
-                      [NSString stringWithFormat:@"http://127.0.0.1:%d/", self.backendPort]];
-        [self.webView loadURL:url];
-    });
 
     // Show window
     [self.window makeKeyAndOrderFront:nil];
@@ -486,18 +482,49 @@ didFinishNavigation:(WKNavigation *)navigation {
     self.schemeBackend.standardOutput = outputPipe;
     self.schemeBackend.standardError = outputPipe;
 
-    // Read output asynchronously
+    // Read output asynchronously and detect backend readiness
+    __weak AppDelegate *weakSelf = self;
     outputPipe.fileHandleForReading.readabilityHandler = ^(NSFileHandle *handle) {
         NSData *data = handle.availableData;
         if (data.length > 0) {
             NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
             NSLog(@"[Backend] %@", output);
+
+            // Backend ready signal - load UI when we see "Listening on"
+            if (!weakSelf.uiLoaded && [output containsString:@"Listening on"]) {
+                weakSelf.uiLoaded = YES;
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    NSURL *url = [NSURL URLWithString:
+                                  [NSString stringWithFormat:@"http://127.0.0.1:%d/", weakSelf.backendPort]];
+                    [weakSelf.webView loadURL:url];
+                });
+            }
         }
     };
 
     @try {
         [self.schemeBackend launch];
         NSLog(@"[Cyberspace] Backend started (PID %d)", self.schemeBackend.processIdentifier);
+
+        // Termination handler to detect backend death
+        self.schemeBackend.terminationHandler = ^(NSTask *task) {
+            NSLog(@"[Cyberspace] Backend terminated with status %d", task.terminationStatus);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [weakSelf.webView postMessage:@{@"type": @"backend.terminated"}];
+            });
+        };
+
+        // Fallback timeout in case "Listening on" is never seen
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10.0 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            if (!weakSelf.uiLoaded) {
+                NSLog(@"[Cyberspace] Backend startup timeout - loading UI anyway");
+                weakSelf.uiLoaded = YES;
+                NSURL *url = [NSURL URLWithString:
+                              [NSString stringWithFormat:@"http://127.0.0.1:%d/", weakSelf.backendPort]];
+                [weakSelf.webView loadURL:url];
+            }
+        });
     } @catch (NSException *e) {
         NSLog(@"[Cyberspace] Failed to start backend: %@", e.reason);
     }

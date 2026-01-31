@@ -19,6 +19,7 @@
         (chicken string)
         (chicken tcp)
         (chicken time)
+        (chicken time posix)
         (chicken file)
         (chicken pathname)
         (chicken process-context)
@@ -149,6 +150,15 @@
 ;; WebSocket Support
 ;; ============================================================
 
+;; Timestamp for connection health logging
+(define (timestamp)
+  (let* ((t (seconds->utc-time (current-seconds)))
+         (pad (lambda (n) (if (< n 10) (sprintf "0~a" n) (sprintf "~a" n)))))
+    (sprintf "~a:~a:~a"
+             (pad (vector-ref t 2))
+             (pad (vector-ref t 1))
+             (pad (vector-ref t 0)))))
+
 (define *ws-magic* "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
 
 (define (ws-accept-key key)
@@ -165,13 +175,13 @@
 
 (define (handle-websocket in out headers)
   ;; Upgrade to WebSocket
-  (printf "[ws] Upgrading connection~n")
+  (printf "[~a][ws] Upgrading connection~n" (timestamp))
   (flush-output)
   (let* ((key (cdr (or (assoc "sec-websocket-key" headers) '(#f . "")))))
-    (printf "[ws] Key: ~a~n" key)
+    (printf "[~a][ws] Key: ~a~n" (timestamp) key)
     (flush-output)
     (let ((accept (ws-accept-key key)))
-      (printf "[ws] Accept: ~a~n" accept)
+      (printf "[~a][ws] Accept: ~a~n" (timestamp) accept)
       (flush-output)
       (display "HTTP/1.1 101 Switching Protocols\r\n" out)
       (display "Upgrade: websocket\r\n" out)
@@ -185,9 +195,11 @@
 (define (ws-loop in out)
   ;; Simple WebSocket frame handling
   ;; Frame format: [fin+opcode] [mask+len] [mask-key if masked] [payload]
-  (let loop ()
-    (let ((b1 (read-byte in)))
-      (when (and b1 (not (eof-object? b1)))
+  (handle-exceptions exn
+    (printf "[~a][ws] Loop error: ~a~n" (timestamp) ((condition-property-accessor 'exn 'message) exn))
+    (let loop ()
+      (let ((b1 (read-byte in)))
+        (when (and b1 (not (eof-object? b1)))
         (let* ((fin (bitwise-and b1 #x80))
                (opcode (bitwise-and b1 #x0f))
                (b2 (read-byte in))
@@ -236,10 +248,12 @@
                    (ws-send-pong out unmasked)
                    (loop))
                   (else
-                   (loop)))))))))))
+                   (loop))))))))))))  ; Extra paren for handle-exceptions
 
 (define (ws-send-frame out opcode payload)
-  (let ((len (string-length payload)))
+  ;; WebSocket frame length is in BYTES, not characters
+  ;; string->blob gives UTF-8 bytes in Chicken
+  (let ((len (blob-size (string->blob payload))))
     (write-byte (bitwise-ior #x80 opcode) out)  ; FIN + opcode
     (cond
       ((< len 126)
@@ -259,8 +273,13 @@
 
 (define (ws-send-text out msg)
   (handle-exceptions exn
-    (printf "[ws] Send failed: ~a~n" ((condition-property-accessor 'exn 'message) exn))
-    (ws-send-frame out 1 msg)))
+    (begin
+      (printf "[~a][ws] Send failed: ~a~n" (timestamp) ((condition-property-accessor 'exn 'message) exn))
+      (flush-output)
+      #f)  ; Return #f on failure
+    (begin
+      (ws-send-frame out 1 msg)
+      #t)))  ; Return #t on success
 
 (define (ws-send-close out)
   (ws-send-frame out 8 ""))
@@ -317,8 +336,9 @@
                             ;; Flush remaining
                             (when (and (pair? buf) *ws-out*)
                               (ws-send-text *ws-out*
-                                (sprintf "{\"type\":\"output\",\"data\":\"~a\"}"
-                                         (json-escape-string (list->string (reverse buf))))))
+                                (string-append "{\"type\":\"output\",\"data\":\""
+                                               (json-escape-string (list->string (reverse buf)))
+                                               "\"}")))
                             ;; Restart REPL
                             (printf "[reader] EOF, restarting REPL~n")
                             (set! *pty-master* #f)
@@ -330,16 +350,18 @@
                             (loop '() 0))
                            ((or (char=? ch #\newline) (> (length buf) 200))
                             (ws-send-text *ws-out*
-                              (sprintf "{\"type\":\"output\",\"data\":\"~a\"}"
-                                       (json-escape-string (list->string (reverse (cons ch buf))))))
+                              (string-append "{\"type\":\"output\",\"data\":\""
+                                             (json-escape-string (list->string (reverse (cons ch buf))))
+                                             "\"}"))
                             (loop '() 0))
                            (else
                             (loop (cons ch buf) 0)))))
                       ;; No data, buffer has content, idle long enough - flush
                       ((and (pair? buf) *ws-out* (> idle 3))
                        (ws-send-text *ws-out*
-                         (sprintf "{\"type\":\"output\",\"data\":\"~a\"}"
-                                  (json-escape-string (list->string (reverse buf)))))
+                         (string-append "{\"type\":\"output\",\"data\":\""
+                                        (json-escape-string (list->string (reverse buf)))
+                                        "\"}"))
                        (loop '() 0))
                       ;; Wait and check again
                       (else
@@ -347,25 +369,27 @@
                        (loop buf (+ idle 1))))))))))))))
 
 (define (json-escape-string str)
-  "Escape string for JSON output"
+  "Escape string for JSON output - escape non-ASCII as \\uXXXX"
   (let loop ((chars (string->list str)) (result '()))
     (if (null? chars)
         (list->string (reverse result))
-        (let ((c (car chars))
-              (rest (cdr chars)))
+        (let* ((c (car chars))
+               (code (char->integer c))
+               (rest (cdr chars)))
           (cond
             ((char=? c #\") (loop rest (append '(#\" #\\) result)))
             ((char=? c #\\) (loop rest (append '(#\\ #\\) result)))
             ((char=? c #\newline) (loop rest (append '(#\n #\\) result)))
             ((char=? c #\return) (loop rest (append '(#\r #\\) result)))
             ((char=? c #\tab) (loop rest (append '(#\t #\\) result)))
-            ((< (char->integer c) 32)
+            ((< code 32)
              ;; Control character - use \u00XX format
-             (let* ((code (char->integer c))
-                    (hex (sprintf "~4,'0x" code)))
-               (loop rest (append (reverse (string->list hex))
-                                  '(#\u #\\)
+             (let ((hex (number->string code 16)))
+               (loop rest (append (reverse (string->list (string-append "\\u" (make-string (- 4 (string-length hex)) #\0) hex)))
                                   result))))
+            ((> code 127)
+             ;; Non-ASCII byte - pass through as-is (UTF-8 is valid in JSON)
+             (loop rest (cons c result)))
             (else (loop rest (cons c result))))))))
 
 (define (send-to-repl data)
@@ -376,7 +400,7 @@
 
 (define (ws-handle-message msg in out)
   "Handle incoming WebSocket message (JSON with type field)"
-  (printf "[ws] Received: ~a~n" msg)
+  (printf "[~a][ws] Received: ~a~n" (timestamp) msg)
 
   ;; Parse JSON message
   (let* ((type (extract-json-field "type" msg))
@@ -562,7 +586,7 @@
         #f
         (let-values (((method path) (parse-request-line request-line)))
           (let ((headers (parse-headers in)))
-            (printf "[http] ~a ~a~n" method path)
+            (printf "[~a][http] ~a ~a~n" (timestamp) method path)
 
             (cond
               ;; WebSocket upgrade - returns 'websocket to keep connection open
@@ -784,6 +808,12 @@
     let term = null;
     let fitAddon = null;
 
+    // Reconnect state with exponential backoff
+    let reconnectAttempts = 0;
+    let reconnectDelay = 1000;
+    const maxReconnectAttempts = 5;
+    const maxReconnectDelay = 16000;
+
     // Terminal themes
     const terminalThemes = {
       phosphor: {
@@ -796,7 +826,7 @@
       },
       amber: {
         background: '#0a0a08', foreground: '#ffb000', cursor: '#ffc000', cursorAccent: '#0a0a08',
-        selection: 'rgba(255, 176, 0, 0.2)',
+        selection: 'rgba(51, 34, 0, 0.85)', selectionForeground: '#ffb000',
         black: '#0a0a08', red: '#ff6600', green: '#ffb000', yellow: '#ffc000',
         blue: '#cc8800', magenta: '#ff8844', cyan: '#ffcc00', white: '#ffb000',
         brightBlack: '#8a6000', brightRed: '#ff8833', brightGreen: '#ffcc33', brightYellow: '#ffdd33',
@@ -865,6 +895,9 @@
     function connect() {
       ws = new WebSocket('ws://' + location.host + '/ws');
       ws.onopen = () => {
+        // Reset reconnect state on successful connection
+        reconnectAttempts = 0;
+        reconnectDelay = 1000;
         status.textContent = 'Connected';
         status.className = 'status connected';
         term.writeln('\x1b[32mConnected.\x1b[0m');
@@ -880,8 +913,16 @@
       ws.onclose = () => {
         status.textContent = 'Disconnected';
         status.className = 'status disconnected';
-        term.writeln('\x1b[31mDisconnected. Reconnecting...\x1b[0m');
-        setTimeout(connect, 2000);
+        if (reconnectAttempts < maxReconnectAttempts) {
+          term.writeln(`\x1b[31mDisconnected. Reconnecting in ${reconnectDelay/1000}s... (${reconnectAttempts + 1}/${maxReconnectAttempts})\x1b[0m`);
+          setTimeout(() => {
+            reconnectAttempts++;
+            connect();
+            reconnectDelay = Math.min(reconnectDelay * 2, maxReconnectDelay);
+          }, reconnectDelay);
+        } else {
+          term.writeln('\x1b[31mConnection lost. Reload page to reconnect.\x1b[0m');
+        }
       };
       ws.onerror = (err) => {
         term.writeln('\x1b[31mConnection error\x1b[0m');
@@ -992,6 +1033,7 @@ EOF
 
   (let ((listener (tcp-listen port)))
     (printf "  Listening on http://~a:~a/~n~n" *server-host* port)
+    (flush-output)  ; Signal app that backend is ready
 
     (let loop ()
       (let-values (((in out) (tcp-accept listener)))
@@ -1001,8 +1043,9 @@ EOF
             (lambda ()
               (handle-exceptions exn
                 (begin
-                  (printf "[error] ~a~n"
+                  (printf "[~a][error] ~a~n" (timestamp)
                     ((condition-property-accessor 'exn 'message) exn))
+                  (flush-output)
                   (close-input-port in)
                   (close-output-port out))
                 (let ((keep-alive (handle-request in out)))
@@ -1017,8 +1060,8 @@ EOF
 ;; ============================================================
 
 (define (main args)
-  (let ((port (if (and (pair? args) (pair? (cdr args)))
-                  (string->number (cadr args))
+  (let ((port (if (and (pair? args) (string->number (car args)))
+                  (string->number (car args))
                   *server-port*)))
     (start-server port)))
 

@@ -5391,8 +5391,8 @@
   (let* ((trimmed (string-trim-both line))
          (port (open-input-string trimmed)))
     (if (or (string=? trimmed "")
-            (char=? (string-ref trimmed 0) #\())
-        ;; Empty or Scheme - read directly
+            (memv (string-ref trimmed 0) '(#\( #\' #\` #\#)))
+        ;; Empty or Scheme (including ', `, #) - read directly
         (if (string=? trimmed "")
             #f
             (read port))
@@ -8139,7 +8139,7 @@ The Ten Commandments of λ
          ;; History already added by repl-read-line
          (let* ((trimmed (string-trim-both line))
                 (is-scheme? (and (> (string-length trimmed) 0)
-                                 (char=? (string-ref trimmed 0) #\()))
+                                 (memv (string-ref trimmed 0) '(#\( #\' #\` #\#))))
                 (expr (parse-command-line line)))
            (when expr
              (handle-exceptions exn
