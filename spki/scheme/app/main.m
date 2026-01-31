@@ -506,11 +506,18 @@ didFinishNavigation:(WKNavigation *)navigation {
         [self.schemeBackend launch];
         NSLog(@"[Cyberspace] Backend started (PID %d)", self.schemeBackend.processIdentifier);
 
-        // Termination handler to detect backend death
+        // Termination handler to detect backend death and auto-restart
         self.schemeBackend.terminationHandler = ^(NSTask *task) {
             NSLog(@"[Cyberspace] Backend terminated with status %d", task.terminationStatus);
             dispatch_async(dispatch_get_main_queue(), ^{
                 [weakSelf.webView postMessage:@{@"type": @"backend.terminated"}];
+                // Auto-restart after brief delay
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
+                               dispatch_get_main_queue(), ^{
+                    NSLog(@"[Cyberspace] Auto-restarting backend...");
+                    weakSelf.uiLoaded = NO;
+                    [weakSelf startSchemeBackend];
+                });
             });
         };
 
@@ -930,6 +937,12 @@ didFinishNavigation:(WKNavigation *)navigation {
 
 - (void)windowDidMove:(NSNotification *)notification {
     [PreferencesManager saveWindowFrame:self.window.frame];
+}
+
+- (void)windowDidBecomeKey:(NSNotification *)notification {
+    // Restore keyboard focus to WebView and terminal when window becomes active
+    [[self.webView view].window makeFirstResponder:[self.webView view]];
+    [self.webView evaluateJavaScript:@"if(term) term.focus();" completionHandler:nil];
 }
 
 @end
