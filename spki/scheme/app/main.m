@@ -21,6 +21,7 @@
 
 @protocol CyberWebView <NSObject>
 - (void)loadURL:(NSURL *)url;
+- (void)loadHTMLString:(NSString *)html;
 - (void)evaluateJavaScript:(NSString *)js
          completionHandler:(void (^)(id result, NSError *error))handler;
 - (void)setMessageHandler:(void (^)(NSDictionary *message))handler;
@@ -65,6 +66,10 @@
 - (void)loadURL:(NSURL *)url {
     NSURLRequest *request = [NSURLRequest requestWithURL:url];
     [self.webView loadRequest:request];
+}
+
+- (void)loadHTMLString:(NSString *)html {
+    [self.webView loadHTMLString:html baseURL:nil];
 }
 
 - (void)evaluateJavaScript:(NSString *)js
@@ -425,6 +430,9 @@ didFinishNavigation:(WKNavigation *)navigation {
     webViewNS.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [self.window.contentView addSubview:webViewNS];
 
+    // Show loading page immediately
+    [self showLoadingPage];
+
     // Start Scheme backend (UI loading triggered by backend readiness signal)
     self.uiLoaded = NO;
     [self startSchemeBackend];
@@ -434,6 +442,24 @@ didFinishNavigation:(WKNavigation *)navigation {
 
     // Set up menu
     [self setupMenu];
+}
+
+- (void)showLoadingPage {
+    NSString *html = @"<!DOCTYPE html><html><head>"
+        @"<style>"
+        @"body { background: #000; color: #0f0; font-family: monospace; "
+        @"       display: flex; justify-content: center; align-items: center; "
+        @"       height: 100vh; margin: 0; }"
+        @".loader { text-align: center; }"
+        @".spinner { font-size: 24px; animation: spin 1s linear infinite; display: inline-block; }"
+        @"@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }"
+        @"p { margin-top: 20px; font-size: 14px; color: #090; }"
+        @"</style></head><body>"
+        @"<div class='loader'>"
+        @"<div class='spinner'>◐</div>"
+        @"<p>Starting Cyberspace...</p>"
+        @"</div></body></html>";
+    [self.webView loadHTMLString:html];
 }
 
 - (void)startSchemeBackend {
