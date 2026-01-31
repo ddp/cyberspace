@@ -179,20 +179,111 @@
     "Configuration"
     (code scheme "(federation-config\n  ;; Identity\n  (identity my-private-key)\n\n  ;; Peers\n  (peers\n    (peer \"alice\" uri: \"git@github.com:alice/vault.git\"\n                  key: alice-pubkey\n                  trust: verified)\n    (peer \"bob\"   uri: \"/shared/bob-vault\"\n                  key: bob-pubkey\n                  trust: known))\n\n  ;; Policies\n  (auto-sync #t)\n  (sync-interval 3600)  ; seconds\n  (verify-before-accept #t)\n\n  ;; Security\n  (require-signature #t)\n  (trust-on-first-use #f))"))
   (section
+    "Multi-Peer Management"
+    (subsection
+      "Peer Registry"
+      (p "Each vault maintains a local peer registry mapping identities to connection metadata:")
+      (code scheme "(define-record-type peer\n  (make-peer id pubkey uri trust-level last-seen sync-state)\n  peer?\n  (id peer-id)                    ; Human-readable name\n  (pubkey peer-pubkey)            ; SPKI principal (Ed25519 public key)\n  (uri peer-uri)                  ; Connection URI (git, http, file)\n  (trust-level peer-trust-level)  ; unknown|known|verified|trusted\n  (last-seen peer-last-seen)      ; Unix timestamp of last contact\n  (sync-state peer-sync-state))   ; idle|syncing|error")
+      (p "The registry persists in `.vault/peers.scm` as a simple alist."))
+    (subsection
+      "Peer Lifecycle"
+      (code "┌─────────┐   register   ┌─────────┐   verify   ┌──────────┐   trust   ┌─────────┐\n│ unknown │────────────►│  known  │──────────►│ verified │─────────►│ trusted │\n└─────────┘             └─────────┘           └──────────┘          └─────────┘\n     ▲                       │                      │                    │\n     │                       │ expire               │ revoke             │ revoke\n     │                       ▼                      ▼                    ▼\n     └───────────────────────┴──────────────────────┴────────────────────┘")
+      (code scheme ";; Add peer (starts as 'known')\n(peer-register! \"alice\"\n  uri: \"git@github.com:alice/vault.git\"\n  pubkey: alice-ed25519-pubkey)\n\n;; Verify via SPKI cert chain\n(peer-verify! \"alice\" cert-chain)\n\n;; Promote to trusted (enables auto-sync)\n(peer-trust! \"alice\")\n\n;; Revoke (demotes to unknown, blocks sync)\n(peer-revoke! \"alice\")\n\n;; Remove entirely\n(peer-remove! \"alice\")"))
+    (subsection
+      "Peer Groups"
+      (p "Peers can be organized into groups for bulk operations:")
+      (code scheme "(peer-group-create! 'family\n  '(\"alice\" \"bob\" \"carol\"))\n\n(peer-group-create! 'work\n  '(\"dave\" \"eve\"))\n\n;; Sync to entire group\n(federation-sync-group 'family)\n\n;; Announce to multiple groups\n(federation-announce \"v2.0.0\"\n  groups: '(family work))")
+      (p "Groups are purely local organizational constructs with no protocol-level significance.")))
+  (section
+    "Trust Levels and Policies"
+    (subsection
+      "Trust Hierarchy"
+      (code "Level      │ Signature │ Auto-Sync │ Announce │ Description\n───────────┼───────────┼───────────┼──────────┼─────────────────────────\nunknown    │ reject    │ no        │ ignore   │ Never seen, no key on file\nknown      │ verify    │ no        │ queue    │ Key registered, manual ops\nverified   │ verify    │ manual    │ notify   │ SPKI chain verified\ntrusted    │ verify    │ automatic │ accept   │ Full bidirectional sync")
+      (p "Trust is not transitive: Alice trusting Bob does not imply Alice trusts Bob's peers."))
+    (subsection
+      "Trust Policies"
+      (code scheme "(federation-policy\n  ;; How to handle first contact\n  (first-contact\n    (action prompt)           ; prompt|reject|tofu\n    (tofu-window 300))        ; TOFU valid for 5 minutes\n\n  ;; Signature requirements\n  (signatures\n    (require-on-announce #t)\n    (require-on-sync #t)\n    (require-on-request #t))\n\n  ;; Automatic trust promotion\n  (auto-promote\n    (known->verified #f)      ; Require explicit verification\n    (verified->trusted #f))   ; Require explicit trust grant\n\n  ;; Trust decay\n  (decay\n    (trusted-idle-days 90)    ; Demote trusted->verified after 90 days idle\n    (verified-idle-days 180)  ; Demote verified->known after 180 days idle\n    (known-idle-days 365)))   ; Remove known after 1 year idle"))
+    (subsection
+      "SPKI Certificate Verification"
+      (p "Trust verification uses SPKI certificate chains (Memo-003):")
+      (code scheme "(define (peer-verify! peer-id cert-chain)\n  \"Verify peer via SPKI certificate chain\"\n  (let* ((peer (peer-lookup peer-id))\n         (pubkey (peer-pubkey peer))\n         (valid? (spki-verify-chain cert-chain pubkey (current-seconds))))\n    (when valid?\n      (peer-set-trust-level! peer-id 'verified)\n      (audit-log! 'peer-verified peer-id cert-chain))\n    valid?))")))
+  (section
+    "Announcement Protocol"
+    (subsection
+      "Message Flow"
+      (code "Announcer                          Receiver\n    │                                  │\n    │  ┌─────────────────────────┐     │\n    ├──│ ANNOUNCE v2.0.0         │────►│\n    │  │ hash: sha512:abc...     │     │\n    │  │ size: 1048576           │     │\n    │  │ sig: ed25519:...        │     │\n    │  └─────────────────────────┘     │\n    │                                  │\n    │  ┌─────────────────────────┐     │\n    │◄─│ ACK                     │─────┤ (if trusted)\n    │  │ status: accepted        │     │\n    │  │ sig: ed25519:...        │     │\n    │  └─────────────────────────┘     │\n    │                                  │\n    │  ┌─────────────────────────┐     │\n    │◄─│ REQUEST v2.0.0          │─────┤ (pull follows)\n    │  └─────────────────────────┘     │")
+      (p "Receivers at different trust levels handle announcements differently:")
+      (list
+        (item "trusted: Auto-ACK, auto-request")
+        (item "verified: Notify user, queue for manual approval")
+        (item "known: Queue silently, require explicit sync")
+        (item "unknown: Ignore (log for audit)")))
+    (subsection
+      "Announcement Message"
+      (code scheme "(define-record-type announcement\n  (make-announcement version hash size notes timestamp signature)\n  announcement?\n  (version announcement-version)      ; Semantic version string\n  (hash announcement-hash)            ; Content hash (sha512)\n  (size announcement-size)            ; Archive size in bytes\n  (notes announcement-notes)          ; Release notes (optional)\n  (timestamp announcement-timestamp)  ; Unix timestamp\n  (signature announcement-signature)) ; Ed25519 signature over above")
+      (code scheme "(define (federation-announce version #!key peers groups notes)\n  \"Announce release to peers\"\n  (let* ((release (release-lookup version))\n         (msg (make-announcement\n                version\n                (release-hash release)\n                (release-size release)\n                (or notes \"\")\n                (current-seconds)\n                #f))  ; Signature added below\n         (signed (sign-announcement msg (vault-private-key))))\n    (for-each\n      (lambda (peer)\n        (send-announcement peer signed))\n      (resolve-recipients peers groups))))"))
+    (subsection
+      "Retries and Timeouts"
+      (code scheme "(federation-config\n  (announce\n    (timeout-seconds 30)       ; Per-peer timeout\n    (retry-count 3)            ; Retries on failure\n    (retry-backoff-base 5)     ; 5, 10, 20 seconds\n    (parallel-sends 5)))       ; Concurrent announcements")
+      (p "Failed announcements are logged and can be retried manually via `(federation-retry-failed)`.")))
+  (section
+    "Gossip Propagation"
+    (subsection
+      "Epidemic Broadcast"
+      (p "For networks larger than a handful of peers, direct announcement to all peers doesn't scale. Gossip provides O(log N) propagation:")
+      (code "Round 0: Alice announces to 3 random peers (fanout=3)\n         Alice ──► Bob, Carol, Dave\n\nRound 1: Bob, Carol, Dave each forward to 3 random peers\n         Bob ──► Eve, Frank, Grace\n         Carol ──► Henry, Eve, Ivan    (Eve receives duplicate)\n         Dave ──► Grace, Julia, Karl   (Grace receives duplicate)\n\nRound 2: Continue until TTL expires or all peers reached")
+      (code scheme "(federation-gossip-config\n  (fanout 3)              ; Forward to N random peers\n  (ttl 5)                 ; Maximum hops\n  (dedup-window 3600))    ; Ignore duplicates within 1 hour"))
+    (subsection
+      "Gossip Message"
+      (code scheme "(define-record-type gossip-envelope\n  (make-gossip-envelope origin hop-count ttl seen payload)\n  gossip-envelope?\n  (origin gossip-origin)        ; Original announcer pubkey\n  (hop-count gossip-hop-count)  ; Current hop count\n  (ttl gossip-ttl)              ; Time-to-live (max hops)\n  (seen gossip-seen)            ; Set of peer pubkeys who've seen this\n  (payload gossip-payload))     ; The announcement")
+      (code scheme "(define (gossip-forward! envelope)\n  \"Forward gossip to random subset of peers\"\n  (when (< (gossip-hop-count envelope) (gossip-ttl envelope))\n    (let* ((candidates (filter\n                         (lambda (p)\n                           (and (>= (peer-trust-level p) 'known)\n                                (not (member (peer-pubkey p) (gossip-seen envelope)))))\n                         (peer-list)))\n           (targets (take-random candidates (gossip-fanout))))\n      (for-each\n        (lambda (peer)\n          (send-gossip peer\n            (make-gossip-envelope\n              (gossip-origin envelope)\n              (+ 1 (gossip-hop-count envelope))\n              (gossip-ttl envelope)\n              (cons (my-pubkey) (gossip-seen envelope))\n              (gossip-payload envelope))))\n        targets))))"))
+    (subsection
+      "Protocol Properties"
+      (list
+        (item "Distributed: No coordinator, any peer can initiate")
+        (item "Resilient: Survives peer failures, duplicates handled")
+        (item "Scalable: O(log N) rounds to reach N peers")
+        (item "Tunable: Fanout and TTL control spread vs traffic")
+        (item "Eventually consistent: All connected peers converge"))))
+  (section
+    "Conflict Resolution UI"
+    (subsection
+      "Conflict Types"
+      (code "Type            │ Cause                           │ Default Resolution\n────────────────┼─────────────────────────────────┼───────────────────────\nversion-hash    │ Same version, different content │ Prompt user\nfork            │ Divergent version histories     │ Prompt user\nrollback        │ Remote has older than local     │ Reject\ntimestamp       │ Timestamps significantly skewed │ Warn, proceed")
+      (p "All conflicts are logged to the audit trail regardless of resolution."))
+    (subsection
+      "Interactive Resolution"
+      (code scheme ";; When conflict detected, present choices:\n(define (resolve-conflict! conflict)\n  (let* ((type (conflict-type conflict))\n         (local (conflict-local conflict))\n         (remote (conflict-remote conflict))\n         (choice (prompt-conflict type local remote)))\n    (case choice\n      ((keep-local)\n       (audit-log! 'conflict-resolved conflict 'keep-local))\n      ((take-remote)\n       (import-release! (conflict-remote-release conflict))\n       (audit-log! 'conflict-resolved conflict 'take-remote))\n      ((keep-both)\n       (rename-release! local (string-append (release-version local) \"-local\"))\n       (import-release! (conflict-remote-release conflict))\n       (audit-log! 'conflict-resolved conflict 'keep-both))\n      ((defer)\n       (queue-conflict! conflict)\n       (audit-log! 'conflict-deferred conflict)))))")
+      (code "┌──────────────────────────────────────────────────────────────┐\n│                    CONFLICT DETECTED                         │\n├──────────────────────────────────────────────────────────────┤\n│  Version: 2.0.0                                              │\n│                                                              │\n│  Local:   sha512:abc123... (2026-01-15 14:30)               │\n│  Remote:  sha512:def456... (2026-01-15 14:35) from alice    │\n│                                                              │\n│  [1] Keep local version                                      │\n│  [2] Take remote version                                     │\n│  [3] Keep both (rename local to 2.0.0-local)                │\n│  [4] Defer decision                                          │\n│  [5] Show diff                                               │\n│                                                              │\n│  Choice: _                                                   │\n└──────────────────────────────────────────────────────────────┘"))
+    (subsection
+      "Automatic Resolution Policies"
+      (code scheme "(federation-config\n  (conflict-resolution\n    ;; For trusted peers, can enable auto-resolution\n    (trusted-peer-wins #f)      ; Auto-accept from trusted\n    (newer-timestamp-wins #f)   ; Dangerous: clock skew\n    (larger-version-wins #f)    ; Only for semver conflicts\n\n    ;; Always prompt for these\n    (always-prompt-on\n      '(version-hash fork rollback))))")
+      (p "Automatic resolution is discouraged for hash conflicts; cryptographic seals exist precisely to detect tampering, and automatic resolution defeats this purpose.")))
+  (section
     "Implementation Status"
     (subsection
       "Implemented (Memo-007)"
       (list
-        (item "seal-publish: Push to single remote - seal-subscribe: Pull from single remote - seal-synchronize: Bidirectional with single peer")
+        (item "seal-publish: Push to single remote")
+        (item "seal-subscribe: Pull from single remote")
+        (item "seal-synchronize: Bidirectional with single peer")
         (item "Transport: git, HTTP, filesystem")))
     (subsection
-      "Proposed (This Memo)"
+      "Specified (This Memo)"
       (list
-        (item "Multi-peer management")
-        (item "Trust levels and policies")
-        (item "Announcement protocol")
-        (item "Gossip propagation")
-        (item "Conflict resolution UI"))))
+        (item "Multi-peer registry and lifecycle")
+        (item "Trust levels: unknown, known, verified, trusted")
+        (item "Trust policies and SPKI verification")
+        (item "Announcement protocol with ACK/retry")
+        (item "Gossip epidemic broadcast")
+        (item "Conflict detection and resolution UI")))
+    (subsection
+      "Future Work"
+      (list
+        (item "Peer reputation scoring")
+        (item "Bandwidth-aware sync scheduling")
+        (item "Partial sync (subset of releases)")
+        (item "Encrypted peer-to-peer channels"))))
   (section
     "References"
     (list
@@ -204,6 +295,6 @@
   (section
     "Changelog"
     (list
-      (item "2026-01-06")
-      (item "Initial specification"))))
+      (item "2026-01-31: Flesh out multi-peer management, trust policies, announcement protocol, gossip propagation, and conflict resolution UI")
+      (item "2026-01-06: Initial specification"))))
 
