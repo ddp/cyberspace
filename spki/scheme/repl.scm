@@ -8282,27 +8282,27 @@ The Ten Commandments of λ
 ;; Registers with Bonjour as _cyberspace._tcp and discovers peers
 (when (directory-exists? ".vault")
   (handle-exceptions exn
-    (when (>= *boot-verbosity* 2)
-      (print "[realm] Auto-enroll failed: "
-             ((condition-property-accessor 'exn 'message) exn)))
-    (ensure-auto-enroll)
-    ;; Start listener to register with Bonjour
-    (let ((name (string->symbol (hostname))))
-      (handle-exceptions exn
-        (when (>= *boot-verbosity* 1)
-          (print "[realm] Listener: " ((condition-property-accessor 'exn 'message) exn)))
-        ((eval 'start-join-listener) name)))
-    ;; Discover peers in background
-    (thread-start!
-     (make-thread
-      (lambda ()
-        (thread-sleep! 2)  ; Let listener settle
+    (print "[realm] Auto-enroll failed: "
+           ((condition-property-accessor 'exn 'message) exn))
+    (begin
+      (ensure-auto-enroll)
+      ;; Start listener to register with Bonjour
+      (let ((name (string->symbol (hostname))))
         (handle-exceptions exn
-          (when (>= *boot-verbosity* 1)
-            (print "[realm] Discovery: " ((condition-property-accessor 'exn 'message) exn)))
-          (let ((name (string->symbol (hostname))))
-            ((eval 'auto-enroll-realm) name))))
-      "realm-enroll"))))
+          (print "[realm] Listener failed: "
+                 ((condition-property-accessor 'exn 'message) exn))
+          ((eval 'start-join-listener) name)))
+      ;; Discover peers in background
+      (thread-start!
+       (make-thread
+        (lambda ()
+          (thread-sleep! 2)  ; Let listener settle
+          (handle-exceptions exn
+            (print "[realm] Discovery: "
+                   ((condition-property-accessor 'exn 'message) exn))
+            (let ((name (string->symbol (hostname))))
+              ((eval 'auto-enroll-realm) name))))
+        "realm-enroll")))))
 
 ;; Boot output based on verbosity level
 ;; 0 shadow    - just prompt
