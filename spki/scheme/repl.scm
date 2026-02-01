@@ -3425,11 +3425,19 @@
   (ensure-auto-enroll)
   ((eval 'start-join-listener) (if (string? name) (string->symbol name) name)))
 
-(define (join name master)
-  "Join a realm by connecting to master.
-   Usage: (join 'myname \"master.local\")"
+(define (join target)
+  "Join a realm by finding it via Bonjour.
+   Usage: (join 'fluffy)  - find fluffy via _cyberspace._tcp and join"
   (ensure-auto-enroll)
-  ((eval 'join-realm) (if (string? name) (string->symbol name) name) master))
+  (let* ((target-str (if (symbol? target) (symbol->string target) target))
+         (resolved ((eval 'bonjour-resolve) target-str)))
+    (if resolved
+        (let ((host (cadr resolved))
+              (port (caddr resolved))
+              (my-name (string->symbol (hostname))))
+          (print "[join] Found " target-str " at " host ":" port)
+          ((eval 'join-realm) my-name host port: port))
+        (print "[join] Could not find '" target-str "' via Bonjour"))))
 
 (define (stop-listen)
   "Stop the join listener"
