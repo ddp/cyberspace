@@ -8270,6 +8270,23 @@ The Ten Commandments of λ
 ;; Measure boot-time weave (must be after vault import)
 (hash-table-set! *session-stats* 'boot-weave (measure-weave))
 
+;; Auto-enroll in realm at startup (background, non-blocking)
+;; Only if vault exists (enrolled node) or discovery finds peers
+(when (directory-exists? ".vault")
+  (handle-exceptions exn
+    (when (>= *boot-verbosity* 2)
+      (print "[realm] Auto-enroll failed: "
+             ((condition-property-accessor 'exn 'message) exn)))
+    (ensure-auto-enroll)
+    (thread-start!
+     (make-thread
+      (lambda ()
+        (handle-exceptions exn
+          (when (>= *boot-verbosity* 1)
+            (print "[realm] " ((condition-property-accessor 'exn 'message) exn)))
+          ((eval 'auto-enroll-realm))))
+      "realm-enroll"))))
+
 ;; Boot output based on verbosity level
 ;; 0 shadow    - just prompt
 ;; 1 whisper   - version + Ready
