@@ -8271,20 +8271,29 @@ The Ten Commandments of λ
 (hash-table-set! *session-stats* 'boot-weave (measure-weave))
 
 ;; Auto-enroll in realm at startup (background, non-blocking)
-;; Only if vault exists (enrolled node) or discovery finds peers
+;; Registers with Bonjour as _cyberspace._tcp and discovers peers
 (when (directory-exists? ".vault")
   (handle-exceptions exn
     (when (>= *boot-verbosity* 2)
       (print "[realm] Auto-enroll failed: "
              ((condition-property-accessor 'exn 'message) exn)))
     (ensure-auto-enroll)
+    ;; Start listener to register with Bonjour
+    (let ((name (string->symbol (hostname))))
+      (handle-exceptions exn
+        (when (>= *boot-verbosity* 1)
+          (print "[realm] Listener: " ((condition-property-accessor 'exn 'message) exn)))
+        ((eval 'start-join-listener) name)))
+    ;; Discover peers in background
     (thread-start!
      (make-thread
       (lambda ()
+        (thread-sleep! 2)  ; Let listener settle
         (handle-exceptions exn
           (when (>= *boot-verbosity* 1)
-            (print "[realm] " ((condition-property-accessor 'exn 'message) exn)))
-          ((eval 'auto-enroll-realm))))
+            (print "[realm] Discovery: " ((condition-property-accessor 'exn 'message) exn)))
+          (let ((name (string->symbol (hostname))))
+            ((eval 'auto-enroll-realm) name))))
       "realm-enroll"))))
 
 ;; Boot output based on verbosity level
