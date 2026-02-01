@@ -20,13 +20,18 @@
   (;; Main entry points
    auto-enroll-realm
    join-realm
+   ;; Master-side join listener
+   start-join-listener
+   stop-join-listener
    ;; Election
    discover-and-elect
    ;; Configuration
    configure-gossip-from-scaling
    ;; Status
    realm-status
-   enrollment-status)
+   enrollment-status
+   ;; Testing support
+   reset-enrollment-state!)
 
   (import scheme
           (chicken base)
@@ -57,10 +62,194 @@
   ;; State
   ;; ============================================================
 
-  (define *realm-master* #f)          ; master node name (or #f)
+  (define *realm-master* #f)          ; master node name (or #f, legacy)
   (define *realm-members* '())        ; list of (name . hardware)
   (define *scaling-factors* #f)       ; computed scaling factors
-  (define *my-role* #f)               ; 'master or 'node
+  (define *my-role* #f)               ; 'master or 'member
+
+  ;; This node's identity
+  (define *my-name* #f)               ; this node's name
+  (define *my-pubkey* #f)             ; this node's public key
+  (define *my-privkey* #f)            ; this node's private key (for signing)
+
+  ;; Join listener state (any member can run this)
+  (define *join-listener* #f)         ; TCP listener socket
+  (define *join-listener-thread* #f)  ; listener thread
+  (define *join-running* #f)          ; listener running flag
+
+  ;; Pending membership proposals (for voting, future)
+  (define *pending-proposals* '())    ; list of (name timestamp proposer)
+
+  ;; ============================================================
+  ;; Master-Side Join Listener
+  ;; ============================================================
+
+  (define (start-join-listener name #!key (port *discovery-port*) (keypair #f))
+    "Start listening for join requests. Any realm member can do this.
+
+     name: this node's name
+     port: TCP port to listen on (default 7656)
+     keypair: optional (pubkey privkey) - generates one if not provided
+
+     Any member can accept new nodes. New membership gets gossiped.
+
+     Example (founding a new realm):
+       (start-join-listener 'fluffy)
+
+     Example (existing member, already has keys):
+       (start-join-listener 'starlight keypair: (list my-pub my-priv))"
+
+    (when *join-running*
+      (stop-join-listener))
+
+    ;; Set up identity
+    (set! *my-name* name)
+    (let ((kp (or keypair (ed25519-keypair))))
+      (set! *my-pubkey* (car kp))
+      (set! *my-privkey* (cadr kp)))
+
+    ;; Determine role based on realm state
+    (cond
+      ;; No realm exists yet - we're founding it
+      ((null? *realm-members*)
+       (set! *realm-master* name)
+       (set! *my-role* 'master)
+       (let ((my-hw (introspect-hardware)))
+         (set! *realm-members* `((,name . ,my-hw)))
+         (set! *scaling-factors* (compute-scaling-factor *realm-members*))))
+
+      ;; Already a member - just starting/restarting listener
+      ((assq name *realm-members*)
+       (unless *my-role*
+         (set! *my-role* 'member)))
+
+      ;; Not a member yet but realm exists (shouldn't happen via this path)
+      (else
+       (set! *my-role* 'member)))
+
+    ;; Start TCP listener
+    (set! *join-listener* (tcp-listen port))
+    (set! *join-running* #t)
+
+    ;; Register with Bonjour so others can discover us
+    (bonjour-register name port: port)
+
+    (printf "[join-listener] Listening for join requests on port ~a~n" port)
+
+    ;; Start listener thread
+    (set! *join-listener-thread*
+      (thread-start!
+        (make-thread
+          (lambda ()
+            (join-listener-loop)))))
+
+    `(join-listener-started
+      (name ,name)
+      (port ,port)
+      (members ,(length *realm-members*))))
+
+  (define (stop-join-listener)
+    "Stop listening for join requests."
+    (set! *join-running* #f)
+    ;; Unregister from Bonjour
+    (bonjour-unregister)
+    (when *join-listener*
+      (handle-exceptions exn #f
+        (tcp-close *join-listener*))
+      (set! *join-listener* #f))
+    (when *join-listener-thread*
+      (handle-exceptions exn #f
+        (thread-terminate! *join-listener-thread*))
+      (set! *join-listener-thread* #f))
+    (printf "[join-listener] Stopped~n")
+    'stopped)
+
+  (define (join-listener-loop)
+    "Accept and handle incoming join requests."
+    (let loop ()
+      (when (and *join-running* *join-listener*)
+        (handle-exceptions exn
+          (begin
+            ;; Log but continue on errors
+            (thread-sleep! 0.5)
+            (loop))
+
+          (let-values (((in out) (tcp-accept *join-listener*)))
+            (thread-start!
+              (make-thread
+                (lambda ()
+                  (handle-exceptions exn
+                    (printf "[join-listener] Error handling request: ~a~n"
+                            (get-condition-property exn 'exn 'message "unknown"))
+                    (handle-join-connection in out))
+                  (enrollment-close in out))))
+            (loop))))))
+
+  (define (handle-join-connection in out)
+    "Handle one incoming connection (join request or capability exchange)."
+    (let ((request (enrollment-receive in)))
+      (cond
+        ;; Capability exchange (for discovery phase)
+        ((and (pair? request) (eq? (car request) 'capability-exchange))
+         (let* ((fields (cdr request))
+                (peer-name (cadr (assq 'name fields)))
+                (peer-hw (cadr (assq 'hardware fields))))
+           (printf "[join-listener] Capability exchange with: ~a~n" peer-name)
+           ;; Respond with our capabilities
+           (let ((my-hw (introspect-hardware)))
+             (enrollment-send out
+               `(capability-response
+                  (name ,*my-name*)
+                  (hardware ,my-hw))))))
+
+        ;; Join request
+        ((and (pair? request) (eq? (car request) 'join-request))
+         (let* ((fields (cdr request))
+                (node-name (cadr (assq 'name fields)))
+                (node-hw (cadr (assq 'hardware fields))))
+
+           (printf "[join-listener] Join request from: ~a~n" node-name)
+           (printf "[join-listener]   Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
+                   (cadr (assq 'cores (cdr node-hw)))
+                   (cadr (assq 'memory-gb (cdr node-hw)))
+                   (cadr (assq 'mobile (cdr node-hw))))
+
+           ;; Add to realm members
+           (set! *realm-members*
+             (cons (cons node-name node-hw) *realm-members*))
+
+           ;; Recompute scaling factors
+           (set! *scaling-factors* (compute-scaling-factor *realm-members*))
+
+           ;; Create enrollment certificate (any member can sign)
+           (let* ((pubkey (or (and (assq 'pubkey fields)
+                                   (cadr (assq 'pubkey fields)))
+                              ;; Generate temporary pubkey if not provided
+                              (car (ed25519-keypair))))
+                  (cert (create-enrollment-cert
+                          node-name pubkey *my-privkey*
+                          role: 'full)))
+
+             (printf "[join-listener] Approved ~a, issuing certificate~n" node-name)
+             (printf "[join-listener] Membership will be gossiped to realm~n")
+
+             ;; Send acceptance with sponsoring member info
+             (enrollment-send out
+               `(join-accepted
+                 (certificate ,cert)
+                 (scaling ,*scaling-factors*)
+                 (master ,*realm-master*)
+                 (sponsor ,*my-name*)
+                 (sponsor-pubkey ,*my-pubkey*)
+                 (members ,(length *realm-members*))
+                 (member-list ,(map car *realm-members*)))))))
+
+        ;; Invalid request
+        (else
+         (printf "[join-listener] Invalid request: ~a~n" request)
+         (enrollment-send out
+           `(join-rejected
+             (reason "Invalid request format")))))))
 
   ;; ============================================================
   ;; Main Entry: Auto-Enroll a Realm
@@ -159,11 +348,26 @@
      name: this node's name
      master-host: hostname/IP of realm master
 
-     Returns: enrollment result"
+     Returns: enrollment result with certificate and keypair
 
-    (printf "[join-realm] Connecting to master at ~a...~n" master-host)
+     Example (on Starlight):
+       (join-realm 'starlight \"fluffy.local\")
+       ; Fluffy must be running: (start-join-listener 'fluffy master-key)"
 
-    (let ((my-hw (introspect-hardware)))
+    (printf "[join-realm] Connecting to master at ~a:~a...~n" master-host port)
+
+    (let* ((my-hw (introspect-hardware))
+           ;; Generate keypair for this node
+           (keypair (ed25519-keypair))
+           (pubkey (car keypair))
+           (privkey (cadr keypair)))
+
+      (printf "[join-realm] Generated keypair for ~a~n" name)
+      (printf "[join-realm] Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
+              (cadr (assq 'cores (cdr my-hw)))
+              (cadr (assq 'memory-gb (cdr my-hw)))
+              (cadr (assq 'mobile (cdr my-hw))))
+
       (handle-exceptions exn
         (begin
           (printf "[join-realm] Failed to connect: ~a~n"
@@ -175,11 +379,13 @@
           (dynamic-wind
             (lambda () #f)
             (lambda ()
-              ;; Send join request with hardware
+              ;; Send join request with hardware and pubkey
+              (printf "[join-realm] Sending join request...~n")
               (enrollment-send out
                 `(join-request
                   (name ,name)
                   (hardware ,my-hw)
+                  (pubkey ,pubkey)
                   (timestamp ,(current-seconds))))
 
               ;; Wait for response
@@ -188,13 +394,57 @@
                          (eq? (car response) 'join-accepted))
                     (let* ((fields (cdr response))
                            (cert (cadr (assq 'certificate fields)))
-                           (scaling (cadr (assq 'scaling fields))))
-                      (set! *my-role* 'node)
+                           (scaling (cadr (assq 'scaling fields)))
+                           (master (and (assq 'master fields)
+                                        (cadr (assq 'master fields))))
+                           (sponsor (and (assq 'sponsor fields)
+                                         (cadr (assq 'sponsor fields))))
+                           (member-count (and (assq 'members fields)
+                                              (cadr (assq 'members fields))))
+                           (member-list (and (assq 'member-list fields)
+                                             (cadr (assq 'member-list fields)))))
+
+                      ;; Update local state
+                      (set! *my-name* name)
+                      (set! *my-pubkey* pubkey)
+                      (set! *my-privkey* privkey)
+                      (set! *my-role* 'member)
+                      (set! *realm-master* master)
                       (set! *scaling-factors* scaling)
-                      (printf "[join-realm] Joined successfully.~n")
+
+                      ;; Initialize member list from response
+                      (when member-list
+                        (set! *realm-members*
+                          (map (lambda (n) (cons n #f)) member-list))
+                        ;; Add ourselves with hardware
+                        (set! *realm-members*
+                          (cons (cons name my-hw) *realm-members*)))
+
+                      ;; Configure gossip from scaling
+                      (let ((gossip-cfg (configure-gossip-from-scaling scaling)))
+                        (configure-from-scaling!
+                          (cdr (assq 'my-scale gossip-cfg))
+                          (cdr (assq 'effective-capacity scaling))
+                          (cdr (assq 'batch-size gossip-cfg))
+                          (cdr (assq 'gossip-interval gossip-cfg)))
+                        (printf "[join-realm] Gossip configured: interval=~as, batch=~a~n"
+                                (cdr (assq 'gossip-interval gossip-cfg))
+                                (cdr (assq 'batch-size gossip-cfg))))
+
+                      (printf "[join-realm] Joined realm! Sponsor: ~a, Members: ~a~n"
+                              sponsor member-count)
+
+                      ;; Auto-start our own join listener (any member can accept joins)
+                      (printf "[join-realm] Starting own listener (any member can sponsor joins)~n")
+                      (start-join-listener name keypair: (list pubkey privkey))
+
                       `((status . joined)
+                        (master . ,master)
+                        (sponsor . ,sponsor)
                         (certificate . ,cert)
-                        (scaling . ,scaling)))
+                        (scaling . ,scaling)
+                        (pubkey . ,pubkey)
+                        (privkey . ,privkey)))
 
                     (begin
                       (printf "[join-realm] Join rejected: ~a~n" response)
@@ -208,125 +458,52 @@
   ;; ============================================================
 
   (define (discover-and-elect my-name my-hw #!key (timeout *discovery-timeout*))
-    "Discover peers on local network and collect their capabilities.
+    "Discover peers on local network via Bonjour and collect their capabilities.
 
      Returns: list of (name . hardware) pairs including self"
 
-    (printf "[discover] Broadcasting capability announcement...~n")
+    (printf "[discover] Browsing Bonjour for _cyberspace._tcp services...~n")
 
-    ;; Start listening for peer announcements (bind immediately for strict-types)
-    (let ((discovered '())
-          (listener (tcp-listen *discovery-port*)))
+    ;; Use Bonjour to find peers
+    (let ((services (bonjour-browse timeout: timeout))
+          (discovered '()))
 
-      ;; Broadcast our capabilities
-      (thread-start!
-        (make-thread
-          (lambda ()
-            (broadcast-capability my-name my-hw timeout))))
-
-      ;; Listen for incoming capabilities
-      (let ((deadline (+ (current-seconds) timeout)))
-        (let loop ()
-          (when (< (current-seconds) deadline)
-            (handle-exceptions exn
-              (begin
-                (thread-sleep! 0.5)
-                (loop))
-
-              ;; Accept connection with timeout
-              (let-values (((in out) (tcp-accept listener)))
-                (handle-exceptions exn
-                  (begin
+      ;; For each discovered service, connect and exchange capabilities
+      (for-each
+        (lambda (svc)
+          (let ((svc-name (car svc))
+                (host (cadr svc))
+                (port (caddr svc)))
+            (when (and host port
+                       (not (equal? svc-name (symbol->string my-name))))
+              (printf "[discover] Found peer via Bonjour: ~a at ~a:~a~n" svc-name host port)
+              (handle-exceptions exn
+                (printf "[discover] Could not exchange capabilities with ~a: ~a~n"
+                        svc-name (get-condition-property exn 'exn 'message "?"))
+                ;; Connect and exchange hardware info
+                (let-values (((in out) (tcp-connect host port)))
+                  (enrollment-send out
+                    `(capability-exchange
+                       (name ,my-name)
+                       (hardware ,my-hw)))
+                  (let ((response (enrollment-receive in)))
                     (enrollment-close in out)
-                    (loop))
-
-                  (let ((data (enrollment-receive in)))
-                    (enrollment-close in out)
-
-                    (when (and (pair? data)
-                               (eq? (car data) 'capability-announce))
-                      (let* ((fields (cdr data))
+                    (when (and (pair? response)
+                               (eq? (car response) 'capability-response))
+                      (let* ((fields (cdr response))
                              (peer-name (cadr (assq 'name fields)))
                              (peer-hw (cadr (assq 'hardware fields))))
-                        (unless (eq? peer-name my-name)
-                          (printf "[discover] Found peer: ~a (mobile: ~a)~n"
-                                  peer-name
-                                  (cadr (assq 'mobile (cdr peer-hw))))
-                          (set! discovered
-                            (cons (cons peer-name peer-hw) discovered))))))
-                  (loop)))))))
-
-      ;; Clean up
-      (handle-exceptions exn #f
-        (tcp-close listener))
+                        (printf "[discover] Got capabilities from ~a (mobile: ~a)~n"
+                                peer-name
+                                (cadr (assq 'mobile (cdr peer-hw))))
+                        (set! discovered
+                          (cons (cons peer-name peer-hw) discovered))))))))))
+        services)
 
       ;; Return all members including self
       (cons (cons my-name my-hw) discovered)))
 
-  (define (broadcast-capability name hw timeout)
-    "Broadcast our capability to local network"
-    (let ((packet `(capability-announce
-                     (name ,name)
-                     (hardware ,hw)
-                     (timestamp ,(current-seconds))))
-          (targets (local-network-targets))
-          (deadline (+ (current-seconds) timeout)))
-
-      (let loop ()
-        (when (< (current-seconds) deadline)
-          (for-each
-            (lambda (host)
-              (handle-exceptions exn #f
-                (let-values (((in out) (tcp-connect host *discovery-port*)))
-                  (enrollment-send out packet)
-                  (enrollment-close in out))))
-            targets)
-          (thread-sleep! 2)
-          (loop)))))
-
-  (define (local-network-targets)
-    "Get local network addresses to broadcast to"
-    ;; Common local network patterns
-    ;; In production, would scan actual subnet
-    (let ((net (introspect-network)))
-      (let ((gateway (cadr (assq 'gateway (cdr net)))))
-        (if gateway
-            ;; Derive likely peers from gateway
-            (let ((prefix (gateway->prefix gateway)))
-              (map (lambda (i)
-                     (string-append prefix (number->string i)))
-                   '(1 2 10 11 20 100 101 200)))
-            ;; Fallback to common ranges
-            '("192.168.1.1" "192.168.1.2" "192.168.1.10"
-              "192.168.0.1" "192.168.0.2" "192.168.0.10"
-              "10.0.0.1" "10.0.0.2" "10.0.1.1")))))
-
-  (define (gateway->prefix gateway)
-    "Extract network prefix from gateway IP"
-    (let ((parts (string-split gateway ".")))
-      (if (>= (length parts) 3)
-          (string-append (car parts) "."
-                        (cadr parts) "."
-                        (caddr parts) ".")
-          "192.168.1.")))
-
-  (define (string-split str delim)
-    "Split string by character delimiter"
-    (let ((dchar (if (string? delim) (string-ref delim 0) delim)))
-      (let loop ((chars (string->list str))
-                 (current '())
-                 (result '()))
-        (cond
-          ((null? chars)
-           (reverse (cons (list->string (reverse current)) result)))
-          ((char=? (car chars) dchar)
-           (loop (cdr chars)
-                 '()
-                 (cons (list->string (reverse current)) result)))
-          (else
-           (loop (cdr chars)
-                 (cons (car chars) current)
-                 result))))))
+  ;; Legacy broadcast functions removed - now using Bonjour via dns-sd
 
   ;; ============================================================
   ;; Gossip Configuration from Scaling
@@ -389,6 +566,23 @@
           (role . ,*my-role*))
         '((enrolled . #f))))
 
+  ;; ============================================================
+  ;; Testing Support
+  ;; ============================================================
+
+  (define (reset-enrollment-state!)
+    "Reset all enrollment state. Used for testing in single-process scenarios."
+    (stop-join-listener)
+    (set! *realm-master* #f)
+    (set! *realm-members* '())
+    (set! *scaling-factors* #f)
+    (set! *my-role* #f)
+    (set! *my-name* #f)
+    (set! *my-pubkey* #f)
+    (set! *my-privkey* #f)
+    (set! *pending-proposals* '())
+    'reset)
+
 ) ;; end module
 
 ;;;
@@ -438,13 +632,63 @@
 ;;;   ;;     (replication-target . 2)
 ;;;   ;;     (my-scale . 0.032))
 ;;;
-;;; Example: Join existing realm
+;;; Example: Starlight joins Fluffy's realm (two-node scenario)
 ;;;
-;;;   (import auto-enroll)
+;;; === On Fluffy (the realm master) ===
 ;;;
-;;;   ;; On a new node wanting to join fluffy's realm:
-;;;   (join-realm 'newnode "192.168.1.100")
+;;;   (import auto-enroll crypto-ffi)
+;;;   (sodium-init)
+;;;
+;;;   ;; Generate master keypair
+;;;   (define master-keypair (ed25519-keypair))
+;;;   (define master-key (cadr master-keypair))  ; 64-byte signing key
+;;;
+;;;   ;; Start listening for join requests
+;;;   (start-join-listener 'fluffy master-key)
+;;;   ;; => [join-listener] Listening for join requests on port 7656
+;;;   ;;    (join-listener-started (name fluffy) (port 7656) (members 1))
+;;;
+;;; === On Starlight (wanting to join) ===
+;;;
+;;;   (import auto-enroll crypto-ffi)
+;;;   (sodium-init)
+;;;
+;;;   ;; Join fluffy's realm
+;;;   (join-realm 'starlight "fluffy.local")  ; or IP address
+;;;
+;;;   ;; Example output:
+;;;   ;; [join-realm] Connecting to master at fluffy.local:7656...
+;;;   ;; [join-realm] Generated keypair for starlight
+;;;   ;; [join-realm] Hardware: 8 cores, 16 GB RAM, mobile: #t
+;;;   ;; [join-realm] Sending join request...
+;;;   ;; [join-realm] Gossip configured: interval=300s, batch=10
+;;;   ;; [join-realm] Joined realm! Master: fluffy, Members: 2
+;;;   ;;
 ;;;   ;; => ((status . joined)
-;;;   ;;     (certificate . ...)
-;;;   ;;     (scaling . ...))
+;;;   ;;     (master . fluffy)
+;;;   ;;     (certificate . (signed-enrollment-cert ...))
+;;;   ;;     (scaling . ((reference . fluffy) ...))
+;;;   ;;     (pubkey . #<blob ...>)
+;;;   ;;     (privkey . #<blob ...>))
+;;;
+;;; === On Fluffy (sees the join) ===
+;;;
+;;;   ;; [join-listener] Join request from: starlight
+;;;   ;; [join-listener]   Hardware: 8 cores, 16 GB RAM, mobile: #t
+;;;   ;; [join-listener] Approved starlight, issuing certificate
+;;;
+;;;   (realm-status)
+;;;   ;; => ((master . fluffy)
+;;;   ;;     (role . master)
+;;;   ;;     (member-count . 2)
+;;;   ;;     (scaling . ((reference . fluffy)
+;;;   ;;                 (reference-score . 520.0)
+;;;   ;;                 (members . ((fluffy . 1.0) (starlight . 0.032)))
+;;;   ;;                 ...)))
+;;;
+;;; === Cleanup ===
+;;;
+;;;   ;; On Fluffy:
+;;;   (stop-join-listener)
+;;;   ;; => [join-listener] Stopped
 ;;;

@@ -1,24 +1,28 @@
-;;; SPKI Scheme - Local Network Discovery (mDNS-lite)
+;;; SPKI Scheme - Local Network Discovery via Bonjour/mDNS
 ;;;
 ;;; Provides local network discovery for node enrollment (Memo-044).
-;;; Uses UDP broadcast for announcements and TCP for enrollment protocol.
+;;; Uses macOS dns-sd for real Bonjour service registration and browsing.
 ;;;
-;;; This is a minimal mDNS-compatible implementation focused on
-;;; the enrollment use case. For full mDNS, use dns-sd/avahi.
+;;; Service type: _cyberspace._tcp
 ;;;
 ;;; Protocol:
-;;;   1. New node broadcasts enrollment request via UDP multicast
-;;;   2. Master sees broadcast, displays verification words
-;;;   3. Human verifies words match on both screens
-;;;   4. Master approves, sends SPKI certificate via TCP
-;;;   5. Node stores certificate, enrollment complete
+;;;   1. Listener registers _cyberspace._tcp service via dns-sd
+;;;   2. Joining nodes browse for _cyberspace._tcp services
+;;;   3. Connect to discovered hosts for enrollment
+;;;   4. Certificate exchange via TCP
 
 (module mdns
   (;; Constants
    mdns-port
    enrollment-port
    cyberspace-service
-   ;; Announcement (node side)
+   ;; Bonjour registration (listener side)
+   bonjour-register
+   bonjour-unregister
+   ;; Bonjour discovery (joiner side)
+   bonjour-browse
+   bonjour-resolve
+   ;; Legacy announcement (node side)
    announce-enrollment
    stop-announcement
    ;; Discovery (master side)
@@ -39,8 +43,10 @@
           (chicken tcp)
           (chicken blob)
           (chicken time)
+          (chicken process)           ; process, process-wait
           (chicken process-context)
           (chicken condition)
+          (chicken string)            ; string-split
           srfi-1      ; list utilities
           srfi-18     ; threads
           srfi-4      ; u8vectors
@@ -57,8 +63,8 @@
   ;; Our enrollment service port
   (define enrollment-port 7654)
 
-  ;; Service type for cyberspace enrollment
-  (define cyberspace-service "_cyberspace-enroll._tcp")
+  ;; Service type for cyberspace realm discovery
+  (define cyberspace-service "_cyberspace._tcp")
 
   ;; Announcement interval (seconds)
   (define announce-interval 2)
@@ -74,6 +80,137 @@
   ;; Active listener
   (define *listener* #f)
   (define *listener-running* #f)
+
+  ;; Bonjour registration process
+  (define *bonjour-pid* #f)
+
+  ;; ============================================================
+  ;; Bonjour Registration (via dns-sd)
+  ;; ============================================================
+
+  (define (bonjour-register name #!key (port 7656))
+    "Register a _cyberspace._tcp service via Bonjour.
+     name: service instance name (e.g., 'fluffy')
+     port: TCP port the service listens on
+
+     Returns: pid of dns-sd process (or #f on failure)"
+    (bonjour-unregister)  ; Clean up any existing registration
+    (let ((name-str (if (symbol? name) (symbol->string name) name)))
+      (handle-exceptions exn
+        (begin
+          (printf "[bonjour] Registration failed: ~a~n"
+                  (get-condition-property exn 'exn 'message "unknown"))
+          #f)
+        ;; dns-sd -R <name> <type> <domain> <port>
+        (let-values (((stdout stdin pid stderr)
+                      (process* "/usr/bin/dns-sd"
+                                (list "-R" name-str cyberspace-service "local" (number->string port)))))
+          (close-output-port stdin)
+          (set! *bonjour-pid* pid)
+          (printf "[bonjour] Registered '~a' on ~a port ~a~n" name-str cyberspace-service port)
+          pid))))
+
+  (define (bonjour-unregister)
+    "Stop Bonjour service registration"
+    (when *bonjour-pid*
+      (handle-exceptions exn #f
+        (process-signal *bonjour-pid*))
+      (set! *bonjour-pid* #f)))
+
+  ;; ============================================================
+  ;; Bonjour Discovery (via dns-sd)
+  ;; ============================================================
+
+  (define (bonjour-browse #!key (timeout 5))
+    "Browse for _cyberspace._tcp services on local network.
+     timeout: seconds to wait for responses
+
+     Returns: list of (name host port) for discovered services"
+    (let ((results '())
+          (deadline (+ (current-seconds) timeout)))
+      (handle-exceptions exn
+        (begin
+          (printf "[bonjour] Browse failed: ~a~n"
+                  (get-condition-property exn 'exn 'message "unknown"))
+          '())
+        ;; dns-sd -B <type> <domain> - browse for services
+        (let-values (((stdout stdin pid stderr)
+                      (process* "/usr/bin/dns-sd"
+                                (list "-B" cyberspace-service "local"))))
+          (close-output-port stdin)
+          ;; Read output for timeout seconds
+          (let loop ()
+            (when (and (< (current-seconds) deadline)
+                       (char-ready? stdout))
+              (let ((line (read-line stdout)))
+                (when (and (string? line) (not (eof-object? line)))
+                  ;; Parse: "Timestamp  A/R  Flags  IF  Domain  Type  Name"
+                  ;; We want lines with "Add" that have our service type
+                  (when (and (string-contains line "Add")
+                             (string-contains line "_cyberspace"))
+                    (let ((parts (string-split line)))
+                      (when (>= (length parts) 7)
+                        (let ((name (list-ref parts 6)))
+                          (unless (assoc name results)
+                            (printf "[bonjour] Found: ~a~n" name)
+                            (set! results (cons (list name #f #f) results)))))))
+                  (loop))))
+            (when (< (current-seconds) deadline)
+              (thread-sleep! 0.1)
+              (loop)))
+          ;; Clean up
+          (handle-exceptions exn #f
+            (process-signal pid))
+          (close-input-port stdout)
+          (close-input-port stderr)))
+      ;; Resolve each discovered service
+      (map (lambda (entry)
+             (let ((resolved (bonjour-resolve (car entry))))
+               (if resolved resolved entry)))
+           results)))
+
+  (define (bonjour-resolve name #!key (timeout 3))
+    "Resolve a Bonjour service name to host and port.
+     Returns: (name host port) or #f"
+    (handle-exceptions exn
+      (begin
+        (printf "[bonjour] Resolve failed for ~a: ~a~n"
+                name (get-condition-property exn 'exn 'message "unknown"))
+        #f)
+      ;; dns-sd -L <name> <type> <domain>
+      (let-values (((stdout stdin pid stderr)
+                    (process* "/usr/bin/dns-sd"
+                              (list "-L" name cyberspace-service "local"))))
+        (close-output-port stdin)
+        (let ((deadline (+ (current-seconds) timeout))
+              (host #f)
+              (port #f))
+          (let loop ()
+            (when (and (< (current-seconds) deadline)
+                       (not (and host port)))
+              (when (char-ready? stdout)
+                (let ((line (read-line stdout)))
+                  (when (and (string? line) (not (eof-object? line)))
+                    ;; Look for "can be reached at <host>:<port>"
+                    (let ((reach-pos (string-contains line "can be reached at")))
+                      (when reach-pos
+                        (let* ((after (substring line (+ reach-pos 18)))
+                               (parts (string-split after ":")))
+                          (when (>= (length parts) 2)
+                            (set! host (string-trim-both (car parts)))
+                            (set! port (string->number
+                                        (car (string-split (cadr parts)))))))))
+                    (loop))))
+              (thread-sleep! 0.1)
+              (loop)))
+          ;; Clean up
+          (handle-exceptions exn #f
+            (process-signal pid))
+          (close-input-port stdout)
+          (close-input-port stderr)
+          (if (and host port)
+              (list name host port)
+              #f)))))
 
   ;; ============================================================
   ;; UDP Announcement (Node Side)
