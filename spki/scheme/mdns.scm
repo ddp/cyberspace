@@ -48,6 +48,7 @@
           (chicken condition)
           (chicken string)            ; string-split
           srfi-1      ; list utilities
+          srfi-13     ; string-contains, string-trim-both
           srfi-18     ; threads
           srfi-4      ; u8vectors
           os)         ; for session-stat!
