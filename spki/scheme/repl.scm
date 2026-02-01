@@ -3405,6 +3405,37 @@
         (print "Replication: " *replication-state*)
         *replication-state*)))
 
+;;; ============================================================
+;;; Realm Enrollment Convenience Wrappers
+;;; ============================================================
+;;; Auto-import auto-enroll on first use.
+
+(define *auto-enroll-loaded* #f)
+
+(define (ensure-auto-enroll)
+  "Lazy-load auto-enroll module"
+  (unless *auto-enroll-loaded*
+    (eval '(import auto-enroll))
+    (set! *auto-enroll-loaded* #t)))
+
+(define (listen #!optional (name (hostname)))
+  "Start listening for realm join requests.
+   Usage: (listen)        - use hostname
+          (listen 'name)  - use custom name"
+  (ensure-auto-enroll)
+  ((eval 'start-join-listener) (if (string? name) (string->symbol name) name)))
+
+(define (join name master)
+  "Join a realm by connecting to master.
+   Usage: (join 'myname \"master.local\")"
+  (ensure-auto-enroll)
+  ((eval 'join-realm) (if (string? name) (string->symbol name) name) master))
+
+(define (stop-listen)
+  "Stop the join listener"
+  (ensure-auto-enroll)
+  ((eval 'stop-join-listener)))
+
 (define (format-nodes nodes max-width)
   "Format node list to fit within max-width"
   (cond
