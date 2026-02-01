@@ -280,6 +280,15 @@
     (if (number? level) level
         (cdr (assq level *boot-levels*)))))
 
+;; Cyberspace home directory - where .vault lives
+(define *cyberspace-home*
+  (or (get-environment-variable "CYBERSPACE_HOME")
+      "/Users/ddp/cyberspace/spki/scheme"))
+
+(define (cyberspace-vault-path)
+  "Get absolute path to .vault directory"
+  (make-pathname *cyberspace-home* ".vault"))
+
 ;; Verbose loading - shows resident editor messages at oracle level
 ;; Must be defined before loading teco.scm, pencil.scm, schemacs.scm
 (define *verbose-load* (>= *boot-verbosity* 3))
@@ -8280,7 +8289,7 @@ The Ten Commandments of λ
 
 ;; Auto-enroll in realm at startup (background, non-blocking)
 ;; Registers with Bonjour as _cyberspace._tcp and discovers peers
-(when (directory-exists? ".vault")
+(when (directory-exists? (cyberspace-vault-path))
   (handle-exceptions exn
     (print "[realm] Auto-enroll failed: "
            ((condition-property-accessor 'exn 'message) exn))
