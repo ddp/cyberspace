@@ -51,6 +51,11 @@
    soup-query
    soup-inspect
    soup-collect-objects
+   soup-create
+   soup-get
+   soup-delete
+   soup-gc
+   *default-realm-period*
    hex-abbrev
    complete
    ask
@@ -98,6 +103,7 @@
    ;; Realm membership (Memo-050) - cert-based
    realm-affiliated?
    realm-membership-cert
+   cert-valid?
    store-membership-cert!
    revoke-membership!
 
@@ -519,6 +525,160 @@
       (when (file-exists? path)
         (delete-file path)
         (print "Membership revoked. You are now in the Wilderness."))))
+
+  ;;; ============================================================================
+  ;;; Soup Object Store (Memo-002 Section 2.3)
+  ;;; ============================================================================
+  ;;;
+  ;;; Objects are born with their destiny. Lifetime is intrinsic:
+  ;;;   temporary  - explicit duration, garbage collected when expired
+  ;;;   default    - realm's standard period, garbage collected when expired
+  ;;;   archivable - active period, then migrates to vault with transition record
+
+  ;; Default realm period: 1 year (365 days in seconds)
+  (define *default-realm-period* 31536000)
+
+  (define (soup-path)
+    ".vault/soup")
+
+  (define (ensure-soup-dir!)
+    "Create .vault/soup directory if needed"
+    (unless (directory-exists? ".vault")
+      (error "No vault found. Create one first."))
+    (unless (directory-exists? (soup-path))
+      (create-directory (soup-path))))
+
+  (define (soup-object-path id)
+    "Get path to a soup object by ID"
+    (sprintf "~a/~a.sexp" (soup-path) id))
+
+  (define (generate-soup-id content)
+    "Generate a unique ID for a soup object based on content hash + timestamp"
+    (let* ((data (sprintf "~a~a" content (current-seconds)))
+           (hash (blob->hex (blake2b-hash data)))
+           (short-hash (substring hash 0 12)))
+      short-hash))
+
+  (define (soup-create content #!key
+                       (lifetime 'default)
+                       (expires #f)
+                       (tags '())
+                       (name #f))
+    "Create a new object in the soup with specified lifetime.
+
+     content: any s-expression to store
+     lifetime: 'temporary, 'default, or 'archivable
+     expires: explicit expiration time (seconds since epoch) for 'temporary
+     tags: list of symbols for categorization
+     name: optional human-readable name
+
+     Returns: object ID
+
+     Examples:
+       (soup-create '(note \"hello\") lifetime: 'temporary expires: (+ (current-seconds) 3600))
+       (soup-create '(draft \"work in progress\") lifetime: 'default)
+       (soup-create '(document \"important\") lifetime: 'archivable)"
+    (ensure-soup-dir!)
+    (let* ((now (current-seconds))
+           (id (or name (generate-soup-id content)))
+           (expiration (case lifetime
+                         ((temporary)
+                          (or expires
+                              (error "soup-create: 'temporary requires expires: parameter")))
+                         ((default)
+                          (+ now *default-realm-period*))
+                         ((archivable)
+                          (+ now *default-realm-period*))  ; active period
+                         (else
+                          (error "soup-create: lifetime must be 'temporary, 'default, or 'archivable"))))
+           (obj `(soup-object
+                   (id ,id)
+                   (created ,now)
+                   (expires ,expiration)
+                   (lifetime ,lifetime)
+                   (tags ,tags)
+                   (content ,content))))
+      (with-output-to-file (soup-object-path id)
+        (lambda () (write obj) (newline)))
+      id))
+
+  (define (soup-get id)
+    "Retrieve a soup object by ID. Returns #f if not found or expired."
+    (let ((path (soup-object-path id)))
+      (if (file-exists? path)
+          (let ((obj (with-input-from-file path read)))
+            (if (and (pair? obj) (eq? 'soup-object (car obj)))
+                (let* ((fields (cdr obj))
+                       (expires (cadr (assq 'expires fields)))
+                       (now (current-seconds)))
+                  (if (< now expires)
+                      obj
+                      #f))  ; expired
+                #f))
+          #f)))
+
+  (define (soup-delete id)
+    "Delete a soup object by ID."
+    (let ((path (soup-object-path id)))
+      (when (file-exists? path)
+        (delete-file path)
+        #t)))
+
+  (define (soup-gc)
+    "Garbage collect expired soup objects.
+     Archivable objects are migrated to vault instead of deleted.
+     Returns: (deleted migrated) counts"
+    (let ((deleted 0)
+          (migrated 0)
+          (now (current-seconds)))
+      (when (directory-exists? (soup-path))
+        (for-each
+          (lambda (f)
+            (when (string-suffix? ".sexp" f)
+              (let* ((path (sprintf "~a/~a" (soup-path) f))
+                     (obj (handle-exceptions exn #f
+                            (with-input-from-file path read))))
+                (when (and obj (pair? obj) (eq? 'soup-object (car obj)))
+                  (let* ((fields (cdr obj))
+                         (expires (cadr (assq 'expires fields)))
+                         (lifetime (cadr (assq 'lifetime fields))))
+                    (when (>= now expires)
+                      (if (eq? lifetime 'archivable)
+                          ;; Migrate to vault with transition record
+                          (begin
+                            (soup-migrate-to-vault! obj path)
+                            (set! migrated (+ migrated 1)))
+                          ;; Delete expired temporary/default objects
+                          (begin
+                            (delete-file path)
+                            (set! deleted (+ deleted 1))))))))))
+          (directory (soup-path))))
+      (list deleted migrated)))
+
+  (define (soup-migrate-to-vault! obj source-path)
+    "Migrate an archivable object to the vault with transition record."
+    (let* ((fields (cdr obj))
+           (id (cadr (assq 'id fields)))
+           (created (cadr (assq 'created fields)))
+           (expires (cadr (assq 'expires fields)))
+           (content (cadr (assq 'content fields)))
+           (now (current-seconds))
+           (vault-obj `(vault-object
+                         (content ,content)
+                         (transition
+                           (active-from ,created)
+                           (active-until ,expires)
+                           (preserved ,now)
+                           (realm ,(realm-name))
+                           (origin ,(hostname))
+                           (source-id ,id)))))
+      ;; Store in .vault/archive/
+      (unless (directory-exists? ".vault/archive")
+        (create-directory ".vault/archive"))
+      (with-output-to-file (sprintf ".vault/archive/~a.sexp" id)
+        (lambda () (write vault-obj) (newline)))
+      ;; Remove from soup
+      (delete-file source-path)))
 
   ;;; ============================================================================
   ;;; Lamport Clock (Memo-012)
@@ -1403,7 +1563,8 @@
       (audit     . "Audit trail entries")
       (keys      . "Cryptographic keys")
       (metadata  . "Commit metadata")
-      (forge     . "Compiled module metadata")))
+      (forge     . "Compiled module metadata")
+      (objects   . "User-created soup objects")))
 
   (define (soup? . args)
     "Show soup help and available object types (JSYS ? command)"
@@ -1550,6 +1711,17 @@ Object Types:
                (set! objects (cons (list 'forge module (vector-ref stat 5) (get-forge-info path)) objects)))))
          (directory ".forge")))
 
+      ;; Soup objects (.vault/soup/*.sexp) - user-created objects with lifetimes
+      (when (directory-exists? ".vault/soup")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sexp" f)
+             (let* ((path (sprintf ".vault/soup/~a" f))
+                    (stat (file-stat path))
+                    (id (pathname-strip-extension f)))
+               (set! objects (cons (list 'objects id (vector-ref stat 5) (get-soup-object-info path)) objects)))))
+         (directory ".vault/soup")))
+
       (reverse objects)))
 
   (define (get-node-info)
@@ -1573,6 +1745,28 @@ Object Types:
         (if (and (pair? data) (eq? 'node-identity (car data)))
             (cdr data)
             #f))))
+
+  (define (get-soup-object-info path)
+    "Extract soup object attributes for listing"
+    (handle-exceptions exn
+      '("unknown")
+      (let ((data (with-input-from-file path read)))
+        (if (and (pair? data) (eq? 'soup-object (car data)))
+            (let* ((fields (cdr data))
+                   (lifetime (assq 'lifetime fields))
+                   (expires (assq 'expires fields))
+                   (tags (assq 'tags fields))
+                   (now (current-seconds))
+                   (remaining (if expires
+                                  (max 0 (- (cadr expires) now))
+                                  0))
+                   (days (quotient remaining 86400)))
+              (list (if lifetime (symbol->string (cadr lifetime)) "?")
+                    (sprintf "~ad" days)
+                    (if (and tags (pair? (cadr tags)))
+                        (string-intersperse (map symbol->string (cadr tags)) ",")
+                        "")))
+            '("invalid")))))
 
   (define (get-cert-info path)
     "Extract certificate attributes for soup listing"
