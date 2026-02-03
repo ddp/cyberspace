@@ -893,7 +893,10 @@
 (define (bootstrap-modules!)
   "Ensure all required modules are built for current platform.
    Sequential builds to avoid Chicken import library race conditions.
-   Pristine builds: -w enables all warnings, expect zero output."
+   Pristine builds: -w enables all warnings, expect zero output.
+
+   Dirty module detection: Always shows summary at all verbosity levels
+   when modules need rebuilding, so users know changes are being picked up."
   ;; Clear warnings from previous forge run
   (set! *forge-warnings* '())
   (let ((stamp (platform-stamp))
@@ -916,6 +919,16 @@
                   ("auto-enroll")
                   ;; Level 7 (ui needs enroll)
                   ("ui"))))
+
+    ;; Pre-scan to detect dirty modules (shown at all verbosity levels)
+    (let ((all-modules (apply append levels)))
+      (let ((dirty (filter (lambda (m) (needs-rebuild? m stamp)) all-modules)))
+        (when (and (pair? dirty) (= *boot-verbosity* 0))
+          ;; At shadow mode, show one-line summary of what will be rebuilt
+          (printf "Forging ~a stale module~a: ~a~%"
+                  (length dirty)
+                  (if (= (length dirty) 1) "" "s")
+                  (string-intersperse dirty ", ")))))
 
     (define (rebuild-level! modules-in-level)
       "Rebuild modules in level sequentially, return count rebuilt.

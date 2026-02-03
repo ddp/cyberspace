@@ -14,6 +14,7 @@
 #import <WebKit/WebKit.h>
 #import <Security/Security.h>
 #import <GSS/GSS.h>
+#include <signal.h>
 
 // ============================================================================
 // CyberWebView Protocol - Abstraction for swappable WebView implementations
@@ -21,12 +22,38 @@
 
 @protocol CyberWebView <NSObject>
 - (void)loadURL:(NSURL *)url;
-- (void)loadHTMLString:(NSString *)html;
 - (void)evaluateJavaScript:(NSString *)js
          completionHandler:(void (^)(id result, NSError *error))handler;
 - (void)setMessageHandler:(void (^)(NSDictionary *message))handler;
 - (void)postMessage:(NSDictionary *)message;
 - (NSView *)view;
+@end
+
+// ============================================================================
+// WeakScriptMessageHandler - Breaks WKScriptMessageHandler retain cycle
+// ============================================================================
+
+@interface WeakScriptMessageHandler : NSObject <WKScriptMessageHandler>
+@property (nonatomic, assign) id<WKScriptMessageHandler> delegate;  // assign for MRC (non-ARC)
+- (instancetype)initWithDelegate:(id<WKScriptMessageHandler>)delegate;
+@end
+
+@implementation WeakScriptMessageHandler
+
+- (instancetype)initWithDelegate:(id<WKScriptMessageHandler>)delegate {
+    self = [super init];
+    if (self) {
+        _delegate = delegate;
+    }
+    return self;
+}
+
+- (void)userContentController:(WKUserContentController *)userContentController
+      didReceiveScriptMessage:(WKScriptMessage *)message {
+    [self.delegate userContentController:userContentController
+                 didReceiveScriptMessage:message];
+}
+
 @end
 
 // ============================================================================
@@ -36,6 +63,7 @@
 @interface WKWebViewAdapter : NSObject <CyberWebView, WKScriptMessageHandler, WKNavigationDelegate>
 @property (nonatomic, strong) WKWebView *webView;
 @property (nonatomic, copy) void (^messageHandler)(NSDictionary *);
+@property (nonatomic, strong) WeakScriptMessageHandler *scriptMessageProxy;
 @end
 
 @implementation WKWebViewAdapter
@@ -46,8 +74,9 @@
         WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
         WKUserContentController *userContent = [[WKUserContentController alloc] init];
 
-        // Register message handler for JS -> native communication
-        [userContent addScriptMessageHandler:self name:@"cyberspace"];
+        // Use weak proxy to break retain cycle (WKUserContentController -> handler -> self)
+        _scriptMessageProxy = [[WeakScriptMessageHandler alloc] initWithDelegate:self];
+        [userContent addScriptMessageHandler:_scriptMessageProxy name:@"cyberspace"];
         config.userContentController = userContent;
 
         // Enable developer extras (right-click inspect)
@@ -63,13 +92,17 @@
     return self;
 }
 
+- (void)dealloc {
+    // Remove message handler to break any remaining references
+    [_webView.configuration.userContentController removeScriptMessageHandlerForName:@"cyberspace"];
+    [_webView release];
+    [_scriptMessageProxy release];
+    [super dealloc];
+}
+
 - (void)loadURL:(NSURL *)url {
     NSURLRequest *request = [NSURLRequest requestWithURL:url];
     [self.webView loadRequest:request];
-}
-
-- (void)loadHTMLString:(NSString *)html {
-    [self.webView loadHTMLString:html baseURL:nil];
 }
 
 - (void)evaluateJavaScript:(NSString *)js
@@ -120,8 +153,6 @@ didFailNavigation:(WKNavigation *)navigation
 - (void)webView:(WKWebView *)webView
 didFinishNavigation:(WKNavigation *)navigation {
     NSLog(@"[Cyberspace] Page loaded");
-    // Make WebView first responder to receive keyboard input
-    [webView.window makeFirstResponder:webView];
 }
 
 @end
@@ -258,9 +289,9 @@ didFinishNavigation:(WKNavigation *)navigation {
     OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
 
     if (status == errSecSuccess && result != NULL) {
-        NSData *data = (__bridge_transfer NSData *)result;
+        NSData *data = (NSData *)result;  // Transfers ownership in MRC
         NSLog(@"[Keychain] Retrieved key '%@'", identifier);
-        return data;
+        return [data autorelease];
     }
 
     if (status != errSecItemNotFound) {
@@ -294,7 +325,7 @@ didFinishNavigation:(WKNavigation *)navigation {
     OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
 
     if (status == errSecSuccess && result != NULL) {
-        NSArray *items = (__bridge_transfer NSArray *)result;
+        NSArray *items = (NSArray *)result;  // Transfers ownership in MRC
         NSMutableArray *identifiers = [NSMutableArray array];
         for (NSDictionary *item in items) {
             NSString *account = item[(__bridge id)kSecAttrAccount];
@@ -302,6 +333,7 @@ didFinishNavigation:(WKNavigation *)navigation {
                 [identifiers addObject:account];
             }
         }
+        [items release];  // Release transferred ownership
         return identifiers;
     }
 
@@ -381,6 +413,59 @@ didFinishNavigation:(WKNavigation *)navigation {
 @end
 
 // ============================================================================
+// Prahar - Time-colored lambda icon (matches REPL prompt)
+// ============================================================================
+
+static NSColor *praharColor(void) {
+    NSCalendar *calendar = [NSCalendar currentCalendar];
+    NSInteger hour = [calendar component:NSCalendarUnitHour fromDate:[NSDate date]];
+
+    // Eight prahars of the day - colors match repl.scm prahar-color
+    if (hour >= 4 && hour < 6)       // brahma muhurta - violet
+        return [NSColor colorWithRed:0.518 green:0.369 blue:0.761 alpha:1.0];
+    else if (hour >= 6 && hour < 8)  // dawn - gold
+        return [NSColor colorWithRed:1.0 green:0.843 blue:0.0 alpha:1.0];
+    else if (hour >= 8 && hour < 11) // morning - teal
+        return [NSColor colorWithRed:0.0 green:0.831 blue:0.667 alpha:1.0];
+    else if (hour >= 11 && hour < 14) // midday - phosphor green
+        return [NSColor colorWithRed:0.0 green:1.0 blue:0.0 alpha:1.0];
+    else if (hour >= 14 && hour < 17) // afternoon - neon
+        return [NSColor colorWithRed:0.224 green:1.0 blue:0.078 alpha:1.0];
+    else if (hour >= 17 && hour < 19) // sunset - orange
+        return [NSColor colorWithRed:1.0 green:0.4 blue:0.0 alpha:1.0];
+    else if (hour >= 19 && hour < 22) // evening - coral
+        return [NSColor colorWithRed:1.0 green:0.2 blue:0.4 alpha:1.0];
+    else                              // night (22-04) - cyan
+        return [NSColor colorWithRed:0.0 green:1.0 blue:1.0 alpha:1.0];
+}
+
+static NSImage *praharLambdaIcon(CGFloat size) {
+    NSImage *image = [[NSImage alloc] initWithSize:NSMakeSize(size, size)];
+    [image lockFocus];
+
+    // Dark background
+    [[NSColor colorWithWhite:0.1 alpha:1.0] setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(0, 0, size, size)
+                                     xRadius:size * 0.2
+                                     yRadius:size * 0.2] fill];
+
+    // Lambda in prahar color
+    NSColor *color = praharColor();
+    NSDictionary *attrs = @{
+        NSFontAttributeName: [NSFont fontWithName:@"Times New Roman" size:size * 0.7],
+        NSForegroundColorAttributeName: color
+    };
+    NSString *lambda = @"λ";
+    NSSize textSize = [lambda sizeWithAttributes:attrs];
+    NSPoint point = NSMakePoint((size - textSize.width) / 2,
+                                (size - textSize.height) / 2 + size * 0.05);
+    [lambda drawAtPoint:point withAttributes:attrs];
+
+    [image unlockFocus];
+    return image;
+}
+
+// ============================================================================
 // AppDelegate
 // ============================================================================
 
@@ -388,13 +473,32 @@ didFinishNavigation:(WKNavigation *)navigation {
 @property (nonatomic, strong) NSWindow *window;
 @property (nonatomic, strong) id<CyberWebView> webView;
 @property (nonatomic, strong) NSTask *schemeBackend;
+@property (nonatomic, strong) NSPipe *backendPipe;
 @property (nonatomic, assign) int backendPort;
-@property (nonatomic, assign) BOOL uiLoaded;
+@property (nonatomic, strong) NSTimer *praharTimer;
+@property (nonatomic, strong) NSTimer *healthCheckTimer;
+@property (nonatomic, assign) int loadRetryCount;
+@property (nonatomic, assign) BOOL isShuttingDown;
 @end
 
 @implementation AppDelegate
 
+- (void)updatePraharIcon {
+    NSImage *icon = praharLambdaIcon(512);
+    [NSApp setApplicationIconImage:icon];
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
+    // Set prahar-colored lambda as Dock icon
+    [self updatePraharIcon];
+
+    // Update icon every hour to track prahar changes
+    self.praharTimer = [NSTimer scheduledTimerWithTimeInterval:3600
+                                                        target:self
+                                                      selector:@selector(updatePraharIcon)
+                                                      userInfo:nil
+                                                       repeats:YES];
+
     // Network Alchemy clustering port
     self.backendPort = 4321;
 
@@ -418,10 +522,10 @@ didFinishNavigation:(WKNavigation *)navigation {
     // Create WebView adapter (swappable)
     self.webView = [[WKWebViewAdapter alloc] init];
 
-    // Set up message handler
-    __weak AppDelegate *weakSelf = self;
+    // Set up message handler (use __unsafe_unretained for MRC)
+    __unsafe_unretained AppDelegate *unsafeSelf = self;
     [self.webView setMessageHandler:^(NSDictionary *message) {
-        [weakSelf handleWebMessage:message];
+        [unsafeSelf handleWebMessage:message];
     }];
 
     // Add WebView to window
@@ -430,36 +534,22 @@ didFinishNavigation:(WKNavigation *)navigation {
     webViewNS.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [self.window.contentView addSubview:webViewNS];
 
-    // Show loading page immediately
-    [self showLoadingPage];
-
-    // Start Scheme backend (UI loading triggered by backend readiness signal)
-    self.uiLoaded = NO;
+    // Start Scheme backend
     [self startSchemeBackend];
+
+    // Start health check timer (polls backend readiness)
+    self.loadRetryCount = 0;
+    self.healthCheckTimer = [NSTimer scheduledTimerWithTimeInterval:0.5
+                                                             target:self
+                                                           selector:@selector(checkBackendHealth)
+                                                           userInfo:nil
+                                                            repeats:YES];
 
     // Show window
     [self.window makeKeyAndOrderFront:nil];
 
     // Set up menu
     [self setupMenu];
-}
-
-- (void)showLoadingPage {
-    NSString *html = @"<!DOCTYPE html><html><head>"
-        @"<style>"
-        @"body { background: #000; color: #0f0; font-family: monospace; "
-        @"       display: flex; justify-content: center; align-items: center; "
-        @"       height: 100vh; margin: 0; }"
-        @".loader { text-align: center; }"
-        @".spinner { font-size: 24px; animation: spin 1s linear infinite; display: inline-block; }"
-        @"@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }"
-        @"p { margin-top: 20px; font-size: 14px; color: #090; }"
-        @"</style></head><body>"
-        @"<div class='loader'>"
-        @"<div class='spinner'>◐</div>"
-        @"<p>Starting Cyberspace...</p>"
-        @"</div></body></html>";
-    [self.webView loadHTMLString:html];
 }
 
 - (void)startSchemeBackend {
@@ -504,63 +594,106 @@ didFinishNavigation:(WKNavigation *)navigation {
     self.schemeBackend.currentDirectoryPath = schemeDir;
 
     // Capture output for logging
-    NSPipe *outputPipe = [NSPipe pipe];
-    self.schemeBackend.standardOutput = outputPipe;
-    self.schemeBackend.standardError = outputPipe;
+    self.backendPipe = [NSPipe pipe];
+    self.schemeBackend.standardOutput = self.backendPipe;
+    self.schemeBackend.standardError = self.backendPipe;
 
-    // Read output asynchronously and detect backend readiness
-    __weak AppDelegate *weakSelf = self;
-    outputPipe.fileHandleForReading.readabilityHandler = ^(NSFileHandle *handle) {
+    // Read output asynchronously
+    self.backendPipe.fileHandleForReading.readabilityHandler = ^(NSFileHandle *handle) {
         NSData *data = handle.availableData;
         if (data.length > 0) {
             NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
             NSLog(@"[Backend] %@", output);
-
-            // Backend ready signal - load UI when we see "Listening on"
-            if (!weakSelf.uiLoaded && [output containsString:@"Listening on"]) {
-                weakSelf.uiLoaded = YES;
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    NSURL *url = [NSURL URLWithString:
-                                  [NSString stringWithFormat:@"http://127.0.0.1:%d/", weakSelf.backendPort]];
-                    [weakSelf.webView loadURL:url];
-                });
-            }
+            [output release];
         }
+    };
+
+    // Monitor for backend termination (use __unsafe_unretained for MRC)
+    __unsafe_unretained AppDelegate *unsafeSelf = self;
+    self.schemeBackend.terminationHandler = ^(NSTask *task) {
+        if (unsafeSelf.isShuttingDown) return;
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSLog(@"[Cyberspace] Backend terminated unexpectedly (exit code: %d)", task.terminationStatus);
+            [unsafeSelf handleBackendCrash];
+        });
     };
 
     @try {
         [self.schemeBackend launch];
         NSLog(@"[Cyberspace] Backend started (PID %d)", self.schemeBackend.processIdentifier);
-
-        // Termination handler to detect backend death and auto-restart
-        self.schemeBackend.terminationHandler = ^(NSTask *task) {
-            NSLog(@"[Cyberspace] Backend terminated with status %d", task.terminationStatus);
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [weakSelf.webView postMessage:@{@"type": @"backend.terminated"}];
-                // Auto-restart after brief delay
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
-                               dispatch_get_main_queue(), ^{
-                    NSLog(@"[Cyberspace] Auto-restarting backend...");
-                    weakSelf.uiLoaded = NO;
-                    [weakSelf startSchemeBackend];
-                });
-            });
-        };
-
-        // Fallback timeout in case "Listening on" is never seen
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10.0 * NSEC_PER_SEC)),
-                       dispatch_get_main_queue(), ^{
-            if (!weakSelf.uiLoaded) {
-                NSLog(@"[Cyberspace] Backend startup timeout - loading UI anyway");
-                weakSelf.uiLoaded = YES;
-                NSURL *url = [NSURL URLWithString:
-                              [NSString stringWithFormat:@"http://127.0.0.1:%d/", weakSelf.backendPort]];
-                [weakSelf.webView loadURL:url];
-            }
-        });
     } @catch (NSException *e) {
         NSLog(@"[Cyberspace] Failed to start backend: %@", e.reason);
     }
+}
+
+- (void)checkBackendHealth {
+    // Try to connect to backend
+    NSURL *healthURL = [NSURL URLWithString:
+                        [NSString stringWithFormat:@"http://127.0.0.1:%d/", self.backendPort]];
+
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:healthURL];
+    request.timeoutInterval = 1.0;
+
+    NSURLSessionDataTask *task = [[NSURLSession sharedSession]
+        dataTaskWithRequest:request
+        completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (error == nil && [(NSHTTPURLResponse *)response statusCode] < 500) {
+                    // Backend is ready
+                    [self.healthCheckTimer invalidate];
+                    self.healthCheckTimer = nil;
+                    NSLog(@"[Cyberspace] Backend ready, loading UI");
+                    [self.webView loadURL:healthURL];
+                } else {
+                    self.loadRetryCount++;
+                    if (self.loadRetryCount > 20) {  // 10 seconds max
+                        [self.healthCheckTimer invalidate];
+                        self.healthCheckTimer = nil;
+                        NSLog(@"[Cyberspace] Backend failed to start after 10s");
+                        [self showBackendError];
+                    }
+                }
+            });
+        }];
+    [task resume];
+}
+
+- (void)handleBackendCrash {
+    // Clean up old process
+    self.backendPipe.fileHandleForReading.readabilityHandler = nil;
+    self.schemeBackend = nil;
+    self.backendPipe = nil;
+
+    // Show alert and offer restart
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = @"Backend Crashed";
+    alert.informativeText = @"The Scheme backend process terminated unexpectedly. Would you like to restart it?";
+    alert.alertStyle = NSAlertStyleWarning;
+    [alert addButtonWithTitle:@"Restart"];
+    [alert addButtonWithTitle:@"Quit"];
+
+    NSModalResponse response = [alert runModal];
+    if (response == NSAlertFirstButtonReturn) {
+        NSLog(@"[Cyberspace] Restarting backend after crash");
+        self.loadRetryCount = 0;
+        [self startSchemeBackend];
+        self.healthCheckTimer = [NSTimer scheduledTimerWithTimeInterval:0.5
+                                                                 target:self
+                                                               selector:@selector(checkBackendHealth)
+                                                               userInfo:nil
+                                                                repeats:YES];
+    } else {
+        [NSApp terminate:nil];
+    }
+}
+
+- (void)showBackendError {
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = @"Backend Unavailable";
+    alert.informativeText = @"Could not connect to the Scheme backend. The application will run in UI-only mode.";
+    alert.alertStyle = NSAlertStyleWarning;
+    [alert runModal];
 }
 
 - (void)handleWebMessage:(NSDictionary *)message {
@@ -673,8 +806,7 @@ didFinishNavigation:(WKNavigation *)navigation {
     NSMenuItem *themeMenuItem = [[NSMenuItem alloc] initWithTitle:@"Theme" action:nil keyEquivalent:@""];
     NSMenu *themeMenu = [[NSMenu alloc] initWithTitle:@"Theme"];
     [themeMenu addItemWithTitle:@"Phosphor" action:@selector(setThemePhosphor:) keyEquivalent:@""];
-    [themeMenu addItemWithTitle:@"Amber" action:@selector(setThemeAmber:) keyEquivalent:@""];
-    [themeMenu addItemWithTitle:@"Dark" action:@selector(setThemeDark:) keyEquivalent:@""];
+    [themeMenu addItemWithTitle:@"Parchment" action:@selector(setThemeParchment:) keyEquivalent:@""];
     themeMenuItem.submenu = themeMenu;
     [viewMenu addItem:themeMenuItem];
 
@@ -767,11 +899,10 @@ didFinishNavigation:(WKNavigation *)navigation {
     y -= 30;
 
     NSPopUpButton *themePopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(20, y, 150, 26)];
-    [themePopup addItemsWithTitles:@[@"Phosphor", @"Amber", @"Dark"]];
+    [themePopup addItemsWithTitles:@[@"Phosphor", @"Parchment"]];
     NSString *currentTheme = [PreferencesManager theme];
-    if ([currentTheme isEqualToString:@"phosphor"]) [themePopup selectItemAtIndex:0];
-    else if ([currentTheme isEqualToString:@"amber"]) [themePopup selectItemAtIndex:1];
-    else [themePopup selectItemAtIndex:2];
+    if ([currentTheme isEqualToString:@"parchment"]) [themePopup selectItemAtIndex:1];
+    else [themePopup selectItemAtIndex:0];
     themePopup.target = self;
     themePopup.action = @selector(themePopupChanged:);
     [contentView addSubview:themePopup];
@@ -818,7 +949,7 @@ didFinishNavigation:(WKNavigation *)navigation {
 }
 
 - (void)themePopupChanged:(NSPopUpButton *)sender {
-    NSArray *themes = @[@"phosphor", @"amber", @"dark"];
+    NSArray *themes = @[@"phosphor", @"parchment"];
     NSString *theme = themes[sender.indexOfSelectedItem];
     [self applyTheme:theme];
 }
@@ -862,12 +993,8 @@ didFinishNavigation:(WKNavigation *)navigation {
     [self applyTheme:@"phosphor"];
 }
 
-- (void)setThemeAmber:(id)sender {
-    [self applyTheme:@"amber"];
-}
-
-- (void)setThemeDark:(id)sender {
-    [self applyTheme:@"dark"];
+- (void)setThemeParchment:(id)sender {
+    [self applyTheme:@"parchment"];
 }
 
 - (void)applyTheme:(NSString *)theme {
@@ -947,9 +1074,43 @@ didFinishNavigation:(WKNavigation *)navigation {
 }
 
 - (void)applicationWillTerminate:(NSNotification *)notification {
-    // Clean up backend process
+    self.isShuttingDown = YES;
+
+    // Clean up timers
+    if (self.praharTimer) {
+        [self.praharTimer invalidate];
+        self.praharTimer = nil;
+    }
+    if (self.healthCheckTimer) {
+        [self.healthCheckTimer invalidate];
+        self.healthCheckTimer = nil;
+    }
+
+    // Clean up pipe handler to break reference cycle
+    if (self.backendPipe) {
+        self.backendPipe.fileHandleForReading.readabilityHandler = nil;
+    }
+
+    // Clean shutdown of backend process
     if (self.schemeBackend && self.schemeBackend.isRunning) {
-        [self.schemeBackend terminate];
+        // First try SIGINT for clean Scheme shutdown
+        kill(self.schemeBackend.processIdentifier, SIGINT);
+
+        // Wait briefly for clean exit
+        dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            [self.schemeBackend waitUntilExit];
+            dispatch_semaphore_signal(sem);
+        });
+
+        // Wait up to 2 seconds for clean exit
+        if (dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC)) != 0) {
+            // Force kill if still running
+            NSLog(@"[Cyberspace] Backend did not exit cleanly, forcing termination");
+            [self.schemeBackend terminate];
+        } else {
+            NSLog(@"[Cyberspace] Backend exited cleanly");
+        }
     }
 }
 
@@ -963,12 +1124,6 @@ didFinishNavigation:(WKNavigation *)navigation {
 
 - (void)windowDidMove:(NSNotification *)notification {
     [PreferencesManager saveWindowFrame:self.window.frame];
-}
-
-- (void)windowDidBecomeKey:(NSNotification *)notification {
-    // Restore keyboard focus to WebView and terminal when window becomes active
-    [[self.webView view].window makeFirstResponder:[self.webView view]];
-    [self.webView evaluateJavaScript:@"if(term) term.focus();" completionHandler:nil];
 }
 
 @end

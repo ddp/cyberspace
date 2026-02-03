@@ -656,13 +656,19 @@
       (list deleted migrated)))
 
   (define (soup-migrate-to-vault! obj source-path)
-    "Migrate an archivable object to the vault with transition record."
+    "Migrate an archivable object to the vault with transition record.
+     The transition record includes a BLAKE2b hash of the content for
+     provenance verification - proving the archived content matches what
+     was active in the realm."
     (let* ((fields (cdr obj))
            (id (cadr (assq 'id fields)))
            (created (cadr (assq 'created fields)))
            (expires (cadr (assq 'expires fields)))
            (content (cadr (assq 'content fields)))
            (now (current-seconds))
+           ;; Hash the content for provenance verification
+           (content-str (with-output-to-string (lambda () (write content))))
+           (content-hash (blob->hex (blake2b-hash (string->blob content-str))))
            (vault-obj `(vault-object
                          (content ,content)
                          (transition
@@ -671,7 +677,8 @@
                            (preserved ,now)
                            (realm ,(realm-name))
                            (origin ,(hostname))
-                           (source-id ,id)))))
+                           (source-id ,id)
+                           (hash ,content-hash)))))
       ;; Store in .vault/archive/
       (unless (directory-exists? ".vault/archive")
         (create-directory ".vault/archive"))
