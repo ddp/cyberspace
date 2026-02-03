@@ -27,6 +27,12 @@
    remove-peer
    list-peers
    get-peer-status
+   set-peer-trust-level!
+   set-peer-role!
+   ;; mDNS discovery (Memo-0012)
+   announce-presence
+   stop-announcement
+   discover-peers-mdns
    ;; Convergence protocol
    sync-bloom-exchange
    sync-merkle-diff
@@ -38,7 +44,13 @@
    configure-from-scaling!
    ;; Statistics
    gossip-stats
-   reset-stats!)
+   reset-stats!
+   ;; Robustness (Memo-012)
+   *gossip-verbose*
+   gossip-verbose!
+   peer-available?
+   peer-dead?
+   peer-reset-failures!)
 
   (import scheme
           (chicken base)
@@ -49,6 +61,9 @@
           (chicken time)
           (chicken format)
           (chicken condition)
+          (chicken string)      ; string-split
+          (chicken process)     ; for mDNS discovery via dns-sd
+          (chicken process-context)  ; for feature detection
           srfi-1      ; list utilities
           srfi-4      ; u8vectors
           srfi-13     ; string-contains
@@ -69,6 +84,14 @@
   (define *gossip-port* 7655)          ; default gossip port
   (define *bloom-error-rate* 0.01)     ; 1% false positive rate
   (define *max-transfer-batch* 100)    ; max objects per transfer
+
+  ;; Robustness configuration
+  (define *connect-timeout* 5)         ; seconds to wait for connection
+  (define *read-timeout* 10)           ; seconds to wait for read
+  (define *max-consecutive-failures* 5) ; failures before marking peer dead
+  (define *base-backoff* 30)           ; initial backoff seconds
+  (define *max-backoff* 3600)          ; maximum backoff (1 hour)
+  (define *gossip-verbose* #f)         ; log gossip errors when #t
 
   ;; Scaling-aware configuration (set by auto-enroll)
   (define *node-scale* 1.0)            ; this node's capability scale (1.0 = reference)
@@ -209,21 +232,112 @@
   ;; Peer Management
   ;; ============================================================
 
+  ;; Trust levels (Memo-0012):
+  ;;   unknown  - Never seen, reject by default
+  ;;   known    - Key registered, manual approval required
+  ;;   verified - Signature chain verified via SPKI
+  ;;   trusted  - Full automatic sync
+
+  ;; Peer roles:
+  ;;   publisher  - I push releases to them
+  ;;   subscriber - I pull releases from them
+  ;;   peer       - Bidirectional sync
+
   (define-record-type <peer>
-    (make-peer-internal host port last-seen status bloom-hash)
+    (make-peer-internal host port last-seen status bloom-hash trust-level role public-key
+                        failure-count last-failure backoff-until)
     peer?
     (host peer-host)
     (port peer-port)
     (last-seen peer-last-seen peer-last-seen-set!)
     (status peer-status peer-status-set!)
-    (bloom-hash peer-bloom-hash peer-bloom-hash-set!))
+    (bloom-hash peer-bloom-hash peer-bloom-hash-set!)
+    (trust-level peer-trust-level peer-trust-level-set!)
+    (role peer-role peer-role-set!)
+    (public-key peer-public-key peer-public-key-set!)
+    ;; Robustness: failure tracking
+    (failure-count peer-failure-count peer-failure-count-set!)
+    (last-failure peer-last-failure peer-last-failure-set!)
+    (backoff-until peer-backoff-until peer-backoff-until-set!))
 
-  (define (add-peer host #!key (port *gossip-port*))
-    "Add a peer to gossip with"
+  (define (add-peer host #!key (port *gossip-port*)
+                               (trust-level 'unknown)
+                               (role 'peer)
+                               (public-key #f))
+    "Add a peer to gossip with.
+
+     trust-level: unknown | known | verified | trusted
+     role: publisher | subscriber | peer
+     public-key: SPKI public key for verification (optional)"
     (let ((key (string-append host ":" (number->string port))))
       (hash-table-set! *peers* key
-                      (make-peer-internal host port (current-seconds) 'unknown #f))
+                      (make-peer-internal host port (current-seconds)
+                                         'unknown #f
+                                         trust-level role public-key
+                                         0 0 0))  ; failure-count, last-failure, backoff-until
       key))
+
+  (define (peer-record-failure! peer)
+    "Record a connection failure for peer. Updates backoff timing."
+    (let* ((failures (+ 1 (peer-failure-count peer)))
+           (now (current-seconds))
+           ;; Exponential backoff: base * 2^(failures-1), capped at max
+           (backoff (min *max-backoff*
+                         (* *base-backoff* (expt 2 (- (min failures 10) 1))))))
+      (peer-failure-count-set! peer failures)
+      (peer-last-failure-set! peer now)
+      (peer-backoff-until-set! peer (+ now backoff))
+      (when *gossip-verbose*
+        (printf "[gossip] Peer ~a:~a failed (~a consecutive), backoff ~as~n"
+                (peer-host peer) (peer-port peer) failures backoff))))
+
+  (define (peer-record-success! peer)
+    "Record a successful connection. Resets failure count."
+    (peer-failure-count-set! peer 0)
+    (peer-backoff-until-set! peer 0)
+    (peer-last-seen-set! peer (current-seconds)))
+
+  (define (peer-available? peer)
+    "Check if peer is available for gossip (not in backoff, not dead)."
+    (and (< (peer-failure-count peer) *max-consecutive-failures*)
+         (>= (current-seconds) (peer-backoff-until peer))))
+
+  (define (peer-dead? peer)
+    "Check if peer has exceeded max consecutive failures."
+    (>= (peer-failure-count peer) *max-consecutive-failures*))
+
+  (define (peer-reset-failures! host #!key (port *gossip-port*))
+    "Reset failure count for a peer. Use to revive a 'dead' peer."
+    (let* ((key (string-append host ":" (number->string port)))
+           (p (hash-table-ref/default *peers* key #f)))
+      (when p
+        (peer-failure-count-set! p 0)
+        (peer-backoff-until-set! p 0)
+        (peer-status-set! p 'unknown)
+        #t)))
+
+  (define (gossip-verbose! #!optional (on #t))
+    "Enable/disable verbose gossip logging."
+    (set! *gossip-verbose* on)
+    (if on "[gossip] Verbose logging enabled" "[gossip] Verbose logging disabled"))
+
+  (define (set-peer-trust-level! host trust-level #!key (port *gossip-port*))
+    "Update trust level for a peer.
+     trust-level: unknown | known | verified | trusted"
+    (let* ((key (string-append host ":" (number->string port)))
+           (p (hash-table-ref/default *peers* key #f)))
+      (when p
+        (peer-trust-level-set! p trust-level)
+        trust-level)))
+
+  (define (set-peer-role! host role #!key (port *gossip-port*))
+    "Update role for a peer.
+     role: publisher | subscriber | peer"
+    (let* ((key (string-append host ":" (number->string port)))
+           (p (hash-table-ref/default *peers* key #f)))
+      (when p
+        (peer-role-set! p role)
+        role)))
 
   (define (remove-peer host #!key (port *gossip-port*))
     "Remove a peer"
@@ -231,24 +345,30 @@
       (hash-table-delete! *peers* key)))
 
   (define (list-peers)
-    "List all known peers"
+    "List all known peers with trust and role information"
     (hash-table-map *peers*
                    (lambda (key p)
                      `(,key
                        (host ,(peer-host p))
                        (port ,(peer-port p))
                        (status ,(peer-status p))
-                       (last-seen ,(peer-last-seen p))))))
+                       (last-seen ,(peer-last-seen p))
+                       (trust-level ,(peer-trust-level p))
+                       (role ,(peer-role p))
+                       (has-key ,(if (peer-public-key p) #t #f))))))
 
   (define (get-peer-status host #!key (port *gossip-port*))
-    "Get status of specific peer"
+    "Get status of specific peer including trust level"
     (let* ((key (string-append host ":" (number->string port)))
            (p (hash-table-ref/default *peers* key #f)))
       (and p
            `((host ,(peer-host p))
              (port ,(peer-port p))
              (status ,(peer-status p))
-             (last-seen ,(peer-last-seen p))))))
+             (last-seen ,(peer-last-seen p))
+             (trust-level ,(peer-trust-level p))
+             (role ,(peer-role p))
+             (has-key ,(if (peer-public-key p) #t #f))))))
 
   ;; ============================================================
   ;; Gossip Daemon
@@ -321,12 +441,22 @@
     'stopped)
 
   (define (gossip-status)
-    "Get current gossip daemon status"
-    `(gossip-status
-      (running ,*gossip-running*)
-      (peers ,(hash-table-size *peers*))
-      (local-objects ,(if *local-catalog* (catalog-size *local-catalog*) 0))
-      (stats ,*stats*)))
+    "Get current gossip daemon status with peer health info"
+    (let* ((all-peers (hash-table-values *peers*))
+           (available (filter peer-available? all-peers))
+           (dead (filter peer-dead? all-peers))
+           (in-backoff (filter (lambda (p)
+                                 (and (not (peer-dead? p))
+                                      (not (peer-available? p))))
+                               all-peers)))
+      `(gossip-status
+        (running ,*gossip-running*)
+        (peers ,(hash-table-size *peers*))
+        (peers-available ,(length available))
+        (peers-dead ,(length dead))
+        (peers-backoff ,(length in-backoff))
+        (local-objects ,(if *local-catalog* (catalog-size *local-catalog*) 0))
+        (stats ,*stats*))))
 
   (define (gossip-main-loop local-objects interval port)
     "Main gossip loop"
@@ -364,60 +494,74 @@
 
   (define (gossip-round)
     "Execute one round of anti-entropy gossip.
-     Selects random peer and synchronizes."
-    (let ((peers (hash-table-values *peers*)))
-      (when (pair? peers)
-        ;; Select random peer
-        (let* ((idx (modulo (random-u32) (length peers)))
-               (peer (list-ref peers idx)))
+     Selects random available peer (not in backoff, not dead) and synchronizes."
+    (let* ((all-peers (hash-table-values *peers*))
+           (available (filter peer-available? all-peers)))
+      (when (pair? available)
+        ;; Select random available peer
+        (let* ((idx (modulo (random-u32) (length available)))
+               (peer (list-ref available idx)))
           (gossip-with-peer peer)))))
 
   (define (gossip-with-peer peer)
     "Gossip with specific peer.
-     Returns: sync result or #f on failure"
-    (handle-exceptions exn
-      (begin
-        (peer-status-set! peer 'unreachable)
-        #f)
-      (let-values (((in out) (tcp-connect (peer-host peer) (peer-port peer))))
-        ;; Track connection protocol
-        (track-connection-type (peer-host peer))
-        (dynamic-wind
-          (lambda () #f)
-          (lambda ()
-            ;; Update peer status
-            (peer-status-set! peer 'connected)
-            (peer-last-seen-set! peer (current-seconds))
+     Returns: sync result or #f on failure.
+     Tracks failures for exponential backoff."
+    ;; Skip if peer is in backoff or dead
+    (if (not (peer-available? peer))
+        (begin
+          (when *gossip-verbose*
+            (printf "[gossip] Skipping ~a:~a (in backoff or dead)~n"
+                    (peer-host peer) (peer-port peer)))
+          #f)
+        (handle-exceptions exn
+          (begin
+            (peer-status-set! peer 'unreachable)
+            (peer-record-failure! peer)
+            (when *gossip-verbose*
+              (printf "[gossip] Connection to ~a:~a failed: ~a~n"
+                      (peer-host peer) (peer-port peer)
+                      (get-condition-property exn 'exn 'message "unknown")))
+            #f)
+          (let-values (((in out) (tcp-connect (peer-host peer) (peer-port peer))))
+            ;; Track connection protocol
+            (track-connection-type (peer-host peer))
+            (dynamic-wind
+              (lambda () #f)
+              (lambda ()
+                ;; Success - reset failure count
+                (peer-record-success! peer)
+                (peer-status-set! peer 'connected)
 
-            ;; Layer 1: Bloom filter exchange
-            (let ((candidates (sync-bloom-exchange in out)))
-              (stat-inc! 'bloom-exchanges)
+                ;; Layer 1: Bloom filter exchange
+                (let ((candidates (sync-bloom-exchange in out)))
+                  (stat-inc! 'bloom-exchanges)
 
-              (if (null? candidates)
-                  ;; Synchronized
-                  (begin
-                    (peer-status-set! peer 'synchronized)
-                    '(synchronized))
+                  (if (null? candidates)
+                      ;; Synchronized
+                      (begin
+                        (peer-status-set! peer 'synchronized)
+                        '(synchronized))
 
-                  ;; Layer 2: Merkle diff for candidates
-                  (let ((missing (sync-merkle-diff in out candidates)))
-                    (stat-inc! 'merkle-diffs)
+                      ;; Layer 2: Merkle diff for candidates
+                      (let ((missing (sync-merkle-diff in out candidates)))
+                        (stat-inc! 'merkle-diffs)
 
-                    (if (null? missing)
-                        ;; All candidates were false positives
-                        (begin
-                          (stat-inc! 'false-positives (length candidates))
-                          (peer-status-set! peer 'synchronized)
-                          '(synchronized (false-positives . ,(length candidates))))
+                        (if (null? missing)
+                            ;; All candidates were false positives
+                            (begin
+                              (stat-inc! 'false-positives (length candidates))
+                              (peer-status-set! peer 'synchronized)
+                              '(synchronized (false-positives . ,(length candidates))))
 
-                        ;; Layer 3: Transfer missing objects
-                        (let ((received (sync-object-transfer in out missing)))
-                          (stat-inc! 'objects-received (length received))
-                          (peer-status-set! peer 'synchronized)
-                          `(synced (objects-received . ,(length received)))))))))
-          (lambda ()
-            (close-input-port in)
-            (close-output-port out))))))
+                            ;; Layer 3: Transfer missing objects
+                            (let ((received (sync-object-transfer in out missing)))
+                              (stat-inc! 'objects-received (length received))
+                              (peer-status-set! peer 'synchronized)
+                              `(synced (objects-received . ,(length received)))))))))
+              (lambda ()
+                (close-input-port in)
+                (close-output-port out)))))))
 
   ;; ============================================================
   ;; Layer 1: Bloom Filter Exchange
@@ -712,6 +856,118 @@
                             out)
                           (stat-inc! 'objects-sent (length objects))
                           (stat-inc! 'sync-completed)))))))))))))
+
+  ;; ============================================================
+  ;; mDNS Discovery (Memo-0012)
+  ;; ============================================================
+  ;;
+  ;; Uses dns-sd on macOS, avahi on Linux for local network discovery.
+  ;; Service type: _cyberspace._tcp
+
+  (define *mdns-service-type* "_cyberspace._tcp")
+  (define *mdns-process* #f)
+
+  (define (announce-presence node-name #!key (port *gossip-port*))
+    "Announce this node via mDNS for local network discovery.
+
+     node-name: Human-readable name for this node (e.g., 'starlight')
+     port: Port to advertise (default: gossip port)
+
+     Returns: Process handle or error"
+    (handle-exceptions exn
+      `(mdns-error ,(get-condition-property exn 'exn 'message "unknown error"))
+      (let ((name (if (symbol? node-name)
+                      (symbol->string node-name)
+                      node-name)))
+        ;; Stop any existing announcement
+        (stop-announcement)
+        ;; Start dns-sd registration (macOS)
+        ;; dns-sd -R <name> <type> <domain> <port>
+        (set! *mdns-process*
+          (process-run "dns-sd"
+            (list "-R" name *mdns-service-type* "local." (number->string port))))
+        `(mdns-announced
+          (name ,name)
+          (type ,*mdns-service-type*)
+          (port ,port)))))
+
+  (define (stop-announcement)
+    "Stop mDNS announcement."
+    (when *mdns-process*
+      (handle-exceptions exn #f
+        (process-signal *mdns-process* 15))  ; SIGTERM
+      (set! *mdns-process* #f))
+    'stopped)
+
+  (define (discover-peers-mdns #!key (timeout 3))
+    "Discover Cyberspace peers on local network via mDNS.
+
+     timeout: How long to browse (seconds, default 3)
+
+     Returns: List of discovered peers as ((host port name) ...)"
+    (handle-exceptions exn
+      `(mdns-error ,(get-condition-property exn 'exn 'message "unknown error"))
+      ;; dns-sd -B <type> <domain> - browse for services
+      ;; We'll capture output for a few seconds then parse it
+      (let* ((results '())
+             (cmd (sprintf "timeout ~a dns-sd -B ~a local. 2>/dev/null || true"
+                          timeout *mdns-service-type*))
+             (output (with-input-from-pipe cmd read-lines)))
+        ;; Parse dns-sd browse output
+        ;; Format: "Timestamp  A/R    Flags  if Domain  Service Type  Instance Name"
+        (for-each
+          (lambda (line)
+            (when (string-contains line *mdns-service-type*)
+              ;; Extract instance name (last field)
+              (let ((fields (string-split line)))
+                (when (>= (length fields) 6)
+                  (let ((name (list-ref fields (- (length fields) 1))))
+                    ;; Resolve this service to get host/port
+                    (let ((resolved (resolve-mdns-service name)))
+                      (when resolved
+                        (set! results (cons resolved results)))))))))
+          output)
+        ;; Auto-add discovered peers with 'known' trust level
+        (for-each
+          (lambda (peer-info)
+            (let ((host (car peer-info))
+                  (port (cadr peer-info))
+                  (name (caddr peer-info)))
+              (add-peer host port: port trust-level: 'known)))
+          results)
+        results)))
+
+  (define (resolve-mdns-service name)
+    "Resolve mDNS service name to host:port.
+     Returns: (host port name) or #f"
+    (handle-exceptions exn #f
+      ;; dns-sd -L <name> <type> <domain> - lookup service
+      (let* ((cmd (sprintf "timeout 2 dns-sd -L '~a' ~a local. 2>/dev/null | head -5 || true"
+                          name *mdns-service-type*))
+             (output (with-input-from-pipe cmd read-lines)))
+        ;; Parse lookup output for host and port
+        ;; Look for line with "can be reached at" or port info
+        (let loop ((lines output))
+          (if (null? lines)
+              #f
+              (let ((line (car lines)))
+                (cond
+                  ;; Look for "hostname:port" pattern
+                  ((string-contains line " port:")
+                   (let* ((port-match (string-contains line "port:"))
+                          (port-str (and port-match
+                                        (substring line (+ port-match 5))))
+                          (port (and port-str
+                                    (string->number (car (string-split port-str))))))
+                     ;; Extract hostname
+                     (let ((host-match (string-contains line ".local.")))
+                       (if (and host-match port)
+                           (let ((host (substring line 0 (+ host-match 7))))
+                             ;; Clean up hostname
+                             (let ((clean-host (string-trim-both host)))
+                               (list clean-host port name)))
+                           (loop (cdr lines))))))
+                  (else (loop (cdr lines))))))))))
 
 ) ;; end module
 
