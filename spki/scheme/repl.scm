@@ -819,7 +819,8 @@
            ;; crypto-ffi needs includes for header files
            (needs-includes? (string=? module "crypto-ffi"))
            ;; Include both Homebrew paths - compiler/linker ignores non-existent ones
-           (lib-flags " -L -L/opt/homebrew/lib -L -L/usr/local/lib -L -lsodium -L -lkeccak")
+           ;; Use -L for library path, -l for library name (csc native flags)
+           (lib-flags " -L/opt/homebrew/lib -L/usr/local/lib -lsodium -lkeccak")
            (inc-flags (if needs-includes? " -I/opt/homebrew/include -I/usr/local/include" ""))
            (actual-cmd (string-append "csc -shared -J" beta-flags " " src
                                       inc-flags lib-flags
