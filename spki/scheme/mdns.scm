@@ -170,7 +170,7 @@
           (close-output-port stdin)
           (set! *bonjour-pid* pid)
           (write-pid-file bonjour-pid-file pid)  ; Persist for crash recovery
-          (printf "[bonjour] Registered '~a' on ~a port ~a~n" name-str cyberspace-service port)
+          (printf "[bonjour] Registered '~a' on ~a port ~a (pid ~a)~n" name-str cyberspace-service port pid)
           pid))))
 
   (define (bonjour-unregister)
@@ -206,6 +206,7 @@
                       (process* "/usr/bin/dns-sd"
                                 (list "-B" cyberspace-service "local"))))
           (close-output-port stdin)
+          (printf "[bonjour] Browse started (pid ~a)~n" pid)
           ;; Read output for timeout seconds
           (let loop ()
             (when (and (< (current-seconds) deadline)
@@ -228,7 +229,8 @@
               (loop)))
           ;; Clean up
           (handle-exceptions exn #f
-            (process-signal pid))
+            (process-signal pid)
+            (printf "[bonjour] Browse stopped (pid ~a)~n" pid))
           (close-input-port stdout)
           (close-input-port stderr)))
       ;; Resolve each discovered service
@@ -250,6 +252,7 @@
                     (process* "/usr/bin/dns-sd"
                               (list "-L" name cyberspace-service "local"))))
         (close-output-port stdin)
+        (printf "[bonjour] Resolve started for ~a (pid ~a)~n" name pid)
         (let ((deadline (+ (current-seconds) timeout))
               (host #f)
               (port #f))
@@ -273,7 +276,8 @@
               (loop)))
           ;; Clean up
           (handle-exceptions exn #f
-            (process-signal pid))
+            (process-signal pid)
+            (printf "[bonjour] Resolve stopped (pid ~a)~n" pid))
           (close-input-port stdout)
           (close-input-port stderr)
           (if (and host port)
