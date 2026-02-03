@@ -816,10 +816,11 @@
     (let* ((strict-exempt '("vault"))
            (beta-flags (if (and (warnings-are-errors?) (not (member module strict-exempt)))
                            " -strict-types" ""))
-           ;; crypto-ffi needs includes for header files, others just need lib path
+           ;; crypto-ffi needs includes for header files
            (needs-includes? (string=? module "crypto-ffi"))
-           (lib-flags (string-append " -L -L" lib-path " -L -lsodium -L -lkeccak"))
-           (inc-flags (if needs-includes? (string-append " -I" inc-path) ""))
+           ;; Include both Homebrew paths - compiler/linker ignores non-existent ones
+           (lib-flags " -L -L/opt/homebrew/lib -L -L/usr/local/lib -L -lsodium -L -lkeccak")
+           (inc-flags (if needs-includes? " -I/opt/homebrew/include -I/usr/local/include" ""))
            (actual-cmd (string-append "csc -shared -J" beta-flags " " src
                                       inc-flags lib-flags
                                       " 2>&1; echo \"__EXIT__$?\""))
