@@ -818,7 +818,7 @@
                            " -strict-types" ""))
            ;; crypto-ffi needs includes for header files, others just need lib path
            (needs-includes? (string=? module "crypto-ffi"))
-           (lib-flags (string-append " -L" lib-path " -L -lsodium -L -lkeccak"))
+           (lib-flags (string-append " -L " lib-path " -L -lsodium -L -lkeccak"))
            (inc-flags (if needs-includes? (string-append " -I" inc-path) ""))
            (actual-cmd (string-append "csc -shared -J" beta-flags " " src
                                       inc-flags lib-flags
