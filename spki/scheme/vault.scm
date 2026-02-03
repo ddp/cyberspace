@@ -95,6 +95,12 @@
    realm-name
    set-realm-name!
 
+   ;; Realm membership (Memo-050) - cert-based
+   realm-affiliated?
+   realm-membership-cert
+   store-membership-cert!
+   revoke-membership!
+
    ;; Address parsing (Memo-041)
    parse-address
    address?
@@ -452,6 +458,67 @@
       (lambda () (display name) (newline)))
     (print "Realm named: " name)
     name)
+
+  ;;; ============================================================================
+  ;;; Realm Membership (Memo-050) - Certificate-Based
+  ;;; ============================================================================
+  ;;;
+  ;;; Membership is proven by a signed enrollment certificate in the soup.
+  ;;; No certificate = wilderness. Expired certificate = wilderness.
+  ;;; Certificates have lifetimes (default 1 year) and require renewal.
+  ;;;
+  ;;; Storage: .vault/certs/membership.sexp
+  ;;; Format: (signed-enrollment-cert (spki-cert ...) (signature ...))
+
+  (define (certs-path)
+    ".vault/certs")
+
+  (define (membership-cert-path)
+    ".vault/certs/membership.sexp")
+
+  (define (realm-membership-cert)
+    "Get the membership certificate, or #f if none exists"
+    (let ((path (membership-cert-path)))
+      (if (file-exists? path)
+          (with-input-from-file path read)
+          #f)))
+
+  (define (cert-valid? cert)
+    "Check if certificate is within its validity period"
+    (and cert
+         (pair? cert)
+         (eq? (car cert) 'signed-enrollment-cert)
+         (let* ((body (cadr cert))                    ; (spki-cert ...)
+                (body-fields (cdr body))              ; ((issuer ...) (subject ...) ...)
+                (validity (assq 'validity body-fields)))
+           (and validity
+                (let ((not-before (assq 'not-before (cdr validity)))
+                      (not-after (assq 'not-after (cdr validity)))
+                      (now (current-seconds)))
+                  (and (or (not not-before) (<= (cadr not-before) now))
+                       (or (not not-after) (< now (cadr not-after)))))))))
+
+  (define (realm-affiliated?)
+    "Return #t if this node has a valid membership certificate"
+    (cert-valid? (realm-membership-cert)))
+
+  (define (store-membership-cert! cert)
+    "Store membership certificate in the vault.
+     cert: signed-enrollment-cert s-expression"
+    (unless (directory-exists? ".vault")
+      (error "No vault found. Create one first."))
+    (unless (directory-exists? (certs-path))
+      (create-directory (certs-path)))
+    (with-output-to-file (membership-cert-path)
+      (lambda () (write cert) (newline)))
+    cert)
+
+  (define (revoke-membership!)
+    "Revoke membership, return to Wilderness. Keys are retained."
+    (let ((path (membership-cert-path)))
+      (when (file-exists? path)
+        (delete-file path)
+        (print "Membership revoked. You are now in the Wilderness."))))
 
   ;;; ============================================================================
   ;;; Lamport Clock (Memo-012)
@@ -1458,6 +1525,15 @@ Object Types:
                (set! objects (cons (list 'metadata f (vector-ref stat 5) '("sexp")) objects)))))
          (directory ".vault/metadata")))
 
+      ;; Certificates (.vault/certs/*.sexp) - membership, delegation, etc.
+      (when (directory-exists? ".vault/certs")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sexp" f)
+             (let ((stat (file-stat (sprintf ".vault/certs/~a" f))))
+               (set! objects (cons (list 'certs f (vector-ref stat 5) (get-cert-info (sprintf ".vault/certs/~a" f))) objects)))))
+         (directory ".vault/certs")))
+
       ;; Node identity (.vault/node.sexp) - local, not replicated
       (when (file-exists? ".vault/node.sexp")
         (let ((stat (file-stat ".vault/node.sexp")))
@@ -1497,6 +1573,30 @@ Object Types:
         (if (and (pair? data) (eq? 'node-identity (car data)))
             (cdr data)
             #f))))
+
+  (define (get-cert-info path)
+    "Extract certificate attributes for soup listing"
+    (handle-exceptions exn
+      '("unknown")
+      (let ((data (with-input-from-file path read)))
+        (if (and (pair? data) (eq? 'signed-enrollment-cert (car data)))
+            (let* ((body (cadr data))
+                   (body-fields (if (and (pair? body) (eq? 'spki-cert (car body)))
+                                    (cdr body)
+                                    '()))
+                   (name (assq 'name body-fields))
+                   (role (assq 'role body-fields))
+                   (validity (assq 'validity body-fields))
+                   (not-after (and validity (assq 'not-after (cdr validity)))))
+              (list (if name (symbol->string (cadr name)) "?")
+                    (if role (symbol->string (cadr role)) "?")
+                    (if not-after
+                        (let ((remaining (- (cadr not-after) (current-seconds))))
+                          (if (> remaining 0)
+                              (sprintf "~ad" (quotient remaining 86400))
+                              "expired"))
+                        "no-expiry")))
+            '("not-enrollment-cert")))))
 
   (define (get-forge-info path)
     "Extract forge metadata attributes for soup listing"

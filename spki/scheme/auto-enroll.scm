@@ -4,8 +4,11 @@
 ;;; "Most capable wins the realm" - nodes exchange hardware info, elect
 ;;; the most capable (!mobile preferred) as master.
 ;;;
+;;; Uses mDNS (via mdns.scm) for local network discovery.
+;;; See mdns.scm header for mDNS/Bonjour/dns-sd terminology.
+;;;
 ;;; Protocol:
-;;;   1. Nodes discover each other via mDNS
+;;;   1. Nodes discover each other via mDNS (Bonjour on macOS)
 ;;;   2. Exchange hardware introspection (includes mobile flag)
 ;;;   3. Compute capability scores (mobile penalized 10x)
 ;;;   4. Most capable node becomes master
@@ -30,6 +33,11 @@
    ;; Status
    realm-status
    enrollment-status
+   ;; Lifecycle
+   auto-enroll-status
+   ;; Verbosity
+   *realm-verbose*
+   realm-verbose!
    ;; Testing support
    reset-enrollment-state!)
 
@@ -48,7 +56,9 @@
           capability
           mdns
           gossip      ; for configure-from-scaling!
-          crypto-ffi)
+          crypto-ffi
+          os          ; register-cleanup-hook!
+          (only vault store-membership-cert!))
 
   ;; ============================================================
   ;; Constants
@@ -62,6 +72,7 @@
   ;; State
   ;; ============================================================
 
+  (define *realm-verbose* #f)         ; verbose logging (default off)
   (define *realm-master* #f)          ; master node name (or #f, legacy)
   (define *realm-members* '())        ; list of (name . hardware)
   (define *scaling-factors* #f)       ; computed scaling factors
@@ -116,7 +127,10 @@
        (set! *my-role* 'master)
        (let ((my-hw (introspect-hardware)))
          (set! *realm-members* `((,name . ,my-hw)))
-         (set! *scaling-factors* (compute-scaling-factor *realm-members*))))
+         (set! *scaling-factors* (compute-scaling-factor *realm-members*)))
+       ;; Store self-signed membership cert (Memo-050)
+       (let ((cert (create-enrollment-cert name *my-pubkey* *my-privkey* role: 'master)))
+         (store-membership-cert! cert)))
 
       ;; Already a member - just starting/restarting listener
       ((assq name *realm-members*)
@@ -134,7 +148,8 @@
     ;; Register with Bonjour so others can discover us
     (bonjour-register name port: port)
 
-    (printf "[join-listener] Listening for join requests on port ~a~n" port)
+    (when *realm-verbose*
+      (printf "[join-listener] Listening for join requests on port ~a~n" port))
 
     ;; Start listener thread
     (set! *join-listener-thread*
@@ -161,7 +176,8 @@
       (handle-exceptions exn #f
         (thread-terminate! *join-listener-thread*))
       (set! *join-listener-thread* #f))
-    (printf "[join-listener] Stopped~n")
+    (when *realm-verbose*
+      (printf "[join-listener] Stopped~n"))
     'stopped)
 
   (define (join-listener-loop)
@@ -194,7 +210,8 @@
          (let* ((fields (cdr request))
                 (peer-name (cadr (assq 'name fields)))
                 (peer-hw (cadr (assq 'hardware fields))))
-           (printf "[join-listener] Capability exchange with: ~a~n" peer-name)
+           (when *realm-verbose*
+             (printf "[join-listener] Capability exchange with: ~a~n" peer-name))
            ;; Respond with our capabilities
            (let ((my-hw (introspect-hardware)))
              (enrollment-send out
@@ -206,13 +223,17 @@
         ((and (pair? request) (eq? (car request) 'join-request))
          (let* ((fields (cdr request))
                 (node-name (cadr (assq 'name fields)))
-                (node-hw (cadr (assq 'hardware fields))))
+                (node-hw (cadr (assq 'hardware fields)))
+                (reason (and (assq 'reason fields) (cadr (assq 'reason fields)))))
 
-           (printf "[join-listener] Join request from: ~a~n" node-name)
-           (printf "[join-listener]   Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
-                   (cadr (assq 'cores (cdr node-hw)))
-                   (cadr (assq 'memory-gb (cdr node-hw)))
-                   (cadr (assq 'mobile (cdr node-hw))))
+           (when *realm-verbose*
+             (printf "[join-listener] Join request from: ~a~n" node-name)
+             (printf "[join-listener]   Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
+                     (cadr (assq 'cores (cdr node-hw)))
+                     (cadr (assq 'memory-gb (cdr node-hw)))
+                     (cadr (assq 'mobile (cdr node-hw))))
+             (when reason
+               (printf "[join-listener]   Reason: ~a~n" reason)))
 
            ;; Add to realm members
            (set! *realm-members*
@@ -230,8 +251,9 @@
                           node-name pubkey *my-privkey*
                           role: 'full)))
 
-             (printf "[join-listener] Approved ~a, issuing certificate~n" node-name)
-             (printf "[join-listener] Membership will be gossiped to realm~n")
+             (when *realm-verbose*
+               (printf "[join-listener] Approved ~a, issuing certificate~n" node-name)
+               (printf "[join-listener] Membership will be gossiped to realm~n"))
 
              ;; Send acceptance with sponsoring member info
              (enrollment-send out
@@ -271,14 +293,16 @@
            (members . ((fluffy . 1.0) (starlight . 0.032)))
            (scaling . ...))"
 
-    (printf "~n[auto-enroll] Starting realm discovery as '~a'...~n" name)
+    (when *realm-verbose*
+      (printf "~n[auto-enroll] Starting realm discovery as '~a'...~n" name))
 
     ;; Step 1: Gather our hardware info
     (let ((my-hw (introspect-hardware)))
-      (printf "[auto-enroll] Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
-              (cadr (assq 'cores (cdr my-hw)))
-              (cadr (assq 'memory-gb (cdr my-hw)))
-              (cadr (assq 'mobile (cdr my-hw))))
+      (when *realm-verbose*
+        (printf "[auto-enroll] Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
+                (cadr (assq 'cores (cdr my-hw)))
+                (cadr (assq 'memory-gb (cdr my-hw)))
+                (cadr (assq 'mobile (cdr my-hw)))))
 
       ;; Step 2: Discover peers and exchange capabilities
       (let ((members (discover-and-elect name my-hw timeout: timeout)))
@@ -342,19 +366,22 @@
   ;; Join Existing Realm
   ;; ============================================================
 
-  (define (join-realm name master-host #!key (port *discovery-port*))
+  (define (join-realm name master-host #!key (port *discovery-port*) (reason #f))
     "Join an existing realm by connecting to master.
 
      name: this node's name
      master-host: hostname/IP of realm master
+     reason: optional string explaining why/how (e.g., \"heard about it from Alice\")
 
      Returns: enrollment result with certificate and keypair
 
      Example (on Starlight):
        (join-realm 'starlight \"fluffy.local\")
+       (join-realm 'starlight \"fluffy.local\" reason: \"referred by Alice\")
        ; Fluffy must be running: (start-join-listener 'fluffy master-key)"
 
-    (printf "[join-realm] Connecting to master at ~a:~a...~n" master-host port)
+    (when *realm-verbose*
+      (printf "[join-realm] Connecting to master at ~a:~a...~n" master-host port))
 
     (let* ((my-hw (introspect-hardware))
            ;; Generate keypair for this node
@@ -362,11 +389,12 @@
            (pubkey (car keypair))
            (privkey (cadr keypair)))
 
-      (printf "[join-realm] Generated keypair for ~a~n" name)
-      (printf "[join-realm] Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
-              (cadr (assq 'cores (cdr my-hw)))
-              (cadr (assq 'memory-gb (cdr my-hw)))
-              (cadr (assq 'mobile (cdr my-hw))))
+      (when *realm-verbose*
+        (printf "[join-realm] Generated keypair for ~a~n" name)
+        (printf "[join-realm] Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
+                (cadr (assq 'cores (cdr my-hw)))
+                (cadr (assq 'memory-gb (cdr my-hw)))
+                (cadr (assq 'mobile (cdr my-hw)))))
 
       (handle-exceptions exn
         (begin
@@ -380,13 +408,15 @@
             (lambda () #f)
             (lambda ()
               ;; Send join request with hardware and pubkey
-              (printf "[join-realm] Sending join request...~n")
+              (when *realm-verbose*
+                (printf "[join-realm] Sending join request...~n"))
               (enrollment-send out
                 `(join-request
                   (name ,name)
                   (hardware ,my-hw)
                   (pubkey ,pubkey)
-                  (timestamp ,(current-seconds))))
+                  (timestamp ,(current-seconds))
+                  ,@(if reason `((reason ,reason)) '())))
 
               ;; Wait for response
               (let ((response (enrollment-receive in)))
@@ -434,6 +464,9 @@
                       (printf "[join-realm] Joined realm! Sponsor: ~a, Members: ~a~n"
                               sponsor member-count)
 
+                      ;; Store membership cert (Memo-050)
+                      (store-membership-cert! cert)
+
                       ;; Auto-start our own join listener (any member can accept joins)
                       (printf "[join-realm] Starting own listener (any member can sponsor joins)~n")
                       (start-join-listener name keypair: (list pubkey privkey))
@@ -462,7 +495,8 @@
 
      Returns: list of (name . hardware) pairs including self"
 
-    (printf "[discover] Browsing Bonjour for _cyberspace._tcp services...~n")
+    (when *realm-verbose*
+      (printf "[discover] Browsing Bonjour for _cyberspace._tcp services...~n"))
 
     ;; Use Bonjour to find peers
     (let ((services (bonjour-browse timeout: timeout))
@@ -565,6 +599,25 @@
           (master . ,*realm-master*)
           (role . ,*my-role*))
         '((enrolled . #f))))
+
+  (define (auto-enroll-status)
+    "Return status of auto-enroll services for introspection."
+    `((join-listener-active . ,*join-running*)
+      (join-listener-port . ,(if *join-listener* *discovery-port* #f))
+      (my-name . ,*my-name*)
+      (my-role . ,*my-role*)
+      (realm-master . ,*realm-master*)
+      (member-count . ,(length *realm-members*))
+      (verbose . ,*realm-verbose*)))
+
+  (define (realm-verbose! #!optional (on #t))
+    "Enable/disable verbose realm logging."
+    (set! *realm-verbose* on)
+    (if on "realm verbose on" "realm verbose off"))
+
+  ;; Register cleanup hook (runs on exit)
+  ;; stop-join-listener already calls bonjour-unregister
+  (register-cleanup-hook! 'auto-enroll stop-join-listener)
 
   ;; ============================================================
   ;; Testing Support

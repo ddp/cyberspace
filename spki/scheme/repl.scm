@@ -3434,9 +3434,10 @@
   (ensure-auto-enroll)
   ((eval 'start-join-listener) (if (string? name) (string->symbol name) name)))
 
-(define (join target)
+(define (realm-join target #!key (reason #f))
   "Join a realm by finding it via Bonjour.
-   Usage: (join 'fluffy)  - find fluffy via _cyberspace._tcp and join"
+   Usage: (realm-join 'fluffy)
+          (realm-join 'fluffy reason: \"referred by Alice\")"
   (ensure-auto-enroll)
   (let* ((target-str (if (symbol? target) (symbol->string target) target))
          (resolved ((eval 'bonjour-resolve) target-str)))
@@ -3445,7 +3446,7 @@
               (port (caddr resolved))
               (my-name (string->symbol (hostname))))
           (print "[join] Found " target-str " at " host ":" port)
-          ((eval 'join-realm) my-name host port: port))
+          ((eval 'join-realm) my-name host port: port reason: reason))
         (print "[join] Could not find '" target-str "' via Bonjour"))))
 
 (define (stop-listen)
@@ -3713,6 +3714,71 @@
     (void)))
 
 (define (enroll-status) (enrollment-status))
+
+;;; ============================================================
+;;; Services Introspection
+;;; ============================================================
+
+(define (services)
+  "Display active background services and cleanup hooks.
+   Shows mDNS registrations, listeners, and what will be cleaned on exit."
+  (let ((hooks (cleanup-hooks-status))
+        (mdns ((eval 'mdns-status)))
+        (enroll ((eval 'auto-enroll-status))))
+    (print "")
+    (print "┌─────────────────── services ───────────────────┐")
+    (print "│ Cleanup hooks registered:                      │")
+    (for-each (lambda (h)
+                (printf "│   • ~a~a│~n" h
+                        (make-string (- 43 (string-length (symbol->string h))) #\space)))
+              hooks)
+    (when (null? hooks)
+      (print "│   (none)                                       │"))
+    (print "├────────────────────────────────────────────────┤")
+    (print "│ mDNS/Bonjour:                                  │")
+    (let ((bonjour (cdr (assq 'bonjour-registered mdns)))
+          (listener (cdr (assq 'listener-active mdns)))
+          (announce (cdr (assq 'announcement-active mdns))))
+      (printf "│   Bonjour PID:    ~a~a│~n"
+              (or bonjour "(not registered)")
+              (make-string (- 26 (string-length (->string (or bonjour "(not registered)")))) #\space))
+      (printf "│   Listener:       ~a~a│~n"
+              (if listener "active" "inactive")
+              (make-string (- 26 (string-length (if listener "active" "inactive"))) #\space))
+      (printf "│   Announcement:   ~a~a│~n"
+              (if announce "active" "inactive")
+              (make-string (- 26 (string-length (if announce "active" "inactive"))) #\space)))
+    (print "├────────────────────────────────────────────────┤")
+    (print "│ Realm/Join Listener:                           │")
+    (let ((join-active (cdr (assq 'join-listener-active enroll)))
+          (join-port (cdr (assq 'join-listener-port enroll)))
+          (my-name (cdr (assq 'my-name enroll)))
+          (my-role (cdr (assq 'my-role enroll))))
+      (printf "│   Active:         ~a~a│~n"
+              (if join-active "yes" "no")
+              (make-string (- 26 (string-length (if join-active "yes" "no"))) #\space))
+      (when join-port
+        (printf "│   Port:           ~a~a│~n"
+                join-port
+                (make-string (- 26 (string-length (number->string join-port))) #\space)))
+      (when my-name
+        (printf "│   Name:           ~a~a│~n"
+                my-name
+                (make-string (- 26 (string-length (->string my-name))) #\space)))
+      (when my-role
+        (printf "│   Role:           ~a~a│~n"
+                my-role
+                (make-string (- 26 (string-length (->string my-role))) #\space))))
+    (print "├────────────────────────────────────────────────┤")
+    (print "│ REPL Listeners:                                │")
+    (printf "│   Enrollment:     ~a~a│~n"
+            (if *enrollment-listener* "active" "inactive")
+            (make-string (- 26 (string-length (if *enrollment-listener* "active" "inactive"))) #\space))
+    (printf "│   Node/CIP:       ~a~a│~n"
+            (if *node-listener* "active" "inactive")
+            (make-string (- 26 (string-length (if *node-listener* "active" "inactive"))) #\space))
+    (print "└────────────────────────────────────────────────┘")
+    (void)))
 
 ;;; ============================================================
 ;;; Enrollment Listener (Master Side)
@@ -4345,21 +4411,37 @@
           (set! parts (cons (plural vault-objects "object") parts)))
         (let ((summary (if (null? parts) "" (string-append " (" (string-intersperse parts ", ") ")"))))
           (print "  vault: " vault-exists summary))))
-    ;; Realm name and principal
+    ;; Realm membership status (Memo-050)
     (when vault-exists
       (let ((name (realm-name))
+            (affiliated (realm-affiliated?))
             (realm-pub-file (string-append vault-exists "/keystore/realm.pub")))
-        (when (file-exists? realm-pub-file)
-          (let* ((sexp (with-input-from-file realm-pub-file read))
-                 (pk-entry (and (pair? sexp) (assq 'public-key (cdr sexp))))
-                 (pk (and pk-entry (cadr pk-entry))))
-            (when pk
-              (let* ((hex (blob->hex pk))
-                     (len (string-length hex))
-                     (short-hash (string-append (substring hex 0 4) "..." (substring hex (- len 4)))))
-                (if name
-                    (print "  realm: " name " (" short-hash ")")
-                    (print "  realm: " short-hash))))))))
+        (cond
+          ;; Affiliated with a realm - show name and principal
+          ((and affiliated (file-exists? realm-pub-file))
+           (let* ((sexp (with-input-from-file realm-pub-file read))
+                  (pk-entry (and (pair? sexp) (assq 'public-key (cdr sexp))))
+                  (pk (and pk-entry (cadr pk-entry))))
+             (when pk
+               (let* ((hex (blob->hex pk))
+                      (len (string-length hex))
+                      (short-hash (string-append (substring hex 0 4) "..." (substring hex (- len 4)))))
+                 (if name
+                     (print "  realm: " name " (" short-hash ")")
+                     (print "  realm: " short-hash))))))
+          ;; Has keys but not affiliated - in the Wilderness
+          ((file-exists? realm-pub-file)
+           (let* ((sexp (with-input-from-file realm-pub-file read))
+                  (pk-entry (and (pair? sexp) (assq 'public-key (cdr sexp))))
+                  (pk (and pk-entry (cadr pk-entry))))
+             (when pk
+               (let* ((hex (blob->hex pk))
+                      (len (string-length hex))
+                      (short-hash (string-append (substring hex 0 4) "..." (substring hex (- len 4)))))
+                 (print "  realm: wilderness (" short-hash ")")))))
+          ;; No keys at all
+          (else
+           (print "  realm: wilderness (no keys)")))))
     ;; Entropy source
     (let ((ent (entropy-status)))
       (print "  entropy: " (cdr (assq 'source ent)) " (" (cdr (assq 'implementation ent)) ")"))
@@ -5644,6 +5726,7 @@
      ("(banner)" "Redisplay startup banner")
      ("(entropy-status)" "Entropy source info")
      ("(fips-status)" "FIPS self-test status")
+     ("(services)" "Show active services/listeners")
      ("(goodbye)" "Exit with session summary"))
 
     (cs "Command Line"
@@ -7403,10 +7486,7 @@ The Ten Commandments of λ
              (> *paren-count* (* 2 *command-count*)))
     (set! *user-mode* 'schemer)
     (set! *prompt-fn* prahar-prompt)  ; dynamic prahar-colored λ
-    (lineage#set-paren-wrap 1)  ; wrap completions in parens
-    (print "")
-    (print "Detected Scheme usage - switching to λ mode.")
-    (print "Type (novice) to switch back.")))
+    (lineage#set-paren-wrap 1)))  ; wrap completions in parens
 
 ;; Result history
 ;; Use _ for last result (like Python), _1 _2 _3 for previous
@@ -8284,6 +8364,17 @@ The Ten Commandments of λ
 (session-stat-init!)
 ;; Catch termination signals for clean exit
 (install-signal-handlers!)
+;; Register REPL cleanup hooks (stop listeners on exit)
+(register-cleanup-hook! 'repl-enrollment
+  (lambda ()
+    (when *enrollment-listener*
+      (handle-exceptions exn #f (stop-listening))
+      (set! *enrollment-listener* #f))))
+(register-cleanup-hook! 'repl-node
+  (lambda ()
+    (when *node-listener*
+      (handle-exceptions exn #f (tcp-close *node-listener*))
+      (set! *node-listener* #f))))
 ;; Measure boot-time weave (must be after vault import)
 (hash-table-set! *session-stats* 'boot-weave (measure-weave))
 
@@ -8334,7 +8425,13 @@ The Ten Commandments of λ
                    (if (< elapsed-sec 1)
                        (format "~ams" elapsed-ms)
                        (format "~as" elapsed-sec))
-                   (realm-signature))))
+                   (realm-signature)))
+    ;; Show pending join requests if any
+    (let ((pending-count (load-pending-enrollments!)))
+      (when (> pending-count 0)
+        (printf "  ~a pending join request~a - (pending) to review~n"
+                pending-count
+                (if (= pending-count 1) "" "s")))))
   (print ""))
 
 ;; --eval: evaluate expression and exit

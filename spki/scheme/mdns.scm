@@ -1,7 +1,16 @@
-;;; SPKI Scheme - Local Network Discovery via Bonjour/mDNS
+;;; SPKI Scheme - Local Network Discovery (mDNS/Bonjour)
 ;;;
 ;;; Provides local network discovery for node enrollment (Memo-044).
-;;; Uses macOS dns-sd for real Bonjour service registration and browsing.
+;;;
+;;; Terminology (see Memo-044 for details):
+;;;   mDNS      - Multicast DNS protocol (RFC 6762)
+;;;   DNS-SD    - DNS Service Discovery layer (RFC 6763)
+;;;   Bonjour   - Apple's implementation of mDNS + DNS-SD
+;;;   dns-sd    - macOS command-line tool for Bonjour operations
+;;;
+;;; This module uses "mDNS" as the generic term for the capability.
+;;; Procedure names use "bonjour-*" since we call Apple's dns-sd tool.
+;;; Portable implementations would use Avahi on Linux.
 ;;;
 ;;; Service type: _cyberspace._tcp
 ;;;
@@ -19,6 +28,7 @@
    ;; Bonjour registration (listener side)
    bonjour-register
    bonjour-unregister
+   cleanup-stale-bonjour
    ;; Bonjour discovery (joiner side)
    bonjour-browse
    bonjour-resolve
@@ -33,7 +43,10 @@
    enrollment-connect
    enrollment-send
    enrollment-receive
-   enrollment-close)
+   enrollment-close
+   ;; Lifecycle
+   mdns-shutdown!
+   mdns-status)
 
   (import scheme
           (chicken base)
@@ -45,13 +58,14 @@
           (chicken time)
           (chicken process)           ; process, process-wait
           (chicken process-context)
+          (chicken file)              ; file-exists?, directory-exists?, etc.
           (chicken condition)
           (chicken string)            ; string-split
           srfi-1      ; list utilities
           srfi-13     ; string-contains, string-trim-both
           srfi-18     ; threads
           srfi-4      ; u8vectors
-          os)         ; for session-stat!
+          os)         ; session-stat!, register-cleanup-hook!
 
   ;; ============================================================
   ;; Constants
@@ -69,6 +83,52 @@
 
   ;; Announcement interval (seconds)
   (define announce-interval 2)
+
+  ;; PID file for tracking child processes
+  (define bonjour-pid-file ".vault/pids/bonjour")
+
+  ;; ============================================================
+  ;; PID File Management
+  ;; ============================================================
+
+  (define (ensure-pids-dir)
+    "Create .vault/pids directory if needed"
+    (unless (directory-exists? ".vault/pids")
+      (when (directory-exists? ".vault")
+        (create-directory ".vault/pids"))))
+
+  (define (write-pid-file path pid)
+    "Write PID to file for tracking"
+    (ensure-pids-dir)
+    (when (directory-exists? ".vault/pids")
+      (with-output-to-file path
+        (lambda () (write pid) (newline)))))
+
+  (define (read-pid-file path)
+    "Read PID from file, or #f if not found"
+    (if (file-exists? path)
+        (handle-exceptions exn #f
+          (with-input-from-file path read))
+        #f))
+
+  (define (remove-pid-file path)
+    "Remove PID file"
+    (when (file-exists? path)
+      (delete-file path)))
+
+  (define (pid-alive? pid)
+    "Check if process with given PID is still running"
+    (handle-exceptions exn #f
+      (receive (p normal status) (process-wait pid #t)  ; nohang = #t
+        (not p))))  ; #f if process exited, pid if still running
+
+  (define (cleanup-stale-bonjour)
+    "Kill stale Bonjour process from previous session if found"
+    (let ((old-pid (read-pid-file bonjour-pid-file)))
+      (when old-pid
+        (handle-exceptions exn #f
+          (process-signal old-pid))
+        (remove-pid-file bonjour-pid-file))))
 
   ;; ============================================================
   ;; Internal State
@@ -95,7 +155,8 @@
      port: TCP port the service listens on
 
      Returns: pid of dns-sd process (or #f on failure)"
-    (bonjour-unregister)  ; Clean up any existing registration
+    (cleanup-stale-bonjour)  ; Kill orphaned process from previous session
+    (bonjour-unregister)     ; Clean up any existing registration in this session
     (let ((name-str (if (symbol? name) (symbol->string name) name)))
       (handle-exceptions exn
         (begin
@@ -108,6 +169,7 @@
                                 (list "-R" name-str cyberspace-service "local" (number->string port)))))
           (close-output-port stdin)
           (set! *bonjour-pid* pid)
+          (write-pid-file bonjour-pid-file pid)  ; Persist for crash recovery
           (printf "[bonjour] Registered '~a' on ~a port ~a~n" name-str cyberspace-service port)
           pid))))
 
@@ -116,7 +178,8 @@
     (when *bonjour-pid*
       (handle-exceptions exn #f
         (process-signal *bonjour-pid*))
-      (set! *bonjour-pid* #f)))
+      (set! *bonjour-pid* #f)
+      (remove-pid-file bonjour-pid-file)))
 
   ;; ============================================================
   ;; Bonjour Discovery (via dns-sd)
@@ -131,8 +194,12 @@
           (deadline (+ (current-seconds) timeout)))
       (handle-exceptions exn
         (begin
-          (printf "[bonjour] Browse failed: ~a~n"
-                  (get-condition-property exn 'exn 'message "unknown"))
+          ;; dns-sd exiting is normal (timeout, no peers) - only log real errors
+          (let ((msg (get-condition-property exn 'exn 'message "")))
+            (when (and (not (string-contains msg "abnormal"))
+                       (not (string-contains msg "process"))
+                       (> (string-length msg) 0))
+              (printf "[bonjour] Browse error: ~a~n" msg)))
           '())
         ;; dns-sd -B <type> <domain> - browse for services
         (let-values (((stdout stdin pid stderr)
@@ -388,6 +455,25 @@
       (when in (close-input-port in)))
     (handle-exceptions exn #f
       (when out (close-output-port out))))
+
+  ;; ============================================================
+  ;; Lifecycle Management
+  ;; ============================================================
+
+  (define (mdns-shutdown!)
+    "Shutdown all mDNS services. Called on REPL exit."
+    (bonjour-unregister)
+    (stop-listening)
+    (stop-announcement))
+
+  (define (mdns-status)
+    "Return status of mDNS services for introspection."
+    `((bonjour-registered . ,(if *bonjour-pid* *bonjour-pid* #f))
+      (listener-active . ,*listener-running*)
+      (announcement-active . ,*announcement-running*)))
+
+  ;; Register cleanup hook (runs on exit)
+  (register-cleanup-hook! 'mdns mdns-shutdown!)
 
 ) ;; end module
 
