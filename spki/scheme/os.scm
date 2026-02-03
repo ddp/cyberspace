@@ -59,6 +59,11 @@
    session-stats        ; return all stats as alist
    session-stats-reset! ; clear all stats
 
+   ;; Cleanup hooks (run on exit for graceful shutdown)
+   register-cleanup-hook!
+   run-cleanup-hooks!
+   cleanup-hooks-status
+
    ;; Box drawing (centralized terminal formatting)
    make-box              ; create a box builder for given width/style
    box-top               ; (box-top builder #!optional title)
@@ -422,6 +427,40 @@
   (define (session-stats-reset!)
     "Clear all session statistics."
     (set! *session-stats* (make-hash-table)))
+
+  ;; ============================================================
+  ;; Cleanup Hooks
+  ;; ============================================================
+  ;;
+  ;; Named thunks to run on exit for graceful shutdown.
+  ;; Modules register hooks; portal/repl runs them before exit.
+
+  (define *cleanup-hooks*
+    (make-hash-table))
+
+  (define (register-cleanup-hook! name thunk)
+    "Register a cleanup hook to run on exit.
+     NAME is a symbol identifying the hook.
+     THUNK is a procedure of zero arguments."
+    (hash-table-set! *cleanup-hooks* name thunk))
+
+  (define (run-cleanup-hooks!)
+    "Run all registered cleanup hooks.
+     Errors are caught and logged; all hooks run regardless of failures."
+    (for-each
+     (lambda (name)
+       (handle-exceptions exn
+         (begin
+           (fprintf (current-error-port)
+                    "Warning: cleanup hook '~a' failed: ~a~n"
+                    name (get-condition-property exn 'exn 'message "unknown error"))
+           #f)
+         ((hash-table-ref *cleanup-hooks* name))))
+     (hash-table-keys *cleanup-hooks*)))
+
+  (define (cleanup-hooks-status)
+    "Return list of registered cleanup hook names."
+    (hash-table-keys *cleanup-hooks*))
 
   ;; ============================================================
   ;; Box Drawing

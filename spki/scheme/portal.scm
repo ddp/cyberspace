@@ -319,6 +319,7 @@
   (define (handle-termination signum)
     "Handle termination signals gracefully."
     (log-signal signum)
+    (run-cleanup-hooks!)
     (flush-output)
     (drain-input)
     (exit (+ 128 signum)))  ; Unix convention: 128 + signal
@@ -354,6 +355,7 @@
             (printf "Cyberspace frozen at ~a on ~a~a.~n  Session: ~a~n"
                     date-str (hostname) weave-str (string-intersperse all-parts " · ")))
         (print "")))
+    (run-cleanup-hooks!)
     (flush-output)
     (drain-input)
     (exit 0))
