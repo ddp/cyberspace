@@ -1036,9 +1036,13 @@
 (import (except info info))  ; hypertext doc browser with pager
 
 ;; Resident editors - load once, always ready (like LSE, VAX Emacs)
-(load "residents/teco.scm")     ; Dan Murphy's TECO (1962)
-(load "residents/pencil.scm")   ; Michael Shrayer's Electric Pencil (1976)
-(load "residents/schemacs.scm") ; Emacs-style editor in Scheme (2026)
+;; Only load if file exists (residents may not be present on all machines)
+(when (file-exists? "residents/teco.scm")
+  (load "residents/teco.scm"))     ; Dan Murphy's TECO (1962)
+(when (file-exists? "residents/pencil.scm")
+  (load "residents/pencil.scm"))   ; Michael Shrayer's Electric Pencil (1976)
+(when (file-exists? "residents/schemacs.scm")
+  (load "residents/schemacs.scm")) ; Emacs-style editor in Scheme (2026)
 
 ;; Initialize libsodium
 (sodium-init)
