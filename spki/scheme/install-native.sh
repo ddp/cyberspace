@@ -45,15 +45,32 @@ else
     CRYPTO_FLAGS="-L -lsodium -L -lkeccak"
 fi
 
-# Build crypto-ffi first (needs libsodium + libkeccak for SHAKE256)
+# Build bootstrap modules first (required for repl.scm to even load)
+echo "  tty-ffi..."
+csc -shared -J tty-ffi.scm 2>/dev/null || echo "  Warning: tty-ffi failed"
+
+echo "  lineage..."
+csc -shared -J eggs/lineage/lineage.scm 2>/dev/null || echo "  Warning: lineage failed"
+
+echo "  edt..."
+csc -shared -J edt.scm 2>/dev/null || echo "  Warning: edt failed"
+
+echo "  text..."
+csc -shared -J text.scm 2>/dev/null || echo "  Warning: text failed"
+
+# Build crypto-ffi (needs libsodium + libkeccak for SHAKE256)
 echo "  crypto-ffi..."
 csc -shared -J crypto-ffi.scm $CRYPTO_FLAGS 2>/dev/null || {
     echo "  Warning: crypto-ffi failed, trying alternate flags..."
     csc -shared -J crypto-ffi.scm -L -lsodium -L -lkeccak
 }
 
+# Build pq-crypto (needs liboqs + openssl for post-quantum)
+echo "  pq-crypto..."
+csc -shared -J pq-crypto.scm -I/opt/homebrew/include -L/opt/homebrew/lib -L -loqs -L -lcrypto 2>/dev/null || echo "  Warning: pq-crypto skipped (liboqs not installed)"
+
 # Build remaining modules in dependency order
-MODULES="fips sexp os vault audit cert wordlist mdns bloom catalog enroll gossip security keyring capability auto-enroll ui inspector portal forum display"
+MODULES="fips sexp os cert vault audit wordlist mdns bloom catalog enroll gossip security keyring capability auto-enroll ui inspector portal forum display"
 
 for mod in $MODULES; do
     if [ -f "$mod.scm" ]; then
