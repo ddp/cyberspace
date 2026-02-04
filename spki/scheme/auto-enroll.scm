@@ -224,6 +224,10 @@
          (let* ((fields (cdr request))
                 (node-name (cadr (assq 'name fields)))
                 (node-hw (cadr (assq 'hardware fields)))
+                (pubkey (or (and (assq 'pubkey fields)
+                                 (cadr (assq 'pubkey fields)))
+                            ;; Generate temporary pubkey if not provided
+                            (car (ed25519-keypair))))
                 (reason (and (assq 'reason fields) (cadr (assq 'reason fields)))))
 
            (when *realm-verbose*
@@ -235,36 +239,42 @@
              (when reason
                (printf "[join-listener]   Reason: ~a~n" reason)))
 
-           ;; Add to realm members
-           (set! *realm-members*
-             (cons (cons node-name node-hw) *realm-members*))
+           ;; Check if joiner is more capable than current master (handoff check)
+           (let* ((master-hw (cdr (assq *realm-master* *realm-members*)))
+                  (comparison (compare-capabilities master-hw node-hw)))
+             (if (and (eq? *my-role* 'master)
+                      (eq? comparison 'second))
+                 ;; Joiner is more capable - hand off master role
+                 (handle-master-handoff node-name node-hw pubkey out)
 
-           ;; Recompute scaling factors
-           (set! *scaling-factors* (compute-scaling-factor *realm-members*))
+                 ;; Normal join - existing logic
+                 (begin
+                   ;; Add to realm members
+                   (set! *realm-members*
+                     (cons (cons node-name node-hw) *realm-members*))
 
-           ;; Create enrollment certificate (any member can sign)
-           (let* ((pubkey (or (and (assq 'pubkey fields)
-                                   (cadr (assq 'pubkey fields)))
-                              ;; Generate temporary pubkey if not provided
-                              (car (ed25519-keypair))))
-                  (cert (create-enrollment-cert
-                          node-name pubkey *my-privkey*
-                          role: 'full)))
+                   ;; Recompute scaling factors
+                   (set! *scaling-factors* (compute-scaling-factor *realm-members*))
 
-             (when *realm-verbose*
-               (printf "[join-listener] Approved ~a, issuing certificate~n" node-name)
-               (printf "[join-listener] Membership will be gossiped to realm~n"))
+                   ;; Create enrollment certificate (any member can sign)
+                   (let ((cert (create-enrollment-cert
+                                 node-name pubkey *my-privkey*
+                                 role: 'full)))
 
-             ;; Send acceptance with sponsoring member info
-             (enrollment-send out
-               `(join-accepted
-                 (certificate ,cert)
-                 (scaling ,*scaling-factors*)
-                 (master ,*realm-master*)
-                 (sponsor ,*my-name*)
-                 (sponsor-pubkey ,*my-pubkey*)
-                 (members ,(length *realm-members*))
-                 (member-list ,(map car *realm-members*)))))))
+                     (when *realm-verbose*
+                       (printf "[join-listener] Approved ~a, issuing certificate~n" node-name)
+                       (printf "[join-listener] Membership will be gossiped to realm~n"))
+
+                     ;; Send acceptance with sponsoring member info
+                     (enrollment-send out
+                       `(join-accepted
+                         (certificate ,cert)
+                         (scaling ,*scaling-factors*)
+                         (master ,*realm-master*)
+                         (sponsor ,*my-name*)
+                         (sponsor-pubkey ,*my-pubkey*)
+                         (members ,(length *realm-members*))
+                         (member-list ,(map car *realm-members*))))))))))
 
         ;; Invalid request
         (else
@@ -272,6 +282,42 @@
          (enrollment-send out
            `(join-rejected
              (reason "Invalid request format")))))))
+
+  (define (handle-master-handoff new-master-name new-master-hw new-master-pubkey out)
+    "Hand off master role to a more capable joining node."
+    (let ((old-master *realm-master*))
+      ;; 1. Update local state
+      (set! *realm-master* new-master-name)
+      (set! *my-role* 'member)
+
+      ;; 2. Add new master to members
+      (set! *realm-members*
+        (cons (cons new-master-name new-master-hw) *realm-members*))
+
+      ;; 3. Recompute scaling (new master becomes reference)
+      (set! *scaling-factors* (compute-scaling-factor *realm-members*))
+
+      ;; 4. Send handoff message
+      (enrollment-send out
+        `(master-handoff
+          (new-master ,new-master-name)
+          (old-master ,old-master)
+          (old-master-pubkey ,*my-pubkey*)
+          (members ,(map car *realm-members*))
+          (member-hardware ,*realm-members*)
+          (scaling ,*scaling-factors*)
+          (timestamp ,(current-seconds))))
+
+      ;; 5. Log transition
+      (printf "[master-handoff] ~a -> ~a (more capable)~n" old-master new-master-name)
+
+      ;; 6. Reconfigure gossip for member role
+      (let ((gossip-cfg (configure-gossip-from-scaling *scaling-factors*)))
+        (configure-from-scaling!
+          (cdr (assq 'my-scale gossip-cfg))
+          (cdr (assq 'effective-capacity *scaling-factors*))
+          (cdr (assq 'batch-size gossip-cfg))
+          (cdr (assq 'gossip-interval gossip-cfg))))))
 
   ;; ============================================================
   ;; Main Entry: Auto-Enroll a Realm
@@ -420,69 +466,114 @@
 
               ;; Wait for response
               (let ((response (enrollment-receive in)))
-                (if (and (pair? response)
-                         (eq? (car response) 'join-accepted))
-                    (let* ((fields (cdr response))
-                           (cert (cadr (assq 'certificate fields)))
-                           (scaling (cadr (assq 'scaling fields)))
-                           (master (and (assq 'master fields)
-                                        (cadr (assq 'master fields))))
-                           (sponsor (and (assq 'sponsor fields)
-                                         (cadr (assq 'sponsor fields))))
-                           (member-count (and (assq 'members fields)
-                                              (cadr (assq 'members fields))))
-                           (member-list (and (assq 'member-list fields)
-                                             (cadr (assq 'member-list fields)))))
+                (cond
+                  ;; Normal join acceptance
+                  ((and (pair? response)
+                        (eq? (car response) 'join-accepted))
+                   (let* ((fields (cdr response))
+                          (cert (cadr (assq 'certificate fields)))
+                          (scaling (cadr (assq 'scaling fields)))
+                          (master (and (assq 'master fields)
+                                       (cadr (assq 'master fields))))
+                          (sponsor (and (assq 'sponsor fields)
+                                        (cadr (assq 'sponsor fields))))
+                          (member-count (and (assq 'members fields)
+                                             (cadr (assq 'members fields))))
+                          (member-list (and (assq 'member-list fields)
+                                            (cadr (assq 'member-list fields)))))
 
-                      ;; Update local state
-                      (set! *my-name* name)
-                      (set! *my-pubkey* pubkey)
-                      (set! *my-privkey* privkey)
-                      (set! *my-role* 'member)
-                      (set! *realm-master* master)
-                      (set! *scaling-factors* scaling)
+                     ;; Update local state
+                     (set! *my-name* name)
+                     (set! *my-pubkey* pubkey)
+                     (set! *my-privkey* privkey)
+                     (set! *my-role* 'member)
+                     (set! *realm-master* master)
+                     (set! *scaling-factors* scaling)
 
-                      ;; Initialize member list from response
-                      (when member-list
-                        (set! *realm-members*
-                          (map (lambda (n) (cons n #f)) member-list))
-                        ;; Add ourselves with hardware
-                        (set! *realm-members*
-                          (cons (cons name my-hw) *realm-members*)))
+                     ;; Initialize member list from response
+                     (when member-list
+                       (set! *realm-members*
+                         (map (lambda (n) (cons n #f)) member-list))
+                       ;; Add ourselves with hardware
+                       (set! *realm-members*
+                         (cons (cons name my-hw) *realm-members*)))
 
-                      ;; Configure gossip from scaling
-                      (let ((gossip-cfg (configure-gossip-from-scaling scaling)))
-                        (configure-from-scaling!
-                          (cdr (assq 'my-scale gossip-cfg))
-                          (cdr (assq 'effective-capacity scaling))
-                          (cdr (assq 'batch-size gossip-cfg))
-                          (cdr (assq 'gossip-interval gossip-cfg)))
-                        (printf "[join-realm] Gossip configured: interval=~as, batch=~a~n"
-                                (cdr (assq 'gossip-interval gossip-cfg))
-                                (cdr (assq 'batch-size gossip-cfg))))
+                     ;; Configure gossip from scaling
+                     (let ((gossip-cfg (configure-gossip-from-scaling scaling)))
+                       (configure-from-scaling!
+                         (cdr (assq 'my-scale gossip-cfg))
+                         (cdr (assq 'effective-capacity scaling))
+                         (cdr (assq 'batch-size gossip-cfg))
+                         (cdr (assq 'gossip-interval gossip-cfg)))
+                       (printf "[join-realm] Gossip configured: interval=~as, batch=~a~n"
+                               (cdr (assq 'gossip-interval gossip-cfg))
+                               (cdr (assq 'batch-size gossip-cfg))))
 
-                      (printf "[join-realm] Joined realm! Sponsor: ~a, Members: ~a~n"
-                              sponsor member-count)
+                     (printf "[join-realm] Joined realm! Sponsor: ~a, Members: ~a~n"
+                             sponsor member-count)
 
-                      ;; Store membership cert (Memo-050)
-                      (store-membership-cert! cert)
+                     ;; Store membership cert (Memo-050)
+                     (store-membership-cert! cert)
 
-                      ;; Auto-start our own join listener (any member can accept joins)
-                      (printf "[join-realm] Starting own listener (any member can sponsor joins)~n")
-                      (start-join-listener name keypair: (list pubkey privkey))
+                     ;; Auto-start our own join listener (any member can accept joins)
+                     (printf "[join-realm] Starting own listener (any member can sponsor joins)~n")
+                     (start-join-listener name keypair: (list pubkey privkey))
 
-                      `((status . joined)
-                        (master . ,master)
-                        (sponsor . ,sponsor)
-                        (certificate . ,cert)
-                        (scaling . ,scaling)
-                        (pubkey . ,pubkey)
-                        (privkey . ,privkey)))
+                     `((status . joined)
+                       (master . ,master)
+                       (sponsor . ,sponsor)
+                       (certificate . ,cert)
+                       (scaling . ,scaling)
+                       (pubkey . ,pubkey)
+                       (privkey . ,privkey))))
 
-                    (begin
-                      (printf "[join-realm] Join rejected: ~a~n" response)
-                      `((status . rejected)
-                        (response . ,response))))))
+                  ;; Master handoff - we're more capable, assume master role
+                  ((and (pair? response)
+                        (eq? (car response) 'master-handoff))
+                   (let* ((fields (cdr response))
+                          (old-master (cadr (assq 'old-master fields)))
+                          (member-hardware (cadr (assq 'member-hardware fields)))
+                          (scaling (cadr (assq 'scaling fields))))
+
+                     ;; Assume master role
+                     (set! *my-name* name)
+                     (set! *my-pubkey* pubkey)
+                     (set! *my-privkey* privkey)
+                     (set! *my-role* 'master)
+                     (set! *realm-master* name)
+                     (set! *realm-members* member-hardware)
+                     (set! *scaling-factors* scaling)
+
+                     ;; Create self-signed master cert
+                     (let ((cert (create-enrollment-cert name pubkey privkey role: 'master)))
+                       (store-membership-cert! cert))
+
+                     ;; Configure gossip from scaling (as new master)
+                     (let ((gossip-cfg (configure-gossip-from-scaling scaling)))
+                       (configure-from-scaling!
+                         (cdr (assq 'my-scale gossip-cfg))
+                         (cdr (assq 'effective-capacity scaling))
+                         (cdr (assq 'batch-size gossip-cfg))
+                         (cdr (assq 'gossip-interval gossip-cfg)))
+                       (printf "[join-realm] Gossip configured: interval=~as, batch=~a~n"
+                               (cdr (assq 'gossip-interval gossip-cfg))
+                               (cdr (assq 'batch-size gossip-cfg))))
+
+                     ;; Start listening as new master
+                     (start-join-listener name keypair: (list pubkey privkey))
+
+                     (printf "[join-realm] Became master (more capable than ~a)~n" old-master)
+
+                     `((status . master-handoff)
+                       (role . master)
+                       (old-master . ,old-master)
+                       (scaling . ,scaling))))
+
+                  ;; Rejected or unknown response
+                  (else
+                   (printf "[join-realm] Join rejected: ~a~n" response)
+                   `((status . rejected)
+                     (response . ,response))))))
             (lambda ()
               (enrollment-close in out)))))))
 
