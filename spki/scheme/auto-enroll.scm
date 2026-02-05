@@ -182,30 +182,22 @@
 
   (define (join-listener-loop)
     "Accept and handle incoming join requests."
-    (printf "[join-listener] Listener loop starting~n")
-    (flush-output)
     (let loop ()
       (when (and *join-running* *join-listener*)
-        (printf "[join-listener] Waiting for connection...~n")
-        (flush-output)
         (handle-exceptions exn
           (begin
             ;; Log but continue on errors
-            (printf "[join-listener] Exception in accept: ~a~n"
-                    (get-condition-property exn 'exn 'message "unknown"))
-            (flush-output)
             (thread-sleep! 0.5)
             (loop))
 
           (let-values (((in out) (tcp-accept *join-listener*)))
-            (printf "[join-listener] Accepted connection~n")
             (thread-start!
               (make-thread
                 (lambda ()
-                  (printf "[join-listener] Thread started~n")
                   (handle-exceptions exn
-                    (printf "[join-listener] Error handling request: ~a~n"
-                            (get-condition-property exn 'exn 'message "unknown"))
+                    (when *realm-verbose*
+                      (printf "[join-listener] Error: ~a~n"
+                              (get-condition-property exn 'exn 'message "unknown")))
                     (handle-join-connection in out))
                   (enrollment-close in out))))
             (loop))))))
