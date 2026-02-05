@@ -7630,6 +7630,7 @@ The Ten Commandments of λ
         (and line (strip-ansi line)))
       ;; Interactive tty: show prompt, peek first char for immediate shortcuts
       (begin
+        (display "\r\x1b[K")  ; CR + clear to end of line before prompt
         (display prompt)
         (flush-output)
         ;; Loop in raw mode to handle DEL/BS at empty prompt (ignore and wait)
@@ -7679,7 +7680,7 @@ The Ten Commandments of λ
                       "")
                      ;; Enter on empty line - newline, return empty (loop shows next prompt)
                      ((or (= c 10) (= c 13))
-                      (newline)
+                      (display "\r\n")  ; CR+LF to ensure cursor at column 0
                       "")
                      ;; Regular char - let lineage redraw with initial (no newline)
                      (else
