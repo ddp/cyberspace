@@ -713,6 +713,7 @@
   (define (realm-verbose! #!optional (on #t))
     "Enable/disable verbose realm logging."
     (set! *realm-verbose* on)
+    (flush-output)
     (if on "realm verbose on" "realm verbose off"))
 
   ;; Register cleanup hook (runs on exit)
