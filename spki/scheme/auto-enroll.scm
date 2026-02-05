@@ -182,11 +182,18 @@
 
   (define (join-listener-loop)
     "Accept and handle incoming join requests."
+    (printf "[join-listener] Listener loop starting~n")
+    (flush-output)
     (let loop ()
       (when (and *join-running* *join-listener*)
+        (printf "[join-listener] Waiting for connection...~n")
+        (flush-output)
         (handle-exceptions exn
           (begin
             ;; Log but continue on errors
+            (printf "[join-listener] Exception in accept: ~a~n"
+                    (get-condition-property exn 'exn 'message "unknown"))
+            (flush-output)
             (thread-sleep! 0.5)
             (loop))
 
