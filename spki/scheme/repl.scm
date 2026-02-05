@@ -8395,6 +8395,10 @@ The Ten Commandments of λ
     (when *node-listener*
       (handle-exceptions exn #f (tcp-close *node-listener*))
       (set! *node-listener* #f))))
+;; Always restore terminal to cooked mode on exit
+(register-cleanup-hook! 'repl-tty
+  (lambda ()
+    (handle-exceptions exn #f (tty-set-cooked))))
 ;; Measure boot-time weave (must be after vault import)
 (hash-table-set! *session-stats* 'boot-weave (measure-weave))
 
