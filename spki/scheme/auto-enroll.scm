@@ -191,9 +191,11 @@
             (loop))
 
           (let-values (((in out) (tcp-accept *join-listener*)))
+            (printf "[join-listener] Accepted connection~n")
             (thread-start!
               (make-thread
                 (lambda ()
+                  (printf "[join-listener] Thread started~n")
                   (handle-exceptions exn
                     (printf "[join-listener] Error handling request: ~a~n"
                             (get-condition-property exn 'exn 'message "unknown"))
