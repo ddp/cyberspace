@@ -110,13 +110,24 @@
 #include "lineage.h"
 
 /* Calculate display width of a UTF-8 string.
- * Returns the number of terminal columns needed to display the string. */
+ * Returns the number of terminal columns needed to display the string.
+ * Skips ANSI escape sequences (they have zero display width). */
 static size_t utf8_display_width(const char *s) {
     size_t width = 0;
     mbstate_t state;
     memset(&state, 0, sizeof(state));
 
     while (*s) {
+        /* Skip ANSI escape sequences: ESC [ ... letter */
+        if (*s == '\x1b' && *(s+1) == '[') {
+            s += 2;  /* Skip ESC [ */
+            while (*s && !(*s >= 'A' && *s <= 'Z') && !(*s >= 'a' && *s <= 'z')) {
+                s++;  /* Skip parameters until terminating letter */
+            }
+            if (*s) s++;  /* Skip the terminating letter */
+            continue;
+        }
+
         wchar_t wc;
         size_t bytes = mbrtowc(&wc, s, MB_CUR_MAX, &state);
         if (bytes == (size_t)-1 || bytes == (size_t)-2) {
