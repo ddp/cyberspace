@@ -84,7 +84,7 @@
   (import (rnrs)
           (only (chezscheme)
                 load-shared-object foreign-procedure
-                lock-object foreign-callable
+                lock-object foreign-callable foreign-callable-entry-point
                 make-parameter parameterize
                 printf format void
                 include guard with-exception-handler))
@@ -420,7 +420,10 @@
        \"v@:@\" = -(void)method:(id)arg
        \"@@:\"  = -(id)method
        \"@@:@\" = -(id)method:(id)arg"
-    (let ((result (%add-method cls (objc-sel sel-name) proc types)))
+    (let ((result (%add-method cls
+                               (objc-sel sel-name)
+                               (foreign-callable-entry-point proc)
+                               types)))
       (when (zero? result)
         (error 'objc-add-method! "Failed to add method" sel-name))))
 
