@@ -9,7 +9,8 @@
 (library (cyberspace compat base64)
   (export base64-encode base64-decode)
 
-  (import (rnrs))
+  (import (rnrs)
+          (only (chezscheme) open-output-string get-output-string))
 
   (define *encode-table*
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
