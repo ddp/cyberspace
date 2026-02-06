@@ -29,6 +29,7 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 #import <Foundation/Foundation.h>
+#import <AppKit/AppKit.h>
 
 /* Suppress clang's objc_msgSend type-safety warnings -- we know
    what we're doing with these casts, that's the whole point. */
@@ -289,13 +290,17 @@ void *bridge_array_at(void *arr, long idx) {
  * Wrap your Scheme entry points with push/pop.
  * ================================================================ */
 
+/* Under ARC, use @autoreleasepool blocks -- but we can't wrap
+   arbitrary Scheme code in a block.  Instead, use the underlying
+   runtime functions that @autoreleasepool compiles to. */
 void *bridge_pool_push(void) {
-    return (__bridge_retained void *)
-        [[NSAutoreleasePool alloc] init];
+    extern void *objc_autoreleasePoolPush(void);
+    return objc_autoreleasePoolPush();
 }
 
 void bridge_pool_pop(void *pool) {
-    (void)(__bridge_transfer NSAutoreleasePool *)pool;
+    extern void objc_autoreleasePoolPop(void *);
+    objc_autoreleasePoolPop(pool);
 }
 
 /* ================================================================
