@@ -72,7 +72,7 @@
   ;; State
   ;; ============================================================
 
-  (define *realm-verbose* #f)         ; verbose logging (default off)
+  (define *realm-verbose* #t)         ; verbose logging (default on for debugging)
   (define *realm-master* #f)          ; master node name (or #f, legacy)
   (define *realm-members* '())        ; list of (name . hardware)
   (define *scaling-factors* #f)       ; computed scaling factors
