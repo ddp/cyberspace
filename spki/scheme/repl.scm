@@ -7445,7 +7445,7 @@ The Ten Commandments of λ
   (set! *user-mode* 'schemer)
   (set! *prompt-fn* prahar-prompt)  ; dynamic prahar-colored λ
   (lineage#set-paren-wrap 1)  ; wrap completions in parens
-  (print "λ mode. Full power, no confirmations."))
+  (printf "~amode. Full power, no confirmations.~n" (prahar-prompt)))
 
 ;; Novice mode guardrails - dangerous operations need confirmation
 (define *dangerous-ops*
