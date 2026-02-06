@@ -87,8 +87,7 @@
                 lock-object foreign-callable
                 make-parameter parameterize
                 printf format void
-                include guard with-exception-handler
-                dynamic-wind))
+                include guard with-exception-handler))
 
   ;; ============================================================
   ;; Library Loading
