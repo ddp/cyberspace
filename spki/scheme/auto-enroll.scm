@@ -88,6 +88,9 @@
   (define *join-listener-thread* #f)  ; listener thread
   (define *join-running* #f)          ; listener running flag
 
+  ;; Join operation mutex (prevents auto-enroll/join-realm race)
+  (define *join-in-progress* #f)      ; #t while join operation active
+
   ;; Pending membership proposals (for voting, future)
   (define *pending-proposals* '())    ; list of (name timestamp proposer)
 
@@ -340,63 +343,75 @@
            (members . ((fluffy . 1.0) (starlight . 0.032)))
            (scaling . ...))"
 
-    (when *realm-verbose*
-      (printf "~n[auto-enroll] Starting realm discovery as '~a'...~n" name))
+    ;; Prevent race with concurrent join-realm
+    (if *join-in-progress*
+        (begin
+          (printf "[auto-enroll] Join operation already in progress~n")
+          `((status . busy) (reason . "join in progress")))
 
-    ;; Step 1: Gather our hardware info
-    (let ((my-hw (introspect-hardware)))
-      (when *realm-verbose*
-        (printf "[auto-enroll] Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
-                (cadr (assq 'cores (cdr my-hw)))
-                (cadr (assq 'memory-gb (cdr my-hw)))
-                (cadr (assq 'mobile (cdr my-hw)))))
+        (begin
+          (set! *join-in-progress* #t)
+          (dynamic-wind
+            (lambda () #f)
+            (lambda ()
+              (when *realm-verbose*
+                (printf "~n[auto-enroll] Starting realm discovery as '~a'...~n" name))
 
-      ;; Step 2: Discover peers and exchange capabilities
-      (let ((members (discover-and-elect name my-hw timeout: timeout)))
+              ;; Step 1: Gather our hardware info
+              (let ((my-hw (introspect-hardware)))
+                (when *realm-verbose*
+                  (printf "[auto-enroll] Hardware: ~a cores, ~a GB RAM, mobile: ~a~n"
+                          (cadr (assq 'cores (cdr my-hw)))
+                          (cadr (assq 'memory-gb (cdr my-hw)))
+                          (cadr (assq 'mobile (cdr my-hw)))))
 
-        (if (null? members)
-            ;; No peers found - we are the sole master
-            (begin
-              (printf "[auto-enroll] No peers found. Establishing single-node realm.~n")
-              (set! *realm-master* name)
-              (set! *my-role* 'master)
-              (set! *realm-members* `((,name . ,my-hw)))
-              (set! *scaling-factors* (compute-scaling-factor *realm-members*))
+                ;; Step 2: Discover peers and exchange capabilities
+                (let ((members (discover-and-elect name my-hw timeout: timeout)))
 
-              ;; Configure gossip for single node (default settings)
-              (configure-from-scaling! 1.0 1.0 100 30)
-              (printf "[auto-enroll] Gossip configured: interval=30s, batch=100~n")
+                  (if (null? members)
+                      ;; No peers found - we are the sole master
+                      (begin
+                        (printf "[auto-enroll] No peers found. Establishing single-node realm.~n")
+                        (set! *realm-master* name)
+                        (set! *my-role* 'master)
+                        (set! *realm-members* `((,name . ,my-hw)))
+                        (set! *scaling-factors* (compute-scaling-factor *realm-members*))
 
-              (make-realm-result name 'master *realm-members* *scaling-factors*))
+                        ;; Configure gossip for single node (default settings)
+                        (configure-from-scaling! 1.0 1.0 100 30)
+                        (printf "[auto-enroll] Gossip configured: interval=30s, batch=100~n")
 
-            ;; Peers found - run election
-            (let-values (((winner score all-scores) (elect-master members)))
-              (printf "[auto-enroll] Election results:~n")
-              (for-each (lambda (s)
-                          (printf "  ~a: ~a~a~n"
-                                  (car s)
-                                  (cdr s)
-                                  (if (eq? (car s) winner) " <- WINNER" "")))
-                        all-scores)
+                        (make-realm-result name 'master *realm-members* *scaling-factors*))
 
-              (set! *realm-master* winner)
-              (set! *realm-members* members)
-              (set! *my-role* (if (eq? winner name) 'master 'node))
-              (set! *scaling-factors* (compute-scaling-factor members))
+                      ;; Peers found - run election
+                      (let-values (((winner score all-scores) (elect-master members)))
+                        (printf "[auto-enroll] Election results:~n")
+                        (for-each (lambda (s)
+                                    (printf "  ~a: ~a~a~n"
+                                            (car s)
+                                            (cdr s)
+                                            (if (eq? (car s) winner) " <- WINNER" "")))
+                                  all-scores)
 
-              ;; Configure gossip from scaling factors
-              (let ((gossip-cfg (configure-gossip-from-scaling *scaling-factors*)))
-                (configure-from-scaling!
-                  (cdr (assq 'my-scale gossip-cfg))
-                  (cdr (assq 'effective-capacity *scaling-factors*))
-                  (cdr (assq 'batch-size gossip-cfg))
-                  (cdr (assq 'gossip-interval gossip-cfg)))
-                (printf "[auto-enroll] Gossip configured: interval=~as, batch=~a~n"
-                        (cdr (assq 'gossip-interval gossip-cfg))
-                        (cdr (assq 'batch-size gossip-cfg))))
+                        (set! *realm-master* winner)
+                        (set! *realm-members* members)
+                        (set! *my-role* (if (eq? winner name) 'master 'node))
+                        (set! *scaling-factors* (compute-scaling-factor members))
 
-              (printf "[auto-enroll] Master: ~a (this node: ~a)~n" winner *my-role*)
-              (make-realm-result winner *my-role* members *scaling-factors*))))))
+                        ;; Configure gossip from scaling factors
+                        (let ((gossip-cfg (configure-gossip-from-scaling *scaling-factors*)))
+                          (configure-from-scaling!
+                            (cdr (assq 'my-scale gossip-cfg))
+                            (cdr (assq 'effective-capacity *scaling-factors*))
+                            (cdr (assq 'batch-size gossip-cfg))
+                            (cdr (assq 'gossip-interval gossip-cfg)))
+                          (printf "[auto-enroll] Gossip configured: interval=~as, batch=~a~n"
+                                  (cdr (assq 'gossip-interval gossip-cfg))
+                                  (cdr (assq 'batch-size gossip-cfg))))
+
+                        (printf "[auto-enroll] Master: ~a (this node: ~a)~n" winner *my-role*)
+                        (make-realm-result winner *my-role* members *scaling-factors*))))))
+            (lambda () (set! *join-in-progress* #f))))))
 
   (define (make-realm-result master role members scaling)
     "Build realm configuration result"
@@ -427,10 +442,21 @@
        (join-realm 'starlight \"fluffy.local\" reason: \"referred by Alice\")
        ; Fluffy must be running: (start-join-listener 'fluffy master-key)"
 
-    (when *realm-verbose*
-      (printf "[join-realm] Connecting to master at ~a:~a...~n" master-host port))
+    ;; Prevent race with concurrent auto-enroll-realm
+    (if *join-in-progress*
+        (begin
+          (printf "[join-realm] Join operation already in progress~n")
+          `((status . busy) (reason . "join in progress")))
 
-    (let* ((my-hw (introspect-hardware))
+        (begin
+          (set! *join-in-progress* #t)
+          (dynamic-wind
+            (lambda () #f)
+            (lambda ()
+              (when *realm-verbose*
+                (printf "[join-realm] Connecting to master at ~a:~a...~n" master-host port))
+
+              (let* ((my-hw (introspect-hardware))
            ;; Generate keypair for this node
            (keypair (ed25519-keypair))
            (pubkey (car keypair))
@@ -577,6 +603,7 @@
                      (response . ,response))))))
             (lambda ()
               (enrollment-close in out)))))))
+            (lambda () (set! *join-in-progress* #f))))))
 
   ;; ============================================================
   ;; Discovery and Election
