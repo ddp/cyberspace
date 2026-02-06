@@ -91,27 +91,25 @@
 
   ;; ============================================================
   ;; Library Loading
+  ;;
+  ;; Must happen BEFORE foreign-procedure declarations below,
+  ;; because Chez resolves symbols at definition time.
   ;; ============================================================
 
-  ;; Path to the bridge dylib -- set before calling objc-init!
-  ;; or let it search relative to the library.
-  (define *bridge-loaded* #f)
+  (define *bridge-loaded*
+    (let loop ((paths '("./libobjc-bridge.dylib"
+                        "../libobjc-bridge.dylib"
+                        "libobjc-bridge.dylib")))
+      (if (null? paths)
+          (error 'cyberspace-objc
+                 "Cannot find libobjc-bridge.dylib -- run build-objc-bridge.sh")
+          (guard (exn [#t (loop (cdr paths))])
+            (load-shared-object (car paths))
+            #t))))
 
   (define (objc-init!)
-    "Load the Objective-C bridge shared library.
-     Must be called before any other objc- functions.
-     Safe to call multiple times (idempotent)."
-    (unless *bridge-loaded*
-      ;; Try several locations
-      (let loop ((paths '("./libobjc-bridge.dylib"
-                          "../libobjc-bridge.dylib"
-                          "libobjc-bridge.dylib")))
-        (if (null? paths)
-            (error 'objc-init!
-                   "Cannot find libobjc-bridge.dylib -- run build-objc-bridge.sh")
-            (guard (exn [#t (loop (cdr paths))])
-              (load-shared-object (car paths))
-              (set! *bridge-loaded* #t))))))
+    "No-op for compatibility.  The bridge loads at library init time."
+    (void))
 
   ;; ============================================================
   ;; Null Pointer
