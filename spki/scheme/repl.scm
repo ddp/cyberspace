@@ -74,8 +74,14 @@
   "Parse command line arguments into options alist."
   (filter-map parse-cli-option args))
 
+;; Collect non-option arguments (script files)
+(define (collect-script-args args)
+  "Return list of non-option arguments (potential script files)."
+  (filter (lambda (a) (not (string-prefix? "--" a))) args))
+
 ;; Parse arguments at load time
 (define *cli-options* (parse-cli-args (command-line-arguments)))
+(define *cli-scripts* (collect-script-args (command-line-arguments)))
 
 (define (cli-option name)
   "Get CLI option value, or #f if not present."
@@ -99,6 +105,7 @@
   (print "  --verbose            Show verbose output (e.g., rm during --clean)")
   (print "  --boot=<level>       Boot verbosity: shadow|whisper|portal|oracle")
   (print "  --eval='<expr>'      Evaluate expression and exit")
+  (print "  --exec='<expr>'      Evaluate expression after init, then start REPL")
   (print "  --version            Show version information")
   (print "  --help               Show this help")
   (print "")
@@ -107,6 +114,7 @@
   (print "  cs --clean --rebuild Clean slate rebuild")
   (print "  cs --boot=portal     Start with banner and help")
   (print "  cs --eval='(+ 1 2)'  Evaluate and exit")
+  (print "  cs init.scm          Source file, then start REPL (supports #! shebang)")
   (exit 0))
 
 ;;; --version
@@ -7445,7 +7453,7 @@ The Ten Commandments of λ
   (set! *user-mode* 'schemer)
   (set! *prompt-fn* prahar-prompt)  ; dynamic prahar-colored λ
   (lineage#set-paren-wrap 1)  ; wrap completions in parens
-  (print "λ mode. Full power, no confirmations."))
+  (printf "~amode. Full power, no confirmations.~n" (prahar-prompt)))
 
 ;; Novice mode guardrails - dangerous operations need confirmation
 (define *dangerous-ops*
@@ -8470,6 +8478,24 @@ The Ten Commandments of λ
           (write result)
           (newline))
         (exit 0)))))
+
+;; --exec: evaluate expression after init, then start REPL
+(when (cli-option "exec")
+  (let ((expr (cli-option "exec")))
+    (handle-exceptions exn
+      (printf "[exec] Error: ~a~n"
+              ((condition-property-accessor 'exn 'message) exn))
+      (eval (with-input-from-string expr read)))))
+
+;; Source script files passed as arguments (supports #!/usr/bin/env cs shebang)
+(for-each
+  (lambda (script)
+    (when (file-exists? script)
+      (handle-exceptions exn
+        (printf "[script] Error in ~a: ~a~n" script
+                ((condition-property-accessor 'exn 'message) exn))
+        (load script))))
+  *cli-scripts*)
 
 ;; Start custom REPL
 ;; Flush any input that accumulated during boot (editor loads, etc.)

@@ -38,6 +38,8 @@
    ;; Verbosity
    *realm-verbose*
    realm-verbose!
+   ;; Diagnostics
+   join-listener-diag
    ;; Testing support
    reset-enrollment-state!)
 
@@ -185,29 +187,38 @@
 
   (define (join-listener-loop)
     "Accept and handle incoming join requests."
+    (printf "[join-listener] Loop started, waiting for connections...~n")
+    (flush-output)
     (let loop ()
       (when (and *join-running* *join-listener*)
         (handle-exceptions exn
           (begin
-            ;; Log but continue on errors
+            (printf "[join-listener] Accept error: ~a~n"
+                    (get-condition-property exn 'exn 'message "unknown"))
+            (flush-output)
             (thread-sleep! 0.5)
             (loop))
 
           (let-values (((in out) (tcp-accept *join-listener*)))
+            (printf "[join-listener] Connection accepted~n")
+            (flush-output)
             (thread-start!
               (make-thread
                 (lambda ()
                   (handle-exceptions exn
-                    (when *realm-verbose*
-                      (printf "[join-listener] Error: ~a~n"
-                              (get-condition-property exn 'exn 'message "unknown")))
+                    (printf "[join-listener] Handler error: ~a~n"
+                            (get-condition-property exn 'exn 'message "unknown"))
                     (handle-join-connection in out))
                   (enrollment-close in out))))
             (loop))))))
 
   (define (handle-join-connection in out)
     "Handle one incoming connection (join request or capability exchange)."
+    (printf "[join-handler] Reading request...~n")
+    (flush-output)
     (let ((request (enrollment-receive in)))
+      (printf "[join-handler] Got: ~a~n" (if (pair? request) (car request) request))
+      (flush-output)
       (cond
         ;; Capability exchange (for discovery phase)
         ((and (pair? request) (eq? (car request) 'capability-exchange))
@@ -738,6 +749,35 @@
   ;; Register cleanup hook (runs on exit)
   ;; stop-join-listener already calls bonjour-unregister
   (register-cleanup-hook! 'auto-enroll stop-join-listener)
+
+  ;; ============================================================
+  ;; Diagnostics
+  ;; ============================================================
+
+  (define (join-listener-diag)
+    "Diagnose join listener state. Run on master to check health."
+    (let ((thread-state
+           (if *join-listener-thread*
+               (thread-state *join-listener-thread*)
+               'no-thread)))
+      (printf "~n=== Join Listener Diagnostics ===~n")
+      (printf "  *join-running*:   ~a~n" *join-running*)
+      (printf "  *join-listener*:  ~a~n" (if *join-listener* "active" "#f"))
+      (printf "  listener-thread:  ~a~n" thread-state)
+      (printf "  *my-name*:        ~a~n" *my-name*)
+      (printf "  *my-role*:        ~a~n" *my-role*)
+      (printf "  *realm-master*:   ~a~n" *realm-master*)
+      (printf "  *join-in-progress*: ~a~n" *join-in-progress*)
+      (printf "  member-count:     ~a~n" (length *realm-members*))
+      (printf "================================~n")
+      (flush-output)
+      `((join-running . ,*join-running*)
+        (listener . ,(if *join-listener* 'active 'none))
+        (thread-state . ,thread-state)
+        (name . ,*my-name*)
+        (role . ,*my-role*)
+        (master . ,*realm-master*)
+        (join-in-progress . ,*join-in-progress*))))
 
   ;; ============================================================
   ;; Testing Support

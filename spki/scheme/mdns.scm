@@ -164,10 +164,10 @@
                   (get-condition-property exn 'exn 'message "unknown"))
           #f)
         ;; dns-sd -R <name> <type> <domain> <port>
-        (let-values (((stdout stdin pid stderr)
-                      (process* "/usr/bin/dns-sd"
+        ;; Use process-run instead of process* - no pipes means dns-sd won't
+        ;; exit prematurely due to pipe handling issues
+        (let ((pid (process-run "/usr/bin/dns-sd"
                                 (list "-R" name-str cyberspace-service "local" (number->string port)))))
-          (close-output-port stdin)
           (set! *bonjour-pid* pid)
           (write-pid-file bonjour-pid-file pid)  ; Persist for crash recovery
           (printf "[bonjour] Registered '~a' on ~a port ~a (pid ~a)~n" name-str cyberspace-service port pid)
@@ -450,8 +450,16 @@
   (define (enrollment-receive in)
     "Receive enrollment data (s-expression)"
     (handle-exceptions exn
-      #f
-      (read in)))
+      (begin
+        (printf "[enrollment-receive] Error: ~a~n"
+                (get-condition-property exn 'exn 'message "unknown"))
+        (flush-output)
+        #f)
+      (let ((data (read in)))
+        (when (eof-object? data)
+          (printf "[enrollment-receive] Got EOF~n")
+          (flush-output))
+        data)))
 
   (define (enrollment-close in out)
     "Close enrollment connection"
