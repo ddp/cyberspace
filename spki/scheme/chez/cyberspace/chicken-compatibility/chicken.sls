@@ -20,7 +20,9 @@
     print
     ;; String operations
     conc string-intersperse string-split
-    string-contains string-prefix? string-trim-both
+    string-contains string-prefix? string-suffix?
+    string-trim-both string-take-right string-drop-right
+    string-concatenate
     ;; Association lists
     alist-ref alist-update alist-delete
     ;; Condition handling
@@ -216,6 +218,27 @@
       (if (>= start end)
           ""
           (substring str start end))))
+
+  ;; string-suffix?: check if str ends with suffix
+  (define (string-suffix? suffix str)
+    (let ((xlen (string-length suffix))
+          (slen (string-length str)))
+      (and (<= xlen slen)
+           (string=? (substring str (- slen xlen) slen) suffix))))
+
+  ;; string-take-right: return last n characters
+  (define (string-take-right str n)
+    (let ((len (string-length str)))
+      (if (>= n len) str (substring str (- len n) len))))
+
+  ;; string-drop-right: remove last n characters
+  (define (string-drop-right str n)
+    (let ((len (string-length str)))
+      (if (>= n len) "" (substring str 0 (- len n)))))
+
+  ;; string-concatenate: concatenate list of strings (SRFI-13)
+  (define (string-concatenate lst)
+    (apply string-append lst))
 
   ;; ============================================================
   ;; Time
