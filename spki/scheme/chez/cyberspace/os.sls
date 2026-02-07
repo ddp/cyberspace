@@ -52,7 +52,7 @@
   (define (shell-command cmd)
     "Run shell command, return trimmed output or #f."
     (guard (exn [#t #f])
-      (let-values (((to-stdin from-stdout from-stderr pid)
+      (let-values (((to-stdin from-stdout from-stderr)
                     (open-process-ports cmd 'line (native-transcoder))))
         (let ((result (get-line from-stdout)))
           (close-port to-stdin)
@@ -63,7 +63,7 @@
   (define (shell-lines cmd)
     "Run shell command, return list of lines."
     (guard (exn [#t '()])
-      (let-values (((to-stdin from-stdout from-stderr pid)
+      (let-values (((to-stdin from-stdout from-stderr)
                     (open-process-ports cmd 'line (native-transcoder))))
         (let loop ((lines '()))
           (let ((line (get-line from-stdout)))

@@ -10,6 +10,9 @@
 ;;;   - handle-exceptions (-> guard)
 ;;;   - get-condition-property (condition accessor)
 ;;;   - optional argument helpers
+;;;   - current-seconds (epoch time)
+;;;   - SRFI-1 list utilities (filter-map, take, drop, any, every)
+;;;   - SRFI-13 string utilities (string-contains, string-prefix?)
 
 (library (cyberspace chicken-compatibility chicken)
   (export
@@ -17,16 +20,22 @@
     print
     ;; String operations
     conc string-intersperse string-split
+    string-contains string-prefix? string-trim-both
     ;; Association lists
     alist-ref alist-update alist-delete
     ;; Condition handling
     handle-exceptions get-condition-property
     ;; Optional/keyword argument helpers
-    get-opt get-key)
+    get-opt get-key
+    ;; Time
+    current-seconds
+    ;; SRFI-1 list utilities
+    filter-map take drop any every)
 
   (import (rnrs)
           (only (chezscheme) printf format void
-                with-output-to-string display))
+                with-output-to-string display
+                current-time time-second))
 
   ;; ============================================================
   ;; Output
@@ -169,5 +178,94 @@
         ((null? (cdr rest)) default)
         ((eq? (car rest) key) (cadr rest))
         (else (loop (cddr rest))))))
+
+  ;; ============================================================
+  ;; String Utilities (SRFI-13 subset + Chicken extras)
+  ;; ============================================================
+
+  ;; string-contains: find substring, return starting index or #f
+  (define (string-contains haystack needle)
+    (let ((hlen (string-length haystack))
+          (nlen (string-length needle)))
+      (if (> nlen hlen)
+          #f
+          (let loop ((i 0))
+            (cond
+              ((> (+ i nlen) hlen) #f)
+              ((string=? (substring haystack i (+ i nlen)) needle) i)
+              (else (loop (+ i 1))))))))
+
+  ;; string-prefix?: check if str starts with prefix
+  (define (string-prefix? prefix str)
+    (let ((plen (string-length prefix))
+          (slen (string-length str)))
+      (and (<= plen slen)
+           (string=? (substring str 0 plen) prefix))))
+
+  ;; string-trim-both: strip leading/trailing whitespace
+  (define (string-trim-both str)
+    (let* ((len (string-length str))
+           (start (let loop ((i 0))
+                    (if (and (< i len) (char-whitespace? (string-ref str i)))
+                        (loop (+ i 1))
+                        i)))
+           (end (let loop ((i (- len 1)))
+                  (if (and (>= i start) (char-whitespace? (string-ref str i)))
+                      (loop (- i 1))
+                      (+ i 1)))))
+      (if (>= start end)
+          ""
+          (substring str start end))))
+
+  ;; ============================================================
+  ;; Time
+  ;; ============================================================
+
+  ;; Chicken's (current-seconds): POSIX epoch seconds
+  (define (current-seconds)
+    (time-second (current-time)))
+
+  ;; ============================================================
+  ;; SRFI-1 List Utilities
+  ;; ============================================================
+
+  ;; filter-map: map + filter in one pass (drop #f results)
+  (define (filter-map proc lst)
+    (let loop ((rest lst) (acc '()))
+      (if (null? rest)
+          (reverse acc)
+          (let ((result (proc (car rest))))
+            (loop (cdr rest)
+                  (if result (cons result acc) acc))))))
+
+  ;; take: return first n elements
+  (define (take lst n)
+    (let loop ((rest lst) (k n) (acc '()))
+      (if (or (zero? k) (null? rest))
+          (reverse acc)
+          (loop (cdr rest) (- k 1) (cons (car rest) acc)))))
+
+  ;; drop: skip first n elements
+  (define (drop lst n)
+    (let loop ((rest lst) (k n))
+      (if (or (zero? k) (null? rest))
+          rest
+          (loop (cdr rest) (- k 1)))))
+
+  ;; any: return first truthy result of applying pred
+  (define (any pred lst)
+    (let loop ((rest lst))
+      (cond
+        ((null? rest) #f)
+        ((pred (car rest)) => (lambda (x) x))
+        (else (loop (cdr rest))))))
+
+  ;; every: return #f if any element fails pred
+  (define (every pred lst)
+    (let loop ((rest lst) (last #t))
+      (cond
+        ((null? rest) last)
+        ((pred (car rest)) => (lambda (x) (loop (cdr rest) x)))
+        (else #f))))
 
 ) ;; end library
