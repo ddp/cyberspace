@@ -6,9 +6,9 @@
 
 (import (rnrs)
         (only (chezscheme) printf format)
-        (cyberspace compat blob)
-        (cyberspace compat chicken)
-        (cyberspace compat base64)
+        (cyberspace chicken-compatibility blob)
+        (cyberspace chicken-compatibility chicken)
+        (cyberspace chicken-compatibility base64)
         (cyberspace sexp))
 
 (define pass-count 0)

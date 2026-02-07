@@ -14,7 +14,7 @@
 ;;;
 ;;; Ported from Chicken's sexp.scm.
 ;;; Changes: module -> library, (chicken *) -> (rnrs), blob -> bytevector,
-;;;          base64 egg -> cyberspace compat base64.
+;;;          base64 egg -> cyberspace chicken-compatibility base64.
 
 (library (cyberspace sexp)
   (export
@@ -29,8 +29,8 @@
 
   (import (rnrs)
           (only (chezscheme) printf format)
-          (cyberspace compat blob)
-          (prefix (cyberspace compat base64) b64:))
+          (cyberspace chicken-compatibility blob)
+          (prefix (cyberspace chicken-compatibility base64) b64:))
 
   ;; S-expression types (tagged records)
   (define-record-type (<sexp-atom> make-atom sexp-atom?)

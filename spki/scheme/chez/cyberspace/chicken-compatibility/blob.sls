@@ -11,7 +11,7 @@
 ;;; Used by: crypto-ffi, cert, vault, audit, sexp, merkle, bloom,
 ;;;          keyring, security, gossip -- basically everything.
 
-(library (cyberspace compat blob)
+(library (cyberspace chicken-compatibility blob)
   (export
     ;; Core blob operations
     make-blob blob-size blob? blob=?
