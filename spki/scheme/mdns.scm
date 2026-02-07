@@ -164,10 +164,10 @@
                   (get-condition-property exn 'exn 'message "unknown"))
           #f)
         ;; dns-sd -R <name> <type> <domain> <port>
-        (let-values (((stdout stdin pid stderr)
-                      (process* "/usr/bin/dns-sd"
+        ;; Use process-run instead of process* - no pipes means dns-sd won't
+        ;; exit prematurely due to pipe handling issues
+        (let ((pid (process-run "/usr/bin/dns-sd"
                                 (list "-R" name-str cyberspace-service "local" (number->string port)))))
-          (close-output-port stdin)
           (set! *bonjour-pid* pid)
           (write-pid-file bonjour-pid-file pid)  ; Persist for crash recovery
           (printf "[bonjour] Registered '~a' on ~a port ~a (pid ~a)~n" name-str cyberspace-service port pid)
