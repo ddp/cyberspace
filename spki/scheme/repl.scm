@@ -7701,8 +7701,10 @@ The Ten Commandments of λ
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
 (define (command-repl)
   (let loop ()
-    ;; Don't clear *last-call-chain* here - it should persist until next exception
-    ;; capture-exception will overwrite it when a new exception occurs
+    ;; Yield to green threads before blocking in linenoise (C call).
+    ;; Without this, cooperative threads (join-listener, auto-enroll)
+    ;; never get scheduled while the REPL waits for keyboard input.
+    (thread-yield!)
     (let ((line (repl-read-line (current-prompt))))
       (cond
         ;; EOF (lineage returns #f, read-line returns eof-object)
