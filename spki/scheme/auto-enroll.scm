@@ -189,25 +189,32 @@
       (when (and *join-running* *join-listener*)
         (handle-exceptions exn
           (begin
-            ;; Log but continue on errors
+            (printf "[join-listener] Accept error: ~a~n"
+                    (get-condition-property exn 'exn 'message "unknown"))
+            (flush-output)
             (thread-sleep! 0.5)
             (loop))
 
           (let-values (((in out) (tcp-accept *join-listener*)))
+            (printf "[join-listener] Connection accepted~n")
+            (flush-output)
             (thread-start!
               (make-thread
                 (lambda ()
                   (handle-exceptions exn
-                    (when *realm-verbose*
-                      (printf "[join-listener] Error: ~a~n"
-                              (get-condition-property exn 'exn 'message "unknown")))
+                    (printf "[join-listener] Handler error: ~a~n"
+                            (get-condition-property exn 'exn 'message "unknown"))
                     (handle-join-connection in out))
                   (enrollment-close in out))))
             (loop))))))
 
   (define (handle-join-connection in out)
     "Handle one incoming connection (join request or capability exchange)."
+    (printf "[join-handler] Reading request...~n")
+    (flush-output)
     (let ((request (enrollment-receive in)))
+      (printf "[join-handler] Got: ~a~n" (if (pair? request) (car request) request))
+      (flush-output)
       (cond
         ;; Capability exchange (for discovery phase)
         ((and (pair? request) (eq? (car request) 'capability-exchange))
