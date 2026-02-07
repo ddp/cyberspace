@@ -450,8 +450,16 @@
   (define (enrollment-receive in)
     "Receive enrollment data (s-expression)"
     (handle-exceptions exn
-      #f
-      (read in)))
+      (begin
+        (printf "[enrollment-receive] Error: ~a~n"
+                (get-condition-property exn 'exn 'message "unknown"))
+        (flush-output)
+        #f)
+      (let ((data (read in)))
+        (when (eof-object? data)
+          (printf "[enrollment-receive] Got EOF~n")
+          (flush-output))
+        data)))
 
   (define (enrollment-close in out)
     "Close enrollment connection"
