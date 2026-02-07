@@ -6,7 +6,7 @@
 ;;;
 ;;; RFC 4648 compliant.
 
-(library (cyberspace compat base64)
+(library (cyberspace chicken-compatibility base64)
   (export base64-encode base64-decode)
 
   (import (rnrs)

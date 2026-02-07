@@ -11,7 +11,7 @@
 ;;;   - get-condition-property (condition accessor)
 ;;;   - optional argument helpers
 
-(library (cyberspace compat chicken)
+(library (cyberspace chicken-compatibility chicken)
   (export
     ;; Output
     print
