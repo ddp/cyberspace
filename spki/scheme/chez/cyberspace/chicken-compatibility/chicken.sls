@@ -32,7 +32,9 @@
     ;; Time
     current-seconds
     ;; SRFI-1 list utilities
-    filter-map take drop any every)
+    filter-map take drop any every find
+    ;; String join (Chicken's string-join)
+    string-join)
 
   (import (rnrs)
           (only (chezscheme) printf format void
@@ -290,5 +292,31 @@
         ((null? rest) last)
         ((pred (car rest)) => (lambda (x) (loop (cdr rest) x)))
         (else #f))))
+
+  ;; find: return first element satisfying pred, or #f
+  (define (find pred lst)
+    (let loop ((rest lst))
+      (cond
+        ((null? rest) #f)
+        ((pred (car rest)) (car rest))
+        (else (loop (cdr rest))))))
+
+  ;; ============================================================
+  ;; String Join (Chicken's string-join)
+  ;; ============================================================
+
+  ;; string-join: join list of strings with separator (default " ")
+  (define (string-join lst . rest)
+    (let ((sep (if (null? rest) " " (car rest))))
+      (cond
+        ((null? lst) "")
+        ((null? (cdr lst)) (car lst))
+        (else
+         (let loop ((rest (cdr lst))
+                    (acc (car lst)))
+           (if (null? rest)
+               acc
+               (loop (cdr rest)
+                     (string-append acc sep (car rest)))))))))
 
 ) ;; end library
