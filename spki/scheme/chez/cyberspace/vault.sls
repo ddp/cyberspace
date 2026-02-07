@@ -32,13 +32,18 @@
     capability-audit-enable!
 
     ;; Helper
-    get-vault-principal)
+    get-vault-principal
+
+    ;; Membership (Memo-050)
+    store-membership-cert!
+    realm-membership-cert
+    realm-affiliated?)
 
   (import (rnrs)
           (only (chezscheme)
-                printf format void file-exists? list-sort
+                printf format void file-exists? list-sort system
                 with-output-to-file with-input-from-file
-                directory-exists?)
+                directory-exists? delete-file)
           (cyberspace chicken-compatibility hashtable)
           (cyberspace chicken-compatibility blob))
 
@@ -156,6 +161,36 @@
     "Enable signed attestations for capability changes."
     (set! *capability-audit* signing-key)
     'audit-enabled)
+
+  ;; ============================================================
+  ;; Membership Certificates (Memo-050)
+  ;; ============================================================
+
+  (define (certs-path) ".vault/certs")
+  (define (membership-cert-path) ".vault/certs/membership.cert")
+
+  (define (store-membership-cert! cert)
+    "Store membership certificate in the vault.
+     cert: signed-enrollment-cert s-expression"
+    (unless (directory-exists? ".vault")
+      (error 'store-membership-cert! "No vault found. Create one first."))
+    (unless (directory-exists? (certs-path))
+      (system (string-append "mkdir -p " (certs-path))))
+    (with-output-to-file (membership-cert-path)
+      (lambda () (write cert) (newline)))
+    cert)
+
+  (define (realm-membership-cert)
+    "Load membership certificate from vault, or #f."
+    (let ((path (membership-cert-path)))
+      (if (file-exists? path)
+          (guard (exn [#t #f])
+            (with-input-from-file path read))
+          #f)))
+
+  (define (realm-affiliated?)
+    "Return #t if this node has a valid membership certificate."
+    (and (realm-membership-cert) #t))
 
   ;; Register core capabilities at load time
   (capability-add! 'ed25519-sign)
