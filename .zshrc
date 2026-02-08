@@ -182,7 +182,6 @@ if [[ -o interactive ]]; then
     alias cb='yt-dlp --merge-output-format mkv https://chaturbate.com/'
     alias grep='grep -i'            # ignore case
     alias gstat='git status -uno'   # ignore untracked files
-    alias guile='rlwrap guile'      # Keep guile if you still want it
     alias hd='xxd -g 4'
     alias hext="open -a 'HexEdit'"
     alias hst='~/bin/hst.pl'
