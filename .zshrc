@@ -166,6 +166,7 @@ if [[ -o interactive ]]; then
     alias avatar='cd ~/cyberspace && claude -c'
     alias cb='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
     alias cc='claude --continue'
+    alias chez='scheme --libdirs ~/cyberspace/spki/scheme/chez'
     alias chicken='rlwrap csi'
     alias cr='claude --resume'
     alias clone='stash && clone-fluffy --with-dotfiles'
