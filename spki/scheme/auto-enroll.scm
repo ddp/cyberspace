@@ -555,7 +555,16 @@
 
                      ;; Auto-start our own join listener (any member can accept joins)
                      (printf "[join-realm] Starting own listener (any member can sponsor joins)~n")
-                     (start-join-listener name keypair: (list pubkey privkey))
+                     (handle-exceptions exn
+                       (begin
+                         (printf "[join-realm] Listener restart delayed: ~a~n"
+                                 (get-condition-property exn 'exn 'message "unknown"))
+                         (thread-sleep! 1)
+                         (handle-exceptions exn2
+                           (printf "[join-realm] Listener restart failed: ~a~n"
+                                   (get-condition-property exn2 'exn 'message "unknown"))
+                           (start-join-listener name keypair: (list pubkey privkey))))
+                       (start-join-listener name keypair: (list pubkey privkey)))
 
                      `((status . joined)
                        (master . ,master)
@@ -597,8 +606,17 @@
                                (cdr (assq 'gossip-interval gossip-cfg))
                                (cdr (assq 'batch-size gossip-cfg))))
 
-                     ;; Start listening as new master
-                     (start-join-listener name keypair: (list pubkey privkey))
+                     ;; Start listening as new master (retry if port still held)
+                     (handle-exceptions exn
+                       (begin
+                         (printf "[join-realm] Listener restart delayed: ~a~n"
+                                 (get-condition-property exn 'exn 'message "unknown"))
+                         (thread-sleep! 1)
+                         (handle-exceptions exn2
+                           (printf "[join-realm] Listener restart failed: ~a~n"
+                                   (get-condition-property exn2 'exn 'message "unknown"))
+                           (start-join-listener name keypair: (list pubkey privkey))))
+                       (start-join-listener name keypair: (list pubkey privkey)))
 
                      (printf "[join-realm] Became master (more capable than ~a)~n" old-master)
 
