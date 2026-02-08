@@ -7647,9 +7647,10 @@ The Ten Commandments of λ
           (tty-set-raw)
           ;; Poll with 500ms timeout - allows signal handling
           (if (not (tty-char-ready? 500))
-              ;; No input ready - check if still a tty, then retry
+              ;; No input ready - yield to green threads, then retry
               (begin
                 (tty-set-cooked)
+                (thread-yield!)  ; schedule green threads (join-listener, etc.)
                 (if (zero? (tty?))
                     #f  ; Terminal gone, exit
                     (read-char)))  ; Still have tty, keep waiting
