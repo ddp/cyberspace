@@ -22,7 +22,7 @@
     *current-topic*
     *forum-path*)
 
-  (import (rnrs)
+  (import (except (rnrs) with-input-from-file with-output-to-file file-exists? delete-file find)
           (only (chezscheme)
                 printf format void
                 with-input-from-file with-output-to-file
@@ -37,7 +37,11 @@
   ;;; ============================================================
 
   (define *forum-path* ".vault/forum")
-  (define *current-topic* #f)
+  (define *current-topic-box* (vector #f))
+  (define-syntax *current-topic*
+    (identifier-syntax
+      [id (vector-ref *current-topic-box* 0)]
+      [(set! id val) (vector-set! *current-topic-box* 0 val)]))
 
   ;;; ============================================================
   ;;; Storage

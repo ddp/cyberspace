@@ -467,7 +467,7 @@
      (else #f)))
 
   (define (verify-chain root-key certs target-tag)
-    "Verify a delegation chain."
+    ;; Verify a delegation chain.
     (define (verify-links current-principal remaining-certs current-tag)
       (if (null? remaining-certs)
           (if (tag-implies current-tag target-tag)

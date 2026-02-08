@@ -88,10 +88,11 @@
     config-status
     config-diff)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists? delete-file with-input-from-file find string->bytevector)
+          (rnrs mutable-strings)
           (only (chezscheme)
                 printf format void system
-                file-exists? directory-exists?
+                file-exists?
                 current-directory delete-file
                 with-output-to-string with-input-from-file
                 getenv
@@ -199,17 +200,17 @@
                   (loop (cons c chars)))))))))
 
   (define (bytevector->hex bv)
-    "Convert bytevector to hex string."
-    (define hex-chars "0123456789abcdef")
-    (let* ((len (bytevector-length bv))
-           (out (make-string (* 2 len))))
-      (let loop ((i 0))
-        (when (< i len)
-          (let ((b (bytevector-u8-ref bv i)))
-            (string-set! out (* 2 i) (string-ref hex-chars (quotient b 16)))
-            (string-set! out (+ (* 2 i) 1) (string-ref hex-chars (remainder b 16)))
-            (loop (+ i 1)))))
-      out))
+    ;; Convert bytevector to hex string.
+    (let ((hex-chars "0123456789abcdef"))
+      (let* ((len (bytevector-length bv))
+             (out (make-string (* 2 len))))
+        (let loop ((i 0))
+          (when (< i len)
+            (let ((b (bytevector-u8-ref bv i)))
+              (string-set! out (* 2 i) (string-ref hex-chars (quotient b 16)))
+              (string-set! out (+ (* 2 i) 1) (string-ref hex-chars (remainder b 16)))
+              (loop (+ i 1)))))
+        out)))
 
   (define (string->bytevector s)
     "Convert string to bytevector (Latin-1)."
@@ -1087,7 +1088,11 @@
   ;; ============================================================
 
   ;; Config manifest: alist of (name source target mode)
-  (define *config-manifest* '())
+  (define *config-manifest-box* (vector '()))
+  (define-syntax *config-manifest*
+    (identifier-syntax
+      [id (vector-ref *config-manifest-box* 0)]
+      [(set! id val) (vector-set! *config-manifest-box* 0 val)]))
 
   (define (expand-tilde path)
     "Expand ~ to home directory."
@@ -1185,8 +1190,8 @@
            *config-manifest*)))
 
   (define (config-status . rest)
-    "Check status of config(s).
-     Optional arg: name (check one config)"
+    ;; Check status of config(s).
+    ;; Optional arg: name (check one config)
     (define (check-one entry)
       (let* ((name (car entry))
              (source (config-source-path name))

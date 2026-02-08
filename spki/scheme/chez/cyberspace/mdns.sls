@@ -48,7 +48,7 @@
     mdns-shutdown!
     mdns-status)
 
-  (import (rnrs)
+  (import (except (rnrs) with-input-from-file with-output-to-file file-exists? delete-file flush-output-port find)
           (only (chezscheme)
                 printf format void
                 with-output-to-string

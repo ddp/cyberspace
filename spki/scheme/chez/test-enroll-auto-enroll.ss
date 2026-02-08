@@ -7,7 +7,7 @@
 
 (import (rnrs)
         (only (chezscheme) printf format void
-              file-exists? directory-exists?
+              file-exists?
               with-output-to-string with-output-to-file
               system delete-file getenv
               flush-output-port current-directory)

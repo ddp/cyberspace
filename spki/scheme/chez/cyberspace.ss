@@ -12,7 +12,7 @@
 ;;; Ported from cyberspace.scm.
 ;;; Copyright (c) 2026 Yoyodyne. See LICENSE.
 
-(import (rnrs)
+(import (except (rnrs) file-exists? with-input-from-file find)
         (only (chezscheme)
               printf format void
               command-line exit

@@ -15,17 +15,17 @@
           info-page info-pager
           *info-node* *info-history*)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists? with-input-from-file flush-output-port find)
           (only (chezscheme)
                 printf format void
-                file-exists? directory-exists?
+                file-exists?
                 directory-list
                 with-input-from-file
                 flush-output-port
                 getenv
                 open-process-ports native-transcoder
-                with-output-to-string))
-  (import (cyberspace chicken-compatibility chicken))
+                with-output-to-string)
+          (cyberspace chicken-compatibility chicken))
 
   ;; ============================================================
   ;; Local Helpers
@@ -217,8 +217,16 @@
   ;; Info Tree
   ;; ============================================================
 
-  (define *info-node* '(top))
-  (define *info-history* '())
+  (define *info-node-box* (vector '(top)))
+  (define-syntax *info-node*
+    (identifier-syntax
+      [id (vector-ref *info-node-box* 0)]
+      [(set! id val) (vector-set! *info-node-box* 0 val)]))
+  (define *info-history-box* (vector '()))
+  (define-syntax *info-history*
+    (identifier-syntax
+      [id (vector-ref *info-history-box* 0)]
+      [(set! id val) (vector-set! *info-history-box* 0 val)]))
   (define *info-path* #f)
 
   (define (info-init!)
@@ -397,12 +405,7 @@
                               (cons line lines)
                               lines))))))))))
 
-  (define (string-downcase str)
-    (let* ((len (string-length str))
-           (out (make-string len)))
-      (do ((i 0 (+ i 1)))
-          ((= i len) out)
-        (string-set! out i (char-downcase (string-ref str i))))))
+  ;; string-downcase is provided by (rnrs unicode)
 
   (define (info-index)
     "Show complete index of all topics"

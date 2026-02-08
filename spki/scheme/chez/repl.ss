@@ -28,11 +28,11 @@
 ;;; Chez port live in their own library modules. This REPL provides the
 ;;; interactive shell, command mode, help system, and inspector integration.
 
-(import (rnrs)
+(import (except (rnrs) file-exists? delete-file with-input-from-file with-output-to-file flush-output-port find)
         (only (chezscheme)
               printf format void system
               command-line exit
-              file-exists? directory-exists?
+              file-exists?
               directory-list delete-file
               current-directory
               with-input-from-file with-output-to-file
@@ -43,10 +43,9 @@
               pretty-print
               eval interaction-environment
               getenv
-              current-time time-second time-nanosecond))
-
-;; Core libraries
-(import (cyberspace chicken-compatibility chicken)
+              current-time time-second time-nanosecond)
+        ;; Core libraries
+        (cyberspace chicken-compatibility chicken)
         (cyberspace chicken-compatibility hashtable)
         (cyberspace os)
         (cyberspace sexp)

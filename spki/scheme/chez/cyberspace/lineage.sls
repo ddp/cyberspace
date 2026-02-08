@@ -20,7 +20,8 @@
     lineage-add-command
     lineage-set-paren-wrap)
 
-  (import (rnrs)
+  (import (except (rnrs) flush-output-port file-exists?
+                         with-input-from-file with-output-to-file)
           (only (chezscheme)
                 printf format void
                 flush-output-port

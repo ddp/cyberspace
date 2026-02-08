@@ -48,7 +48,7 @@
     keyring-path
     key-path)
 
-  (import (rnrs)
+  (import (except (rnrs) with-input-from-file with-output-to-file file-exists? delete-file find)
           (only (chezscheme)
                 printf format void
                 with-input-from-file with-output-to-file
@@ -57,7 +57,7 @@
                 file-exists? delete-file
                 system
                 make-parameter
-                sort)
+                rename-file sort)
           (cyberspace chicken-compatibility chicken)
           (cyberspace chicken-compatibility hashtable)
           (cyberspace chicken-compatibility blob)

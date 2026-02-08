@@ -21,7 +21,7 @@
     signature-value
     signature-timestamp)
 
-  (import (rnrs)
+  (import (except (rnrs) find)
           (only (chezscheme) printf format void)
           (cyberspace chicken-compatibility chicken)
           (cyberspace crypto-ffi)

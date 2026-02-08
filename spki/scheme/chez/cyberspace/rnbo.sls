@@ -34,7 +34,7 @@
     rnbo-unmute
     rnbo-status)
 
-  (import (rnrs)
+  (import (except (rnrs) flush-output-port find)
           (only (chezscheme)
                 printf format void flush-output-port)
           (cyberspace chicken-compatibility chicken)

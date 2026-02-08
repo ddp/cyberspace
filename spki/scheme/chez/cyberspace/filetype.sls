@@ -66,7 +66,7 @@
     ;; Known types registry
     *magic-patterns*)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists? find string-upcase string-downcase)
           (only (chezscheme)
                 printf format void
                 file-exists? open-file-input-port)

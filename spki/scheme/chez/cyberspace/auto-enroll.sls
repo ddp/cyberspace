@@ -46,7 +46,7 @@
     ;; Testing support
     reset-enrollment-state!)
 
-  (import (rnrs)
+  (import (except (rnrs) flush-output-port find)
           (only (chezscheme)
                 printf format void
                 flush-output-port
@@ -57,7 +57,7 @@
           (cyberspace enroll)
           (cyberspace capability)
           (cyberspace mdns)
-          (cyberspace gossip)
+          (except (cyberspace gossip) announce-presence)
           (cyberspace crypto-ffi)
           (cyberspace os)
           (cyberspace vault))
@@ -74,7 +74,11 @@
   ;; State
   ;; ============================================================
 
-  (define *realm-verbose* #f)         ; verbose logging (default off)
+  (define *realm-verbose-box* (vector #f))  ; verbose logging (default off)
+  (define-syntax *realm-verbose*
+    (identifier-syntax
+      [id (vector-ref *realm-verbose-box* 0)]
+      [(set! id val) (vector-set! *realm-verbose-box* 0 val)]))
   (define *realm-master* #f)          ; master node name (or #f, legacy)
   (define *realm-members* '())        ; list of (name . hardware)
   (define *scaling-factors* #f)       ; computed scaling factors
@@ -397,7 +401,7 @@
                           (cdr (assq 'batch-size gossip-cfg))))
 
                 (printf "[auto-enroll] Master: ~a (this node: ~a)~%" winner *my-role*)
-                (make-realm-result winner *my-role* members *scaling-factors*))))))))
+                (make-realm-result winner *my-role* members *scaling-factors*)))))))
 
   (define (make-realm-result master role members scaling)
     "Build realm configuration result"
@@ -713,10 +717,6 @@
       (flush-output-port (current-output-port))
       (if on "realm verbose on" "realm verbose off")))
 
-  ;; Register cleanup hook (runs on exit)
-  ;; stop-join-listener already calls bonjour-unregister
-  (register-cleanup-hook! 'auto-enroll stop-join-listener)
-
   ;; ============================================================
   ;; Testing Support
   ;; ============================================================
@@ -733,5 +733,9 @@
     (set! *my-privkey* #f)
     (set! *pending-proposals* '())
     'reset)
+
+  ;; Register cleanup hook (runs on exit)
+  ;; stop-join-listener already calls bonjour-unregister
+  (register-cleanup-hook! 'auto-enroll stop-join-listener)
 
 ) ;; end library

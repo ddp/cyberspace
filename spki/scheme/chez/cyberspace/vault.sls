@@ -39,11 +39,12 @@
     realm-membership-cert
     realm-affiliated?)
 
-  (import (rnrs)
+  (import (except (rnrs) find file-exists? list-sort with-output-to-file with-input-from-file delete-file)
           (only (chezscheme)
                 printf format void file-exists? list-sort system
                 with-output-to-file with-input-from-file
-                directory-exists? delete-file)
+                delete-file)
+          (cyberspace chicken-compatibility chicken)
           (cyberspace chicken-compatibility hashtable)
           (cyberspace chicken-compatibility blob))
 

@@ -41,7 +41,7 @@
     display-chain
     display-capability)
 
-  (import (rnrs)
+  (import (except (rnrs) with-input-from-file file-exists? find)
           (only (chezscheme) printf format void
                 with-input-from-file
                 file-exists?)

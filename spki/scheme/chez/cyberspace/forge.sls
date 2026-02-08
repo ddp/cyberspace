@@ -29,7 +29,7 @@
     *forge-languages*
     *forge-db-path*)
 
-  (import (rnrs)
+  (import (except (rnrs) with-input-from-file with-output-to-file flush-output-port find current-error-port)
           (only (chezscheme)
                 printf format void
                 make-parameter
@@ -110,7 +110,7 @@
              "Entropy source failed FIPS 140-2 statistical tests")))
 
   ;; Verify entropy source on module load
-  (verify-entropy-source)
+  (define _entropy-verified (begin (verify-entropy-source) (void)))
 
   ;; ============================================================
   ;; Database Structure

@@ -34,7 +34,7 @@
     ;; Availability
     metadata-ffi-available?)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists? find)
           (only (chezscheme)
                 printf format void
                 load-shared-object foreign-procedure

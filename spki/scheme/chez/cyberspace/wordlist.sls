@@ -28,7 +28,7 @@
     even-words
     odd-words)
 
-  (import (rnrs)
+  (import (except (rnrs) find)
           (only (chezscheme) void)
           (cyberspace chicken-compatibility blob)
           (cyberspace chicken-compatibility chicken)

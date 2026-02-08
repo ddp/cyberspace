@@ -28,7 +28,7 @@
     count-vault-items
     audit-load-entries-raw)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists? flush-output-port find exit)
           (only (chezscheme)
                 printf format void
                 file-exists? directory-list
@@ -296,7 +296,7 @@
               (printf "Cyberspace frozen at ~a on ~a~a.~%" date-str host weave-str)
               (printf "Cyberspace frozen at ~a on ~a~a.~%  Session: ~a~%"
                       date-str host weave-str
-                      (string-intersperse all-parts " \xb7 ")))
+                      (string-intersperse all-parts " \xb7; ")))
           (print "")))
       (run-cleanup-hooks!)
       (flush-output-port (current-output-port))

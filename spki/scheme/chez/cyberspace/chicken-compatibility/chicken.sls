@@ -34,11 +34,17 @@
     ;; SRFI-1 list utilities
     filter-map take drop any every find
     ;; String join (Chicken's string-join)
-    string-join)
+    string-join
+    ;; Arithmetic (Chicken uses modulo/quotient/remainder)
+    modulo quotient remainder
+    ;; File system (Chez 9.5 compat)
+    directory-exists?)
 
-  (import (rnrs)
+  (import (except (rnrs) find file-exists?)
           (only (chezscheme) printf format void
-                with-output-to-string display
+                with-output-to-string
+                file-exists? system
+                open-process-ports native-transcoder
                 current-time time-second))
 
   ;; ============================================================
@@ -318,5 +324,33 @@
                acc
                (loop (cdr rest)
                      (string-append acc sep (car rest)))))))))
+
+  ;; ============================================================
+  ;; Arithmetic
+  ;; ============================================================
+
+  ;; Chicken's modulo/quotient/remainder: R5RS names not in (rnrs)
+  (define modulo mod)
+  (define (quotient a b) (div a b))
+  (define (remainder a b) (mod a b))
+
+  ;; ============================================================
+  ;; File System (Chez 9.5 compatibility)
+  ;; ============================================================
+
+  ;; directory-exists? is not in Chez 9.5.8;
+  ;; available in newer versions.  Use file-exists? + stat.
+  (define (directory-exists? path)
+    (and (file-exists? path)
+         (guard (exn [#t #f])
+           (let-values (((to-stdin from-stdout from-stderr)
+                         (open-process-ports
+                           (string-append "test -d " path " && echo y")
+                           'line (native-transcoder))))
+             (let ((result (get-line from-stdout)))
+               (close-port to-stdin)
+               (close-port from-stdout)
+               (close-port from-stderr)
+               (and (string? result) (string=? result "y")))))))
 
 ) ;; end library

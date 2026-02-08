@@ -45,11 +45,11 @@
     format-enrollment-display
     format-approval-display)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists? with-output-to-file flush-output-port find)
           (only (chezscheme)
                 printf format void system
                 file-exists? directory-list
-                directory-exists? current-directory
+                current-directory
                 with-output-to-string with-output-to-file
                 getenv flush-output-port)
           (cyberspace chicken-compatibility chicken)
@@ -417,8 +417,9 @@
            (title-len (string-length title-padded))
            (left-pad (quotient (- w title-len) 2))
            (right-pad (- w title-len left-pad))
-           (header (string-append "\x250C;" (make-string left-pad #\x2500;) title-padded (make-string right-pad #\x2500;) "\x2510;\n"))
-           (footer (string-append "\x2514;" (make-string w #\x2500;) "\x2518;\n")))
+           (box-h (integer->char #x2500))
+           (header (string-append "\x250C;" (make-string left-pad box-h) title-padded (make-string right-pad box-h) "\x2510;\n"))
+           (footer (string-append "\x2514;" (make-string w box-h) "\x2518;\n")))
       (lambda (cmd . args)
         (case cmd
           ((header) header)

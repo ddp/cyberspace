@@ -43,11 +43,12 @@
     dual-hash-legacy
     dual-hash-merkle)
 
-  (import (rnrs)
+  (import (except (rnrs) find)
           (only (chezscheme) void)
           (cyberspace chicken-compatibility blob)
           (cyberspace chicken-compatibility chicken)
-          (cyberspace crypto-ffi))
+          (only (cyberspace crypto-ffi)
+                blake2b-hash sha512-hash))
 
   ;;; ============================================================
   ;;; Constants
@@ -304,13 +305,7 @@
                            (else (reverse result))))))
                   (loop (cdr path) (merkle-hash-node children))))))))
 
-  (define (bytevector=? a b)
-    "Compare two bytevectors for equality."
-    (and (= (bytevector-length a) (bytevector-length b))
-         (let loop ((i 0))
-           (or (>= i (bytevector-length a))
-               (and (= (bytevector-u8-ref a i) (bytevector-u8-ref b i))
-                    (loop (+ i 1)))))))
+  ;; bytevector=? is provided by (rnrs bytevectors)
 
   ;;; ============================================================
   ;;; Dual-Hash Support (Transition Period)

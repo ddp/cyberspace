@@ -8,7 +8,7 @@
 (import (rnrs)
         (only (chezscheme)
               printf format void
-              file-exists? directory-exists?
+              file-exists?
               with-output-to-string with-input-from-string
               getenv)
         (cyberspace chicken-compatibility chicken)

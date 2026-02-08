@@ -25,7 +25,7 @@
     elect-master
     compare-capabilities)
 
-  (import (rnrs)
+  (import (except (rnrs) find)
           (only (chezscheme) printf format void sort)
           (cyberspace chicken-compatibility chicken))
 

@@ -27,7 +27,7 @@
     tty-cols
     tty?)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists?)
           (only (chezscheme)
                 printf format void system
                 load-shared-object foreign-procedure
@@ -41,20 +41,19 @@
   (define *bridge-loaded* #f)
 
   (define (try-load-bridge)
-    "Attempt to load tty-bridge shared library."
-    (define paths
-      (list "tty-bridge.so"
-            "tty-bridge.dylib"
-            "./tty-bridge.so"
-            "./tty-bridge.dylib"
-            "cyberspace/tty-bridge.so"
-            "cyberspace/tty-bridge.dylib"))
-    (let loop ((ps paths))
-      (if (null? ps)
-          #f
-          (guard (exn [#t (loop (cdr ps))])
-            (load-shared-object (car ps))
-            #t))))
+    ;; Attempt to load tty-bridge shared library.
+    (let ((paths (list "tty-bridge.so"
+                       "tty-bridge.dylib"
+                       "./tty-bridge.so"
+                       "./tty-bridge.dylib"
+                       "cyberspace/tty-bridge.so"
+                       "cyberspace/tty-bridge.dylib")))
+      (let loop ((ps paths))
+        (if (null? ps)
+            #f
+            (guard (exn [#t (loop (cdr ps))])
+              (load-shared-object (car ps))
+              #t)))))
 
   (define dummy (set! *bridge-loaded* (try-load-bridge)))
 

@@ -43,11 +43,15 @@
     condition-variable-broadcast!)
 
   (import (rnrs)
-          (only (chezscheme)
-                fork-thread sleep
-                make-condition condition-wait condition-signal condition-broadcast
-                make-mutex with-mutex acquire-mutex release-mutex
-                void format printf))
+          (rename
+            (only (chezscheme)
+                  fork-thread sleep make-time
+                  make-condition condition-wait condition-signal condition-broadcast
+                  make-mutex with-mutex mutex-acquire mutex-release
+                  void format printf)
+            (make-mutex chez-make-mutex)
+            (make-condition chez-make-condition)
+            (with-mutex chez-with-mutex)))
 
   ;; ============================================================
   ;; Thread record
@@ -64,8 +68,8 @@
   ;;                     0    1     2       3         4       5      6     7       8
 
   (define (make-thread-record name thunk)
-    (let ((mtx (make-mutex))
-          (cv  (make-condition)))
+    (let ((mtx (chez-make-mutex))
+          (cv  (chez-make-condition)))
       (vector *thread-tag* name thunk #f #f (void) mtx cv #f)))
 
   (define (thread? x)
@@ -107,7 +111,7 @@
                  (guard (exn [#t (void)])  ; Don't crash on unhandled exceptions
                    (let ((result ((thread-thunk thread))))
                      (thread-result-set! thread result)))
-                 (with-mutex (thread-mutex thread)
+                 (chez-with-mutex (thread-mutex thread)
                    (thread-finished-set! thread #t)
                    (condition-broadcast (thread-condvar thread)))))))
       (thread-chez-thread-set! thread ct))
@@ -137,7 +141,7 @@
      For the fire-and-forget threads in Cyberspace, this is acceptable
      since they loop with thread-sleep! and can check the flag."
     ;; Mark as finished so join won't block
-    (with-mutex (thread-mutex thread)
+    (chez-with-mutex (thread-mutex thread)
       (thread-finished-set! thread #t)
       (condition-broadcast (thread-condvar thread))))
 
@@ -168,7 +172,7 @@
                       (loop (- remaining 0.01))))))
           ;; Infinite wait
           (begin
-            (with-mutex (thread-mutex thread)
+            (chez-with-mutex (thread-mutex thread)
               (let loop ()
                 (unless (thread-finished? thread)
                   (condition-wait (thread-condvar thread) (thread-mutex thread))
@@ -192,20 +196,17 @@
   (define (mutex-name m) (vector-ref m 1))
   (define (mutex-chez m) (vector-ref m 2))
 
-  ;; Shadow Chez's make-mutex with SRFI-18 compatible version
-  ;; We need to keep access to the original
-  (define chez-make-mutex make-mutex)
-
+  ;; SRFI-18 make-mutex wraps Chez's mutex
   (define (make-mutex . rest)
     (let ((name (if (null? rest) #f (car rest))))
       (%make-mutex-record name (chez-make-mutex))))
 
   (define (mutex-lock! m . rest)
-    (acquire-mutex (mutex-chez m))
+    (mutex-acquire (mutex-chez m))
     #t)
 
   (define (mutex-unlock! m . rest)
-    (release-mutex (mutex-chez m))
+    (mutex-release (mutex-chez m))
     #t)
 
   ;; ============================================================
@@ -219,10 +220,6 @@
          (>= (vector-length x) 3)
          (eq? (vector-ref x 0) *condvar-tag*)))
 
-  (define chez-make-condition make-condition)
-  (define chez-condition-signal condition-signal)
-  (define chez-condition-broadcast condition-broadcast)
-
   (define (make-condition-variable . rest)
     (let ((name (if (null? rest) #f (car rest))))
       (vector *condvar-tag* name (chez-make-condition))))
@@ -230,9 +227,9 @@
   (define (condvar-chez cv) (vector-ref cv 2))
 
   (define (condition-variable-signal! cv)
-    (chez-condition-signal (condvar-chez cv)))
+    (condition-signal (condvar-chez cv)))
 
   (define (condition-variable-broadcast! cv)
-    (chez-condition-broadcast (condvar-chez cv)))
+    (condition-broadcast (condvar-chez cv)))
 
 ) ;; end library

@@ -57,7 +57,7 @@
     peer-dead?
     peer-reset-failures!)
 
-  (import (rnrs)
+  (import (except (rnrs) list-sort flush-output-port find)
           (only (chezscheme)
                 printf format void system
                 with-output-to-string
@@ -89,7 +89,11 @@
   (define *max-consecutive-failures* 5) ; failures before marking peer dead
   (define *base-backoff* 30)           ; initial backoff seconds
   (define *max-backoff* 3600)          ; maximum backoff (1 hour)
-  (define *gossip-verbose* #f)         ; log gossip errors when #t
+  (define *gossip-verbose-box* (vector #f))  ; log gossip errors when #t
+  (define-syntax *gossip-verbose*
+    (identifier-syntax
+      [id (vector-ref *gossip-verbose-box* 0)]
+      [(set! id val) (vector-set! *gossip-verbose-box* 0 val)]))
 
   ;; Scaling-aware configuration (set by auto-enroll)
   (define *node-scale* 1.0)            ; this node's capability scale

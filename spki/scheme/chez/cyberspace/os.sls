@@ -36,7 +36,7 @@
     *box-square* *box-rounded* *box-double*
     string-pad-left string-truncate string-display-width)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists?)
           (only (chezscheme)
                 printf format void system
                 file-exists? with-output-to-string
@@ -236,7 +236,11 @@
   ;; Session Statistics
   ;; ============================================================
 
-  (define *session-stats* (make-hash-table))
+  (define *session-stats-box* (vector (make-hash-table)))
+  (define-syntax *session-stats*
+    (identifier-syntax
+      [id (vector-ref *session-stats-box* 0)]
+      [(set! id val) (vector-set! *session-stats-box* 0 val)]))
 
   (define (session-stat! key . rest)
     (let ((delta (if (null? rest) 1 (car rest))))

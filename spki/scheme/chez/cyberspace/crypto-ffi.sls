@@ -90,7 +90,8 @@
                 foreign-procedure foreign-alloc foreign-free foreign-ref
                 foreign-set! load-shared-object
                 record-writer with-output-to-string
-                iota void format printf))
+                iota void format printf
+                list-head))
 
   ;; ============================================================
   ;; Load shared libraries at init time
@@ -756,7 +757,7 @@
       (bytevector-u8-set! gf256-exp i (bytevector-u8-ref gf256-exp (- i 255)))))
 
   ;; Initialize on load
-  (init-gf256-tables!)
+  (define _gf256-init (begin (init-gf256-tables!) (void)))
 
   (define (gf256-add a b)
     (bitwise-xor a b))
@@ -787,21 +788,7 @@
                 (gf256-add (list-ref coeffs i)
                           (gf256-mul result x))))))
 
-  ;; Shamir share record
-  (define-record-type shamir-share
-    (fields id threshold x y))
-
-  (define (share-id s) (shamir-share-id s))
-  (define (share-threshold s) (shamir-share-threshold s))
-  (define (share-x s) (shamir-share-x s))
-  (define (share-y s) (shamir-share-y s))
-  (define (shamir-share? x)
-    (and (record? x)
-         (eq? (record-type-descriptor x)
-              (record-type-descriptor (make-shamir-share 'dummy 0 0 #vu8())))))
-
-  ;; We need a proper predicate -- use a tag instead
-  ;; Redefine with a simpler approach using a unique tag
+  ;; Shamir share: tagged vector (id threshold x y)
   (define *shamir-share-tag* (list 'shamir-share))
 
   (define (make-shamir-share-tagged id threshold x y)

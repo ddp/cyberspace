@@ -17,15 +17,16 @@
 ;;; Ported from build.scm.
 ;;; Copyright (c) 2026 Yoyodyne. See LICENSE.
 
-(import (rnrs)
+(import (except (rnrs) find)
         (only (chezscheme)
               printf format void system
               command-line exit
-              file-exists? directory-exists?
+              file-exists?
               directory-list delete-file
               with-output-to-string
               open-process-ports native-transcoder
-              getenv))
+              getenv)
+        (cyberspace chicken-compatibility chicken))
 
 ;;; ============================================================
 ;;; Build Dependency Graph (Chez Port)

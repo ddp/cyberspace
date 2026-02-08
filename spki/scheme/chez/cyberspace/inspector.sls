@@ -61,7 +61,7 @@
     pprint
     pp-frame)
 
-  (import (rnrs)
+  (import (except (rnrs) flush-output-port find)
           (only (chezscheme)
                 printf format void
                 pretty-print
@@ -78,7 +78,11 @@
   ;; State
   ;; ============================================================
 
-  (define *inspector-enabled* #f)
+  (define *inspector-enabled-box* (vector #f))
+  (define-syntax *inspector-enabled*
+    (identifier-syntax
+      [id (vector-ref *inspector-enabled-box* 0)]
+      [(set! id val) (vector-set! *inspector-enabled-box* 0 val)]))
   (define *current-condition* #f)
   (define *current-frames* '())
   (define *current-frame-index* 0)
@@ -86,13 +90,29 @@
   (define *inspect-history* '())
 
   ;; Our own call stack - maintained explicitly
-  (define *call-stack* '())
+  (define *call-stack-box* (vector '()))
+  (define-syntax *call-stack*
+    (identifier-syntax
+      [id (vector-ref *call-stack-box* 0)]
+      [(set! id val) (vector-set! *call-stack-box* 0 val)]))
   (define *call-stack-max* 100)
 
   ;; Object inspector state (Memo-052 Section 8.2)
-  (define *inspector-current* #f)
-  (define *inspector-stack* '())
-  (define *inspector-bookmarks* '())
+  (define *inspector-current-box* (vector #f))
+  (define-syntax *inspector-current*
+    (identifier-syntax
+      [id (vector-ref *inspector-current-box* 0)]
+      [(set! id val) (vector-set! *inspector-current-box* 0 val)]))
+  (define *inspector-stack-box* (vector '()))
+  (define-syntax *inspector-stack*
+    (identifier-syntax
+      [id (vector-ref *inspector-stack-box* 0)]
+      [(set! id val) (vector-set! *inspector-stack-box* 0 val)]))
+  (define *inspector-bookmarks-box* (vector '()))
+  (define-syntax *inspector-bookmarks*
+    (identifier-syntax
+      [id (vector-ref *inspector-bookmarks-box* 0)]
+      [(set! id val) (vector-set! *inspector-bookmarks-box* 0 val)]))
 
   ;; ============================================================
   ;; Explicit Call Tracking
@@ -660,7 +680,7 @@
                            (if (message-condition? exn)
                                (condition-message exn)
                                "unknown"))])
-               (describe (eval (read (open-input-string expr))
+               (describe (eval (read (open-string-input-port expr))
                                (interaction-environment)))))
            (loop))
 
@@ -690,7 +710,7 @@
                          (if (message-condition? exn)
                              (condition-message exn)
                              "unknown"))])
-             (let ((result (eval (read (open-input-string input))
+             (let ((result (eval (read (open-string-input-port input))
                                  (interaction-environment))))
                (unless (eq? result (void))
                  (pprint result))))

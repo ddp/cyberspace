@@ -27,10 +27,18 @@
                 with-input-from-string))
 
   ;; Current editor hook - set by editor when active
-  (define *edt-editor* #f)
+  (define *edt-editor-box* (vector #f))
+  (define-syntax *edt-editor*
+    (identifier-syntax
+      [id (vector-ref *edt-editor-box* 0)]
+      [(set! id val) (vector-set! *edt-editor-box* 0 val)]))
 
   ;; GOLD prefix state
-  (define *edt-gold-active* #f)
+  (define *edt-gold-active-box* (vector #f))
+  (define-syntax *edt-gold-active*
+    (identifier-syntax
+      [id (vector-ref *edt-gold-active-box* 0)]
+      [(set! id val) (vector-set! *edt-gold-active-box* 0 val)]))
 
   ;; QMK command prefix
   (define qmk-prefix "#;QMK ")

@@ -60,7 +60,7 @@
     action-verb
     action-object)
 
-  (import (rnrs)
+  (import (except (rnrs) with-output-to-file with-input-from-file file-exists? list-sort flush-output-port find)
           (only (chezscheme)
                 printf format void
                 with-output-to-string with-output-to-file with-input-from-file

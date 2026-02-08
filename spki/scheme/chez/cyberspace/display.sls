@@ -50,21 +50,25 @@
     ;; Sparklines
     sparkline)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists? with-output-to-file flush-output-port find)
           (only (chezscheme)
                 printf format void system
                 file-exists? with-output-to-file
                 flush-output-port
                 open-process-ports native-transcoder
                 getenv
-                with-output-to-string))
-  (import (cyberspace chicken-compatibility chicken))
+                with-output-to-string)
+          (cyberspace chicken-compatibility chicken))
 
   ;;; ============================================================
   ;;; Display Mode
   ;;; ============================================================
 
-  (define *display-mode* 'vt100)
+  (define *display-mode-box* (vector 'vt100))
+  (define-syntax *display-mode*
+    (identifier-syntax
+      [id (vector-ref *display-mode-box* 0)]
+      [(set! id val) (vector-set! *display-mode-box* 0 val)]))
 
   (define (display-mode! mode)
     "Set display mode: 'vt100 or 'html"
@@ -99,7 +103,11 @@
        (error . "#ff4444")
        (warn . "#ffa500"))))
 
-  (define *theme* 'phosphor)
+  (define *theme-box* (vector 'phosphor))
+  (define-syntax *theme*
+    (identifier-syntax
+      [id (vector-ref *theme-box* 0)]
+      [(set! id val) (vector-set! *theme-box* 0 val)]))
 
   (define (theme! name)
     "Set theme: 'phosphor, 'reading-lamp, or 'midnight"

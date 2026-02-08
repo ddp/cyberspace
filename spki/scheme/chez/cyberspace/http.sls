@@ -14,10 +14,10 @@
     http-response
     mime-type)
 
-  (import (rnrs)
+  (import (except (rnrs) file-exists? flush-output-port find string-downcase)
           (only (chezscheme)
                 printf format void system
-                file-exists? directory-exists?
+                file-exists?
                 current-directory
                 with-output-to-string
                 flush-output-port

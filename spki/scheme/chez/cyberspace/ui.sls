@@ -18,7 +18,7 @@
     cmd-peers
     cmd-hw)
 
-  (import (rnrs)
+  (import (except (rnrs) flush-output-port find)
           (only (chezscheme)
                 printf format void
                 flush-output-port)

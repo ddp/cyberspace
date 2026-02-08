@@ -64,13 +64,14 @@
     O_RDONLY O_WRONLY O_RDWR O_CREAT O_TRUNC
     ENOENT EACCES EIO EEXIST ENOTDIR EISDIR ENOTEMPTY)
 
-  (import (rnrs)
+  (import (except (rnrs) find file-exists?)
           (only (chezscheme)
                 printf format void system
                 load-shared-object foreign-procedure
-                file-exists? directory-exists?
+                file-exists?
                 directory-list
-                getenv))
+                getenv)
+          (cyberspace chicken-compatibility chicken))
 
   ;; ============================================================
   ;; Library Detection
@@ -151,20 +152,19 @@
   (define *bridge-loaded* #f)
 
   (define (try-load-bridge)
-    "Attempt to load fuse-bridge shared library."
-    (define paths
-      (list "fuse-bridge.so"
-            "fuse-bridge.dylib"
-            "./fuse-bridge.so"
-            "./fuse-bridge.dylib"
-            "cyberspace/fuse-bridge.so"
-            "cyberspace/fuse-bridge.dylib"))
-    (let loop ((ps paths))
-      (if (null? ps)
-          #f
-          (guard (exn [#t (loop (cdr ps))])
-            (load-shared-object (car ps))
-            #t))))
+    ;; Attempt to load fuse-bridge shared library.
+    (let ((paths (list "fuse-bridge.so"
+                       "fuse-bridge.dylib"
+                       "./fuse-bridge.so"
+                       "./fuse-bridge.dylib"
+                       "cyberspace/fuse-bridge.so"
+                       "cyberspace/fuse-bridge.dylib")))
+      (let loop ((ps paths))
+        (if (null? ps)
+            #f
+            (guard (exn [#t (loop (cdr ps))])
+              (load-shared-object (car ps))
+              #t)))))
 
   (define dummy (set! *bridge-loaded* (try-load-bridge)))
 

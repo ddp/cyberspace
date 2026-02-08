@@ -20,7 +20,7 @@
     ;; Address patterns
     /status /soup /gossip /lamport /keys)
 
-  (import (rnrs)
+  (import (except (rnrs) flush-output-port find)
           (only (chezscheme)
                 printf format void
                 bytevector-ieee-single-native-ref
