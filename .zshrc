@@ -166,8 +166,6 @@ if [[ -o interactive ]]; then
     alias avatar='cd ~/cyberspace && claude -c'
     alias cb='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
     alias cc='claude --continue'
-    alias chibi='rlwrap chibi-scheme'
-    alias chez='rlwrap chez'
     alias chicken='rlwrap csi'
     alias cr='claude --resume'
     alias clone='stash && clone-fluffy --with-dotfiles'
@@ -223,7 +221,6 @@ if [[ -o interactive ]]; then
     alias portmap='nmap -sT -Pn -v 192.168.0.0/24'
     alias portscan='nmap -sT -Pn -v 192.168.0.0/24'
     alias purge='~/bin/purge'
-    alias scheme='rlwrap csi'       # Chicken Scheme
     alias ssh='ssh -X -K'           # X11 forwarding, delegate Kerberos
     alias stash='ssh-add --apple-use-keychain'
     alias weather='curl http://wttr.in/94903'
