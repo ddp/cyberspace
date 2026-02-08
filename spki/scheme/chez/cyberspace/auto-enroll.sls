@@ -522,7 +522,19 @@
 
                        ;; Auto-start our own join listener (any member can accept joins)
                        (printf "[join-realm] Starting own listener (any member can sponsor joins)~%")
-                       (start-join-listener name 'keypair: (list pubkey privkey))
+                       (guard (exn [#t
+                         (printf "[join-realm] Listener restart delayed: ~a~%"
+                                 (if (message-condition? exn)
+                                     (condition-message exn)
+                                     "unknown"))
+                         (thread-sleep! 1)
+                         (guard (exn2 [#t
+                           (printf "[join-realm] Listener restart failed: ~a~%"
+                                   (if (message-condition? exn2)
+                                       (condition-message exn2)
+                                       "unknown"))])
+                           (start-join-listener name 'keypair: (list pubkey privkey)))])
+                         (start-join-listener name 'keypair: (list pubkey privkey)))
 
                        `((status . joined)
                          (master . ,master)
@@ -565,8 +577,20 @@
                                  (cdr (assq 'gossip-interval gossip-cfg))
                                  (cdr (assq 'batch-size gossip-cfg))))
 
-                       ;; Start listening as new master
-                       (start-join-listener name 'keypair: (list pubkey privkey))
+                       ;; Start listening as new master (retry if port still held)
+                       (guard (exn [#t
+                         (printf "[join-realm] Listener restart delayed: ~a~%"
+                                 (if (message-condition? exn)
+                                     (condition-message exn)
+                                     "unknown"))
+                         (thread-sleep! 1)
+                         (guard (exn2 [#t
+                           (printf "[join-realm] Listener restart failed: ~a~%"
+                                   (if (message-condition? exn2)
+                                       (condition-message exn2)
+                                       "unknown"))])
+                           (start-join-listener name 'keypair: (list pubkey privkey)))])
+                         (start-join-listener name 'keypair: (list pubkey privkey)))
 
                        (printf "[join-realm] Became master (more capable than ~a)~%" old-master)
 
