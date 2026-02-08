@@ -74,7 +74,7 @@
   ;; State
   ;; ============================================================
 
-  (define *realm-verbose* #t)         ; verbose logging (default on for debugging)
+  (define *realm-verbose* #f)         ; verbose logging (enable with realm-verbose!)
   (define *realm-master* #f)          ; master node name (or #f, legacy)
   (define *realm-members* '())        ; list of (name . hardware)
   (define *scaling-factors* #f)       ; computed scaling factors
@@ -187,8 +187,9 @@
 
   (define (join-listener-loop)
     "Accept and handle incoming join requests."
-    (printf "[join-listener] Loop started, waiting for connections...~n")
-    (flush-output)
+    (when *realm-verbose*
+      (printf "[join-listener] Loop started, waiting for connections...~n")
+      (flush-output))
     (let loop ()
       (when (and *join-running* *join-listener*)
         (handle-exceptions exn
@@ -200,8 +201,9 @@
             (loop))
 
           (let-values (((in out) (tcp-accept *join-listener*)))
-            (printf "[join-listener] Connection accepted~n")
-            (flush-output)
+            (when *realm-verbose*
+              (printf "[join-listener] Connection accepted~n")
+              (flush-output))
             (thread-start!
               (make-thread
                 (lambda ()
@@ -214,11 +216,13 @@
 
   (define (handle-join-connection in out)
     "Handle one incoming connection (join request or capability exchange)."
-    (printf "[join-handler] Reading request...~n")
-    (flush-output)
+    (when *realm-verbose*
+      (printf "[join-handler] Reading request...~n")
+      (flush-output))
     (let ((request (enrollment-receive in)))
-      (printf "[join-handler] Got: ~a~n" (if (pair? request) (car request) request))
-      (flush-output)
+      (when *realm-verbose*
+        (printf "[join-handler] Got: ~a~n" (if (pair? request) (car request) request))
+        (flush-output))
       (cond
         ;; Capability exchange (for discovery phase)
         ((and (pair? request) (eq? (car request) 'capability-exchange))
@@ -382,7 +386,8 @@
                   (if (null? members)
                       ;; No peers found - we are the sole master
                       (begin
-                        (printf "[auto-enroll] No peers found. Establishing single-node realm.~n")
+                        (when *realm-verbose*
+                          (printf "[auto-enroll] No peers found. Establishing single-node realm.~n"))
                         (set! *realm-master* name)
                         (set! *my-role* 'master)
                         (set! *realm-members* `((,name . ,my-hw)))
@@ -390,19 +395,21 @@
 
                         ;; Configure gossip for single node (default settings)
                         (configure-from-scaling! 1.0 1.0 100 30)
-                        (printf "[auto-enroll] Gossip configured: interval=30s, batch=100~n")
+                        (when *realm-verbose*
+                          (printf "[auto-enroll] Gossip configured: interval=30s, batch=100~n"))
 
                         (make-realm-result name 'master *realm-members* *scaling-factors*))
 
                       ;; Peers found - run election
                       (let-values (((winner score all-scores) (elect-master members)))
-                        (printf "[auto-enroll] Election results:~n")
-                        (for-each (lambda (s)
-                                    (printf "  ~a: ~a~a~n"
-                                            (car s)
-                                            (cdr s)
-                                            (if (eq? (car s) winner) " <- WINNER" "")))
-                                  all-scores)
+                        (when *realm-verbose*
+                          (printf "[auto-enroll] Election results:~n")
+                          (for-each (lambda (s)
+                                      (printf "  ~a: ~a~a~n"
+                                              (car s)
+                                              (cdr s)
+                                              (if (eq? (car s) winner) " <- WINNER" "")))
+                                    all-scores))
 
                         (set! *realm-master* winner)
                         (set! *realm-members* members)
@@ -416,11 +423,13 @@
                             (cdr (assq 'effective-capacity *scaling-factors*))
                             (cdr (assq 'batch-size gossip-cfg))
                             (cdr (assq 'gossip-interval gossip-cfg)))
-                          (printf "[auto-enroll] Gossip configured: interval=~as, batch=~a~n"
-                                  (cdr (assq 'gossip-interval gossip-cfg))
-                                  (cdr (assq 'batch-size gossip-cfg))))
+                          (when *realm-verbose*
+                            (printf "[auto-enroll] Gossip configured: interval=~as, batch=~a~n"
+                                    (cdr (assq 'gossip-interval gossip-cfg))
+                                    (cdr (assq 'batch-size gossip-cfg)))))
 
-                        (printf "[auto-enroll] Master: ~a (this node: ~a)~n" winner *my-role*)
+                        (when *realm-verbose*
+                          (printf "[auto-enroll] Master: ~a (this node: ~a)~n" winner *my-role*))
                         (make-realm-result winner *my-role* members *scaling-factors*))))))
             (lambda () (set! *join-in-progress* #f))))))
 
@@ -540,9 +549,10 @@
                          (cdr (assq 'effective-capacity scaling))
                          (cdr (assq 'batch-size gossip-cfg))
                          (cdr (assq 'gossip-interval gossip-cfg)))
-                       (printf "[join-realm] Gossip configured: interval=~as, batch=~a~n"
-                               (cdr (assq 'gossip-interval gossip-cfg))
-                               (cdr (assq 'batch-size gossip-cfg))))
+                       (when *realm-verbose*
+                         (printf "[join-realm] Gossip configured: interval=~as, batch=~a~n"
+                                 (cdr (assq 'gossip-interval gossip-cfg))
+                                 (cdr (assq 'batch-size gossip-cfg)))))
 
                      (printf "[join-realm] Joined realm! Sponsor: ~a, Members: ~a~n"
                              sponsor member-count)
@@ -551,15 +561,18 @@
                      (store-membership-cert! cert)
 
                      ;; Auto-start our own join listener (any member can accept joins)
-                     (printf "[join-realm] Starting own listener (any member can sponsor joins)~n")
+                     (when *realm-verbose*
+                       (printf "[join-realm] Starting own listener (any member can sponsor joins)~n"))
                      (handle-exceptions exn
                        (begin
-                         (printf "[join-realm] Listener restart delayed: ~a~n"
-                                 (get-condition-property exn 'exn 'message "unknown"))
+                         (when *realm-verbose*
+                           (printf "[join-realm] Listener restart delayed: ~a~n"
+                                   (get-condition-property exn 'exn 'message "unknown")))
                          (thread-sleep! 1)
                          (handle-exceptions exn2
-                           (printf "[join-realm] Listener restart failed: ~a~n"
-                                   (get-condition-property exn2 'exn 'message "unknown"))
+                           (when *realm-verbose*
+                             (printf "[join-realm] Listener restart failed: ~a~n"
+                                     (get-condition-property exn2 'exn 'message "unknown")))
                            (start-join-listener name keypair: (list pubkey privkey))))
                        (start-join-listener name keypair: (list pubkey privkey)))
 
@@ -599,19 +612,22 @@
                          (cdr (assq 'effective-capacity scaling))
                          (cdr (assq 'batch-size gossip-cfg))
                          (cdr (assq 'gossip-interval gossip-cfg)))
-                       (printf "[join-realm] Gossip configured: interval=~as, batch=~a~n"
-                               (cdr (assq 'gossip-interval gossip-cfg))
-                               (cdr (assq 'batch-size gossip-cfg))))
+                       (when *realm-verbose*
+                         (printf "[join-realm] Gossip configured: interval=~as, batch=~a~n"
+                                 (cdr (assq 'gossip-interval gossip-cfg))
+                                 (cdr (assq 'batch-size gossip-cfg)))))
 
                      ;; Start listening as new master (retry if port still held)
                      (handle-exceptions exn
                        (begin
-                         (printf "[join-realm] Listener restart delayed: ~a~n"
-                                 (get-condition-property exn 'exn 'message "unknown"))
+                         (when *realm-verbose*
+                           (printf "[join-realm] Listener restart delayed: ~a~n"
+                                   (get-condition-property exn 'exn 'message "unknown")))
                          (thread-sleep! 1)
                          (handle-exceptions exn2
-                           (printf "[join-realm] Listener restart failed: ~a~n"
-                                   (get-condition-property exn2 'exn 'message "unknown"))
+                           (when *realm-verbose*
+                             (printf "[join-realm] Listener restart failed: ~a~n"
+                                     (get-condition-property exn2 'exn 'message "unknown")))
                            (start-join-listener name keypair: (list pubkey privkey))))
                        (start-join-listener name keypair: (list pubkey privkey)))
 
@@ -655,10 +671,12 @@
                 (port (caddr svc)))
             (when (and host port
                        (not (equal? svc-name (symbol->string my-name))))
-              (printf "[discover] Found peer via Bonjour: ~a at ~a:~a~n" svc-name host port)
+              (when *realm-verbose*
+                (printf "[discover] Found peer via Bonjour: ~a at ~a:~a~n" svc-name host port))
               (handle-exceptions exn
-                (printf "[discover] Could not exchange capabilities with ~a: ~a~n"
-                        svc-name (get-condition-property exn 'exn 'message "?"))
+                (when *realm-verbose*
+                  (printf "[discover] Could not exchange capabilities with ~a: ~a~n"
+                          svc-name (get-condition-property exn 'exn 'message "?")))
                 ;; Connect and exchange hardware info
                 (let-values (((in out) (tcp-connect host port)))
                   (enrollment-send out
@@ -672,9 +690,10 @@
                       (let* ((fields (cdr response))
                              (peer-name (cadr (assq 'name fields)))
                              (peer-hw (cadr (assq 'hardware fields))))
-                        (printf "[discover] Got capabilities from ~a (mobile: ~a)~n"
-                                peer-name
-                                (cadr (assq 'mobile (cdr peer-hw))))
+                        (when *realm-verbose*
+                          (printf "[discover] Got capabilities from ~a (mobile: ~a)~n"
+                                  peer-name
+                                  (cadr (assq 'mobile (cdr peer-hw)))))
                         (set! discovered
                           (cons (cons peer-name peer-hw) discovered))))))))))
         services)
@@ -756,8 +775,9 @@
       (verbose . ,*realm-verbose*)))
 
   (define (realm-verbose! #!optional (on #t))
-    "Enable/disable verbose realm logging."
+    "Enable/disable verbose realm logging (controls both auto-enroll and mdns)."
     (set! *realm-verbose* on)
+    (set! *mdns-verbose* on)
     (flush-output)
     (if on "realm verbose on" "realm verbose off"))
 
