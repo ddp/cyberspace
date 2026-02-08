@@ -185,9 +185,10 @@
   ;; Bonjour Discovery (via dns-sd)
   ;; ============================================================
 
-  (define (bonjour-browse #!key (timeout 5))
+  (define (bonjour-browse #!key (timeout 5) (self #f))
     "Browse for _cyberspace._tcp services on local network.
      timeout: seconds to wait for responses
+     self: our own service name to skip during resolve (avoids wasted resolve)
 
      Returns: list of (name host port) for discovered services"
     (let ((results '())
@@ -227,17 +228,20 @@
             (when (< (current-seconds) deadline)
               (thread-sleep! 0.1)
               (loop)))
-          ;; Clean up
+          ;; Clean up - wrap close-input-port to avoid "abnormal process exit"
           (handle-exceptions exn #f
             (process-signal pid)
-            (printf "[bonjour] Browse stopped (pid ~a)~n" pid))
-          (close-input-port stdout)
-          (close-input-port stderr)))
-      ;; Resolve each discovered service
-      (map (lambda (entry)
-             (let ((resolved (bonjour-resolve (car entry))))
-               (if resolved resolved entry)))
-           results)))
+            (printf "[bonjour] Browse stopped (pid ~a)~n" pid)
+            (close-input-port stdout)
+            (close-input-port stderr))))
+      ;; Resolve each discovered service (skip self)
+      (let ((self-str (and self (if (symbol? self) (symbol->string self) self))))
+        (filter-map
+          (lambda (entry)
+            (if (and self-str (string-contains (car entry) self-str))
+                #f  ; skip our own service
+                (bonjour-resolve (car entry))))
+          results))))
 
   (define (bonjour-resolve name #!key (timeout 3))
     "Resolve a Bonjour service name to host and port.
@@ -274,12 +278,14 @@
                     (loop))))
               (thread-sleep! 0.1)
               (loop)))
-          ;; Clean up
+          ;; Clean up - wrap everything so "abnormal process exit" from
+          ;; close-input-port (triggered by process-wait on killed child)
+          ;; doesn't discard resolved host/port values
           (handle-exceptions exn #f
             (process-signal pid)
-            (printf "[bonjour] Resolve stopped (pid ~a)~n" pid))
-          (close-input-port stdout)
-          (close-input-port stderr)
+            (printf "[bonjour] Resolve stopped (pid ~a)~n" pid)
+            (close-input-port stdout)
+            (close-input-port stderr))
           (if (and host port)
               (list name host port)
               #f)))))

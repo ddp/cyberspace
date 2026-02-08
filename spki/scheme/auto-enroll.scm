@@ -453,13 +453,10 @@
        (join-realm 'starlight \"fluffy.local\" reason: \"referred by Alice\")
        ; Fluffy must be running: (start-join-listener 'fluffy master-key)"
 
-    ;; Prevent race with concurrent auto-enroll-realm
-    (if *join-in-progress*
-        (begin
-          (printf "[join-realm] Join operation already in progress~n")
-          `((status . busy) (reason . "join in progress")))
-
-        (begin
+    ;; User-initiated join takes priority over background auto-enroll
+    (when *join-in-progress*
+      (printf "[join-realm] Preempting background auto-enroll~n"))
+    (begin
           (set! *join-in-progress* #t)
           (dynamic-wind
             (lambda () #f)
@@ -632,7 +629,7 @@
                      (response . ,response))))))
             (lambda ()
               (enrollment-close in out)))))))
-            (lambda () (set! *join-in-progress* #f))))))
+            (lambda () (set! *join-in-progress* #f)))))
 
   ;; ============================================================
   ;; Discovery and Election
@@ -646,8 +643,8 @@
     (when *realm-verbose*
       (printf "[discover] Browsing Bonjour for _cyberspace._tcp services...~n"))
 
-    ;; Use Bonjour to find peers
-    (let ((services (bonjour-browse timeout: timeout))
+    ;; Use Bonjour to find peers (skip resolving our own service)
+    (let ((services (bonjour-browse timeout: timeout self: my-name))
           (discovered '()))
 
       ;; For each discovered service, connect and exchange capabilities
