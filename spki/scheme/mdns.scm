@@ -46,7 +46,9 @@
    enrollment-close
    ;; Lifecycle
    mdns-shutdown!
-   mdns-status)
+   mdns-status
+   ;; Verbosity
+   *mdns-verbose*)
 
   (import scheme
           (chicken base)
@@ -145,6 +147,9 @@
   ;; Bonjour registration process
   (define *bonjour-pid* #f)
 
+  ;; Verbose logging (controls Bonjour lifecycle messages)
+  (define *mdns-verbose* #f)
+
   ;; ============================================================
   ;; Bonjour Registration (via dns-sd)
   ;; ============================================================
@@ -170,7 +175,8 @@
                                 (list "-R" name-str cyberspace-service "local" (number->string port)))))
           (set! *bonjour-pid* pid)
           (write-pid-file bonjour-pid-file pid)  ; Persist for crash recovery
-          (printf "[bonjour] Registered '~a' on ~a port ~a (pid ~a)~n" name-str cyberspace-service port pid)
+          (when *mdns-verbose*
+            (printf "[bonjour] Registered '~a' on ~a port ~a (pid ~a)~n" name-str cyberspace-service port pid))
           pid))))
 
   (define (bonjour-unregister)
@@ -185,9 +191,10 @@
   ;; Bonjour Discovery (via dns-sd)
   ;; ============================================================
 
-  (define (bonjour-browse #!key (timeout 5))
+  (define (bonjour-browse #!key (timeout 5) (self #f))
     "Browse for _cyberspace._tcp services on local network.
      timeout: seconds to wait for responses
+     self: our own service name to skip during resolve (avoids wasted resolve)
 
      Returns: list of (name host port) for discovered services"
     (let ((results '())
@@ -206,7 +213,8 @@
                       (process* "/usr/bin/dns-sd"
                                 (list "-B" cyberspace-service "local"))))
           (close-output-port stdin)
-          (printf "[bonjour] Browse started (pid ~a)~n" pid)
+          (when *mdns-verbose*
+            (printf "[bonjour] Browse started (pid ~a)~n" pid))
           ;; Read output for timeout seconds
           (let loop ()
             (when (and (< (current-seconds) deadline)
@@ -221,38 +229,48 @@
                       (when (>= (length parts) 7)
                         (let ((name (list-ref parts 6)))
                           (unless (assoc name results)
-                            (printf "[bonjour] Found: ~a~n" name)
+                            (when *mdns-verbose*
+                              (printf "[bonjour] Found: ~a~n" name))
                             (set! results (cons (list name #f #f) results)))))))
                   (loop))))
             (when (< (current-seconds) deadline)
               (thread-sleep! 0.1)
               (loop)))
-          ;; Clean up
+          ;; Clean up - wrap close-input-port to avoid "abnormal process exit"
           (handle-exceptions exn #f
             (process-signal pid)
-            (printf "[bonjour] Browse stopped (pid ~a)~n" pid))
-          (close-input-port stdout)
-          (close-input-port stderr)))
-      ;; Resolve each discovered service
-      (map (lambda (entry)
-             (let ((resolved (bonjour-resolve (car entry))))
-               (if resolved resolved entry)))
-           results)))
+            (when *mdns-verbose*
+              (printf "[bonjour] Browse stopped (pid ~a)~n" pid))
+            (close-input-port stdout)
+            (close-input-port stderr))))
+      ;; Resolve each discovered service (skip self)
+      (let ((self-str (and self (if (symbol? self) (symbol->string self) self))))
+        (filter-map
+          (lambda (entry)
+            (cond
+              ((and self-str (string-contains (car entry) self-str))
+               (when *mdns-verbose*
+                 (printf "[bonjour] Skipping self: ~a~n" (car entry)))
+               #f)
+              (else (bonjour-resolve (car entry)))))
+          results))))
 
   (define (bonjour-resolve name #!key (timeout 3))
     "Resolve a Bonjour service name to host and port.
      Returns: (name host port) or #f"
     (handle-exceptions exn
       (begin
-        (printf "[bonjour] Resolve failed for ~a: ~a~n"
-                name (get-condition-property exn 'exn 'message "unknown"))
+        (when *mdns-verbose*
+          (printf "[bonjour] Resolve failed for ~a: ~a~n"
+                  name (get-condition-property exn 'exn 'message "unknown")))
         #f)
       ;; dns-sd -L <name> <type> <domain>
       (let-values (((stdout stdin pid stderr)
                     (process* "/usr/bin/dns-sd"
                               (list "-L" name cyberspace-service "local"))))
         (close-output-port stdin)
-        (printf "[bonjour] Resolve started for ~a (pid ~a)~n" name pid)
+        (when *mdns-verbose*
+          (printf "[bonjour] Resolve started for ~a (pid ~a)~n" name pid))
         (let ((deadline (+ (current-seconds) timeout))
               (host #f)
               (port #f))
@@ -274,12 +292,15 @@
                     (loop))))
               (thread-sleep! 0.1)
               (loop)))
-          ;; Clean up
+          ;; Clean up - wrap everything so "abnormal process exit" from
+          ;; close-input-port (triggered by process-wait on killed child)
+          ;; doesn't discard resolved host/port values
           (handle-exceptions exn #f
             (process-signal pid)
-            (printf "[bonjour] Resolve stopped (pid ~a)~n" pid))
-          (close-input-port stdout)
-          (close-input-port stderr)
+            (when *mdns-verbose*
+              (printf "[bonjour] Resolve stopped (pid ~a)~n" pid))
+            (close-input-port stdout)
+            (close-input-port stderr))
           (if (and host port)
               (list name host port)
               #f)))))
@@ -451,12 +472,13 @@
     "Receive enrollment data (s-expression)"
     (handle-exceptions exn
       (begin
-        (printf "[enrollment-receive] Error: ~a~n"
-                (get-condition-property exn 'exn 'message "unknown"))
-        (flush-output)
+        (when *mdns-verbose*
+          (printf "[enrollment-receive] Error: ~a~n"
+                  (get-condition-property exn 'exn 'message "unknown"))
+          (flush-output))
         #f)
       (let ((data (read in)))
-        (when (eof-object? data)
+        (when (and *mdns-verbose* (eof-object? data))
           (printf "[enrollment-receive] Got EOF~n")
           (flush-output))
         data)))

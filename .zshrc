@@ -174,7 +174,8 @@ if [[ -o interactive ]]; then
     # Cyberspace REPL - uses linenoise for line editing (no rlwrap needed)
     alias cyberspace='cd ~/cyberspace/spki/scheme && ./repl'
     alias cs='cd ~/cyberspace/spki/scheme && ./repl'
-    alias kludge='cd ~/cyberspace && git pull'
+    alias cs-chez='scheme --libdirs /home/user/cyberspace/spki/scheme/chez'
+    alias kludge='cd ~/cyberspace && git pull && cd spki/scheme && git pull'
     alias epoch='date +%s'
     alias fen='~/bin/forge-word'
     alias gonorns='ssh we@192.168.0.161'

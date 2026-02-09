@@ -119,15 +119,129 @@
         (item "Audit trail: Role changes are logged"))
       (p "A node's sovereignty over its own role prevents external actors from dictating its participation level."))))
   (section
+    "Membership Lifecycle"
+    (p "Roles define what a node can do; membership defines who belongs. This section specifies the full lifecycle: enrollment, persistence, voluntary departure, and involuntary removal.")
+    (subsection
+      "Join Policy"
+      (p "A realm's join policy determines how new members are admitted. Four policies, from most to least permissive:")
+      (table
+        (header "Policy " "Description " "When ")
+        (row "open " "Any node may join; master auto-approves " "Development, testing, personal realms ")
+        (row "sponsored " "Existing member vouches for joiner " "Default for small realms (2-10 nodes) ")
+        (row "voted " "N-of-M existing members must approve " "Production realms, high-trust environments ")
+        (row "closed " "No new members accepted " "Frozen realms, archival configurations "))
+      (p "The policy is a realm-level setting, stored in realm state and enforced by the join listener.")
+      (code scheme "(realm-state\n  (version 1)\n  (master fluffy)\n  (join-policy sponsored)    ; open | sponsored | voted | closed\n  (vote-threshold (2 3))     ; 2-of-3 required (voted policy only)\n  ...)")
+      (p "Open policy is the current default. The join listener accepts any well-formed join request and issues a certificate. This is correct for the current two-node development scenario but must evolve as realms grow."))
+    (subsection
+      "Sponsored Enrollment"
+      (p "Under the sponsored policy, the sponsoring member's identity is recorded in the enrollment certificate:")
+      (code scheme "(signed-enrollment-cert\n  (spki-cert\n    (issuer (principal ed25519:...))\n    (subject (name new-node) (principal ed25519:...))\n    (role full)\n    (sponsor fluffy)             ; who vouched\n    (validity (not-before ...) (not-after ...))))\n  (signature ...))")
+      (p "The sponsor field creates an accountability chain. If a sponsored node misbehaves, the sponsor's judgment is part of the audit record."))
+    (subsection
+      "Voted Enrollment"
+      (p "Under the voted policy, a join request enters a pending queue. Existing members vote to approve or reject.")
+      (code scheme ";; Pending join request (stored in *pending-proposals*)\n(pending-join\n  (name starlight)\n  (pubkey #${...})\n  (hardware (introspection ...))\n  (proposed-by fluffy)\n  (proposed-at 1770583600)\n  (votes ((fluffy . approve)\n          (luna . approve)))\n  (threshold (2 3))              ; need 2-of-3\n  (status pending))              ; pending | approved | rejected | expired")
+      (p "When the threshold is met, the proposing member (or any approver) issues the enrollment certificate. Votes are gossiped so all members converge on the same decision.")
+      (p "Pending proposals expire after a configurable timeout (default: 7 days). Expired proposals are garbage-collected and the joiner must re-request."))
+    (subsection
+      "Enrollment Persistence"
+      (p "After successful enrollment (by any policy), three artifacts are persisted to the vault:")
+      (code ".vault/\n  certs/membership.sexp           ; signed enrollment certificate\n  keystore/\n    enrollment.pub                ; Ed25519 public key (plaintext)\n    enrollment.key                ; Ed25519 private key (plaintext)\n  realm-state.sexp                ; master, role, members, timestamp")
+      (p "On restart, the system checks all three. If any is missing or invalid, the node falls back to fresh auto-enrollment. This three-point check prevents a node from operating with stale identity material.")
+      (p "Hardware capabilities and scaling factors are NOT persisted. They are recomputed from fresh introspection on every startup, ensuring the node's declared capabilities always match reality.")))
+  (section
+    "Leaving a Realm"
+    (p "A node may voluntarily depart a realm. Departure is clean: the node revokes its own membership, notifies peers, and returns to the Wilderness.")
+    (subsection
+      "Voluntary Departure"
+      (code scheme "(define (leave-realm)\n  \"Voluntarily depart the realm. Clean exit.\"\n  ;; 1. Notify peers (gossip departure)\n  ;; 2. Revoke local membership cert\n  ;; 3. Delete realm-state.sexp\n  ;; 4. Delete enrollment keypair\n  ;; 5. Stop join listener\n  ;; 6. Unregister from Bonjour\n  ;; 7. Reset in-memory state\n  ;; Node returns to Wilderness\n  ...)")
+      (p "Steps 1-6 are idempotent. A crashed node that restarts after partial departure will detect the missing files and fall through to fresh enrollment, achieving the same end state."))
+    (subsection
+      "Member List Update"
+      (p "When a node departs, the remaining members must update their member lists. The departure is gossiped as a membership event:")
+      (code scheme "(membership-event\n  (type departure)\n  (node starlight)\n  (timestamp 1770583600)\n  (reason voluntary)             ; voluntary | timeout | disbarred\n  (signed-by starlight))")
+      (p "On receiving a departure event, each member removes the node from its local member list and recomputes scaling factors. If the departing node was master, the remaining members trigger a new election."))
+    (subsection
+      "Master Departure"
+      (p "If the master departs, the realm needs a new one. The remaining members hold a capability-based election (same as initial enrollment). The most capable remaining node becomes master.")
+      (p "If no members remain, the realm ceases to exist. Its artifacts persist in vaults but no active realm operates.")))
+  (section
+    "Disbarment"
+    (p "Involuntary removal of a malicious or compromised node. Unlike voluntary departure, the node does not cooperate.")
+    (subsection
+      "Grounds for Disbarment"
+      (list
+        (item "Certificate compromise: Private key leaked or stolen")
+        (item "Byzantine behavior: Node issues conflicting statements")
+        (item "Resource abuse: Excessive storage, bandwidth, or compute consumption")
+        (item "Protocol violation: Malformed messages, replay attacks"))
+      (p "Disbarment is a serious action. The bar is high because false positives destroy trust in the system."))
+    (subsection
+      "Disbarment Protocol"
+      (p "Disbarment requires a vote under the realm's join policy (even if the join policy is 'open', disbarment always requires a vote):")
+      (code scheme ";; Disbarment proposal\n(pending-disbar\n  (name compromised-node)\n  (proposed-by fluffy)\n  (proposed-at 1770583600)\n  (reason \"Certificate compromise detected\")\n  (evidence (audit-ref \"hash-of-evidence\"))\n  (votes ((fluffy . disbar)\n          (luna . disbar)))\n  (threshold (2 3))\n  (status pending))")
+      (p "When the threshold is met:")
+      (list
+        (item "The node's membership certificate is revoked (added to a revocation list)")
+        (item "The node is removed from all member lists")
+        (item "The revocation is gossiped to all members")
+        (item "The node's Bonjour registration is ignored by members")
+        (item "Scaling factors are recomputed without the disbarred node")))
+    (subsection
+      "Certificate Revocation"
+      (p "Revoked certificates are stored in a revocation list that is gossiped alongside membership events:")
+      (code scheme "(revocation-list\n  (version 1)\n  (entries\n    ((principal ed25519:abc123...)\n     (revoked-at 1770583600)\n     (reason \"Byzantine behavior\")\n     (revoked-by (fluffy luna)))))")
+      (p "Any node encountering a revoked certificate rejects it, even if the certificate is otherwise valid. The revocation list is append-only and signed by the revoking quorum."))
+    (subsection
+      "Disbarred Node Behavior"
+      (p "A disbarred node finds itself unable to participate:")
+      (list
+        (item "Join requests are rejected (pubkey is on revocation list)")
+        (item "Gossip messages from the node are dropped")
+        (item "The node can still operate locally but cannot federate"))
+      (p "The node effectively returns to the Wilderness but with a tainted identity. It must generate new keys to re-enroll, and even then, the voted policy provides a gate.")))
+  (section
+    "Pending Joins Queue"
+    (p "The pending proposals queue (*pending-proposals*) tracks join and disbarment votes in progress.")
+    (subsection
+      "Queue Structure"
+      (code scheme "(define *pending-proposals* '())\n\n;; Each proposal:\n(proposal\n  (id \"hash-of-proposal\")\n  (type join)                    ; join | disbar\n  (subject node-name)\n  (proposed-by proposer-name)\n  (proposed-at timestamp)\n  (votes ())                     ; ((name . vote) ...)\n  (threshold (n m))              ; n-of-m required\n  (expires (+ proposed-at 604800))  ; 7 days\n  (status pending))              ; pending | approved | rejected | expired"))
+    (subsection
+      "Queue Operations"
+      (code scheme ";; Propose a new member\n(propose-join 'new-node pubkey hardware)\n\n;; Vote on a pending proposal\n(vote-proposal proposal-id 'approve)  ; or 'reject\n\n;; List pending proposals\n(pending)\n\n;; Proposals are gossiped between members\n;; Votes are gossiped as they arrive\n;; Threshold check happens on every vote receipt"))
+    (subsection
+      "Consistency"
+      (p "Proposals and votes are gossiped, so all members eventually see the same state. Because votes are idempotent (a member can only vote once per proposal), convergence is guaranteed regardless of message ordering.")
+      (p "In the event of a network partition, each partition may independently reach a threshold if enough members are present. When the partition heals, the gossiped results converge. If conflicting decisions were made (one partition approved, another rejected), the earlier timestamp wins.")))
+  (section
+    "Voting Protocol"
+    (p "Membership votes use the quorum protocol defined in Memo-038. The specific application to membership decisions:")
+    (subsection
+      "Simple Majority"
+      (p "For small realms (2-5 members), a simple majority suffices. Votes are open (not encrypted) since the social cost of disagreement is low in small groups.")
+      (code scheme "(vote-threshold\n  (policy majority)\n  (minimum 2))                   ; at least 2 votes regardless of realm size"))
+    (subsection
+      "N-of-M Threshold"
+      (p "For larger realms, an explicit threshold prevents single members from controlling admission:")
+      (code scheme "(vote-threshold\n  (policy threshold)\n  (n 3)\n  (m 5))                         ; 3 of 5 members must approve")
+      (p "The threshold is a realm-level setting. Changing the threshold itself requires a vote at the current threshold."))
+    (subsection
+      "Private Ballot"
+      (p "For sensitive decisions (especially disbarment), the homomorphic voting protocol from Memo-038 applies. Individual votes are encrypted; only the tally is revealed.")
+      (p "Private ballot is RECOMMENDED for disbarment and OPTIONAL for join votes. The realm's join policy configuration specifies which.")))
+  (section
     "References"
     (list
       (item "Memo-010: Federation Protocol")
       (item "Memo-011: Byzantine Consensus")
       (item "Memo-016: Lazy Clustering")
-      (item "Memo-017: Security Considerations")))
+      (item "Memo-017: Security Considerations")
+      (item "Memo-038: Quorum Protocol with Homomorphic Voting")
+      (item "Memo-050: The Wilderness")))
   (section
     "Changelog"
     (list
-      (item "2026-01-07")
-      (item "Initial draft"))))
+      (item "2026-02-09: Membership lifecycle (enrollment, departure, disbarment, voting)")
+      (item "2026-01-07: Initial draft (roles and capabilities)"))))
 
