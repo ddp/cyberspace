@@ -902,7 +902,7 @@
   (define (realm-verbose! #!optional (on #t))
     "Enable/disable verbose realm logging (controls both auto-enroll and mdns)."
     (set! *realm-verbose* on)
-    (set! *mdns-verbose* on)
+    (mdns-verbose! on)
     (flush-output)
     (if on "realm verbose on" "realm verbose off"))
 

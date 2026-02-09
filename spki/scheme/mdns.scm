@@ -48,7 +48,8 @@
    mdns-shutdown!
    mdns-status
    ;; Verbosity
-   *mdns-verbose*)
+   *mdns-verbose*
+   mdns-verbose!)
 
   (import scheme
           (chicken base)
@@ -149,6 +150,10 @@
 
   ;; Verbose logging (controls Bonjour lifecycle messages)
   (define *mdns-verbose* #f)
+
+  (define (mdns-verbose! on)
+    "Set mdns verbose logging."
+    (set! *mdns-verbose* on))
 
   ;; ============================================================
   ;; Bonjour Registration (via dns-sd)

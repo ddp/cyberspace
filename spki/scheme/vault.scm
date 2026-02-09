@@ -4119,10 +4119,13 @@ Object Types:
         (string-prefix? "https://" str)))
 
   (define (publish-http url version archive-file)
-    "Publish archive to HTTP endpoint"
-    ;; Placeholder - would use curl or HTTP client
-    (print "HTTP publication not yet implemented")
-    (print "Would POST " archive-file " to " url))
+    "Publish archive to HTTP endpoint via curl PUT"
+    (let* ((target (sprintf "~a/~a" url version))
+           (cmd (sprintf "curl -s -f -X PUT -T '~a' '~a'" archive-file target))
+           (result (system cmd)))
+      (if (= result 0)
+          (print "✓ Published " archive-file " to " target)
+          (error "publish-http: curl failed" target result))))
 
   (define (publish-filesystem target-dir version archive-file)
     "Publish archive to filesystem location"
@@ -4146,9 +4149,13 @@ Object Types:
                 (loop (cons line tags))))))))
 
   (define (fetch-http-releases url)
-    "Fetch release list from HTTP endpoint"
-    ;; Placeholder
-    '())
+    "Fetch release list from HTTP endpoint via curl"
+    (let ((target (sprintf "~a/releases.txt" url)))
+      (handle-exceptions exn '()
+        (let ((lines (with-input-from-pipe
+                       (sprintf "curl -s -f '~a'" target)
+                       read-lines)))
+          (filter (lambda (s) (not (string=? s ""))) lines)))))
 
   (define (fetch-filesystem-releases dir)
     "Fetch releases from filesystem directory"
@@ -4164,14 +4171,28 @@ Object Types:
         '()))
 
   (define (download-release url target-dir version)
-    "Download release archive"
-    ;; Placeholder - would use curl or copy
-    (print "Download from: " url))
+    "Download release archive via curl"
+    (let* ((dest (sprintf "~a/vault-~a.archive" target-dir version))
+           (cmd (sprintf "curl -s -f -o '~a' '~a'" dest url)))
+      (create-directory target-dir #t)
+      (let ((result (system cmd)))
+        (if (= result 0)
+            (begin (print "✓ Downloaded to " dest) dest)
+            (error "download-release: curl failed" url result)))))
 
   (define (download-single-release remote version verify-key)
-    "Download and verify single release"
-    ;; Placeholder
-    (print "Would download " version " from " remote))
+    "Download and verify single release from remote"
+    (let ((target-dir (vault-config 'archive-dir)))
+      (cond
+       ((http-url? remote)
+        (let ((url (sprintf "~a/vault-~a.archive" remote version)))
+          (download-release url target-dir version)))
+       ((git-remote? remote)
+        (run-command "git" "fetch" remote "tag" version)
+        (print "✓ Fetched tag " version " from " remote))
+       (else
+        (let ((src (sprintf "~a/vault-~a.archive" remote version)))
+          (download-release src target-dir version))))))
 
   (define (get-local-releases)
     "Get list of local sealed releases"
@@ -4192,8 +4213,9 @@ Object Types:
 
   (define (upload-release-asset remote version archive-file)
     "Upload release asset to remote (e.g., GitHub releases)"
-    ;; Placeholder
-    (print "Would upload " archive-file " as release asset"))
+    (if (http-url? remote)
+        (publish-http remote version archive-file)
+        (print "upload-release-asset: non-HTTP remotes use git push")))
 
   ;;; ============================================================================
   ;;; Migration Paths - Explicit version transitions

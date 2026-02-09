@@ -45,6 +45,12 @@
    ;; Statistics
    gossip-stats
    reset-stats!
+   ;; Epidemic broadcast (Memo-012)
+   make-gossip-envelope gossip-envelope?
+   gossip-envelope-origin gossip-envelope-hop-count
+   gossip-envelope-ttl gossip-envelope-seen gossip-envelope-payload
+   gossip-forward!
+   *gossip-fanout* *gossip-ttl* *gossip-dedup-window*
    ;; Robustness (Memo-012)
    *gossip-verbose*
    gossip-verbose!
@@ -489,19 +495,164 @@
         (loop))))
 
   ;; ============================================================
+  ;; Epidemic Broadcast (Memo-012)
+  ;; ============================================================
+  ;;
+  ;; Gossip envelope wraps messages for multi-hop epidemic forwarding.
+  ;; The three-layer convergence protocol (bloom/merkle/transfer) stays
+  ;; unchanged underneath. This adds forwarding on top.
+
+  ;; Epidemic configuration
+  (define *gossip-fanout* 3)          ; peers per forward
+  (define *gossip-ttl* 5)            ; max hops
+  (define *gossip-dedup-window* 3600) ; seconds before dedup entry expires
+
+  ;; Gossip envelope record
+  (define-record-type <gossip-envelope>
+    (make-gossip-envelope origin hop-count ttl seen payload)
+    gossip-envelope?
+    (origin     gossip-envelope-origin)
+    (hop-count  gossip-envelope-hop-count)
+    (ttl        gossip-envelope-ttl)
+    (seen       gossip-envelope-seen)
+    (payload    gossip-envelope-payload))
+
+  ;; Dedup cache: message-hash → timestamp
+  (define *dedup-cache* (make-hash-table string=?))
+  (define *dedup-mutex* (make-mutex 'dedup))
+
+  (define (dedup-seen? msg-hash)
+    "Check if message hash has been seen recently (thread-safe)."
+    (mutex-lock! *dedup-mutex*)
+    (let ((result (hash-table-exists? *dedup-cache* msg-hash)))
+      (mutex-unlock! *dedup-mutex*)
+      result))
+
+  (define (dedup-record! msg-hash)
+    "Record message hash in dedup cache (thread-safe)."
+    (mutex-lock! *dedup-mutex*)
+    (hash-table-set! *dedup-cache* msg-hash (current-seconds))
+    (mutex-unlock! *dedup-mutex*))
+
+  (define (dedup-gc!)
+    "Evict stale entries from dedup cache (thread-safe)."
+    (mutex-lock! *dedup-mutex*)
+    (let ((cutoff (- (current-seconds) *gossip-dedup-window*)))
+      (hash-table-walk *dedup-cache*
+        (lambda (k v)
+          (when (< v cutoff)
+            (hash-table-delete! *dedup-cache* k)))))
+    (mutex-unlock! *dedup-mutex*))
+
+  (define (take-random lst n)
+    "Select up to n random elements from lst without replacement."
+    (if (or (null? lst) (<= n 0))
+        '()
+        (let ((len (length lst)))
+          (if (<= len n)
+              lst
+              ;; Fisher-Yates partial shuffle: pick n from lst
+              (let ((vec (list->vector lst)))
+                (do ((i 0 (+ i 1)))
+                    ((= i n)
+                     (let loop ((j 0) (acc '()))
+                       (if (= j n)
+                           acc
+                           (loop (+ j 1) (cons (vector-ref vec j) acc)))))
+                  (let* ((j (+ i (modulo (random-u32) (- len i))))
+                         (tmp (vector-ref vec i)))
+                    (vector-set! vec i (vector-ref vec j))
+                    (vector-set! vec j tmp))))))))
+
+  (define (gossip-forward! envelope my-node-id)
+    "Forward a gossip envelope via epidemic broadcast.
+     1. Check TTL (drop if hop-count >= ttl)
+     2. Check dedup cache (drop if seen)
+     3. Record in dedup cache
+     4. Filter peers: available AND trust >= known AND not in seen-set
+     5. Select up to *gossip-fanout* random peers
+     6. For each: TCP connect, send envelope with hop-count+1 and updated seen"
+    (let ((msg-hash (blob->hex (blake2b-hash
+                                 (string->blob
+                                   (with-output-to-string
+                                     (lambda () (write (gossip-envelope-payload envelope))))))))
+          (hop (gossip-envelope-hop-count envelope))
+          (ttl (gossip-envelope-ttl envelope))
+          (seen (gossip-envelope-seen envelope)))
+
+      (cond
+       ;; Check TTL
+       ((>= hop ttl)
+        (when *gossip-verbose*
+          (printf "[gossip] Dropping envelope: TTL exceeded (~a/~a)~n" hop ttl)))
+
+       ;; Check dedup
+       ((dedup-seen? msg-hash)
+        (when *gossip-verbose*
+          (printf "[gossip] Dropping envelope: duplicate~n")))
+
+       (else
+        ;; Record in dedup cache
+        (dedup-record! msg-hash)
+
+        ;; Filter peers and forward
+        (let* ((all-peers (hash-table-values *peers*))
+               (eligible (filter
+                           (lambda (p)
+                             (and (peer-available? p)
+                                  (memq (peer-trust-level p) '(known verified trusted))
+                                  (not (member (string-append (peer-host p) ":"
+                                                (number->string (peer-port p)))
+                                               seen string=?))))
+                           all-peers))
+               (targets (take-random eligible *gossip-fanout*))
+               (new-seen (cons my-node-id seen))
+               (new-envelope (make-gossip-envelope
+                               (gossip-envelope-origin envelope)
+                               (+ hop 1)
+                               ttl
+                               new-seen
+                               (gossip-envelope-payload envelope))))
+          ;; Forward to each target
+          (for-each
+            (lambda (peer)
+              (handle-exceptions exn
+                (begin
+                  (peer-record-failure! peer)
+                  (when *gossip-verbose*
+                    (printf "[gossip] Forward to ~a:~a failed~n"
+                            (peer-host peer) (peer-port peer))))
+                (let-values (((in out) (tcp-connect (peer-host peer) (peer-port peer))))
+                  (dynamic-wind
+                    (lambda () #f)
+                    (lambda ()
+                      (gossip-write-timestamped
+                        `(gossip-forward
+                          (origin ,(gossip-envelope-origin new-envelope))
+                          (hop-count ,(gossip-envelope-hop-count new-envelope))
+                          (ttl ,(gossip-envelope-ttl new-envelope))
+                          (seen ,(gossip-envelope-seen new-envelope))
+                          (payload ,(gossip-envelope-payload new-envelope)))
+                        out)
+                      (peer-record-success! peer))
+                    (lambda ()
+                      (close-input-port in)
+                      (close-output-port out))))))
+            targets))))))
+
+  ;; ============================================================
   ;; Single Gossip Round
   ;; ============================================================
 
   (define (gossip-round)
     "Execute one round of anti-entropy gossip.
-     Selects random available peer (not in backoff, not dead) and synchronizes."
+     Selects up to *gossip-fanout* available peers and synchronizes with each.
+     Periodically garbage-collects the dedup cache."
+    (dedup-gc!)
     (let* ((all-peers (hash-table-values *peers*))
-           (available (filter peer-available? all-peers)))
-      (when (pair? available)
-        ;; Select random available peer
-        (let* ((idx (modulo (random-u32) (length available)))
-               (peer (list-ref available idx)))
-          (gossip-with-peer peer)))))
+           (available (filter peer-available? all-peers))
+           (targets (take-random available (min *gossip-fanout* (length available)))))
+      (for-each gossip-with-peer targets)))
 
   (define (gossip-with-peer peer)
     "Gossip with specific peer.
@@ -801,7 +952,8 @@
 
   (define (handle-gossip-session in out local-objects-proc)
     "Handle one incoming gossip session.
-     Implements server side of three-layer protocol."
+     Implements server side of three-layer protocol.
+     Also handles gossip-forward envelopes for epidemic broadcast."
 
     (let* ((local-hashes (local-objects-proc))
            (local-bloom (make-inventory-bloom local-hashes
@@ -810,8 +962,21 @@
       ;; Build local catalog
       (for-each (lambda (h) (catalog-add! local-cat h)) local-hashes)
 
-      ;; Layer 1: Respond to Bloom exchange
+      ;; Read first message — dispatch on type
       (let ((request (gossip-read-timestamped in)))
+        ;; Handle epidemic forward messages
+        (when (and (pair? request) (eq? (car request) 'gossip-forward))
+          (let* ((origin    (cadr (assq 'origin (cdr request))))
+                 (hop-count (cadr (assq 'hop-count (cdr request))))
+                 (ttl       (cadr (assq 'ttl (cdr request))))
+                 (seen      (cadr (assq 'seen (cdr request))))
+                 (payload   (cadr (assq 'payload (cdr request))))
+                 (envelope  (make-gossip-envelope origin hop-count ttl seen payload))
+                 ;; Our node-id for the seen list
+                 (my-id     (sprintf "local:~a" *gossip-port*)))
+            (gossip-forward! envelope my-id)))
+
+        ;; Layer 1: Respond to Bloom exchange
         (when (and (pair? request) (eq? (car request) 'bloom-exchange))
           ;; Send our bloom and hashes
           (gossip-write-timestamped

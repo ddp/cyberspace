@@ -18,6 +18,8 @@
    ;; Certificate inspection
    inspect-cert
    cert-status
+   validity-expired?
+   iso8601->seconds
 
    ;; Capability queries
    who-can
@@ -28,6 +30,7 @@
    verify-object
    verify-chain-to
    check-revocation
+   cert-revoked?
 
    ;; Security summary
    security-summary
@@ -297,12 +300,30 @@
            (equal? cert-fingerprint (alist-ref 'fingerprint rev eq?)))
          revocations))
 
+  (define (iso8601->seconds datestr)
+    "Parse ISO 8601 date string (YYYY-MM-DDThh:mm:ssZ) to Unix epoch seconds.
+     Handles basic format with Z suffix."
+    (let* ((year  (string->number (substring datestr 0 4)))
+           (month (string->number (substring datestr 5 7)))
+           (day   (string->number (substring datestr 8 10)))
+           (hour  (string->number (substring datestr 11 13)))
+           (min   (string->number (substring datestr 14 16)))
+           (sec   (string->number (substring datestr 17 19))))
+      (utc-time->seconds
+       (vector sec min hour day (- month 1) (- year 1900) 0 0 #f 0))))
+
   (define (validity-expired? validity)
-    "Check if validity period has expired"
-    (let ((not-after (validity-not-after validity)))
-      ;; Simple check - assumes ISO date string format
-      ;; In production, parse and compare properly
-      #f))  ; Placeholder
+    "Check if validity period has expired. Returns #f if no validity.
+     Handles both numeric epoch seconds and ISO 8601 date strings."
+    (and validity
+         (let ((not-after (validity-not-after validity)))
+           (and not-after
+                (cond
+                 ((number? not-after)
+                  (> (current-seconds) not-after))
+                 ((and (string? not-after) (>= (string-length not-after) 19))
+                  (> (current-seconds) (iso8601->seconds not-after)))
+                 (else #f))))))
 
   ;; ============================================================
   ;; Capability Queries
