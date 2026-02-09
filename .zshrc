@@ -43,7 +43,9 @@ if [[ -o interactive ]]; then
     # Environment variables
     export EGG_FRECKELS=T
 
-    # Ollama local LLM (Anthropic-compatible API)
+    export CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000  # ~4,000 LOC for vault.scm
+
+# Ollama local LLM (Anthropic-compatible API)
 #    export ANTHROPIC_AUTH_TOKEN=ollama
 #    export ANTHROPIC_BASE_URL=http://localhost:11434
     
@@ -170,7 +172,6 @@ if [[ -o interactive ]]; then
     alias cr='claude --resume'
     alias clone='stash && clone-fluffy --with-dotfiles'
     alias csi='rlwrap csi'
-    # Cyberspace REPL - uses linenoise for line editing (no rlwrap needed)
     alias cyberspace='cd ~/cyberspace/spki/scheme && ./repl'
     alias cs='cd ~/cyberspace/spki/scheme && ./repl'
     alias cs-chez='scheme --libdirs /home/user/cyberspace/spki/scheme/chez'
@@ -198,6 +199,7 @@ if [[ -o interactive ]]; then
     alias lsflags='ls -laO'
     alias lsmod='ls -lat'
     alias lsnew='ls -laU'
+    alias lssicp='cd ~/cyberspace/spki/scheme && ./sicp'
     alias lssym='ls -la | grep -e "->" | sort'
     alias lsuse='ls -lau'
     alias lstree='tree -h -L 2 . && echo "Total size: $(du -sh . | cut -f1)"'
@@ -224,6 +226,7 @@ if [[ -o interactive ]]; then
     alias ssh='ssh -X -K'           # X11 forwarding, delegate Kerberos
     alias stash='ssh-add --apple-use-keychain'
     alias weather='curl http://wttr.in/94903'
+
     # Host-specific DISPLAY setting
     case "$HOST" in
         om|ombra)
@@ -293,5 +296,3 @@ if [[ "$PWD" == "$HOME/cyberspace" && -d .git ]]; then
     git pull --quiet 2>/dev/null || true
 fi
 
-# Cyberspace SICP metrics
-alias lscs='cd ~/cyberspace/spki/scheme && ./sicp'
