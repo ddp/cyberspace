@@ -1,7 +1,7 @@
 ;;; SPKI Scheme - Blocked Bloom Filters for Federation Convergence
-;;; Chez Scheme Port
+;;; Library of Cyberspace - Chez Port
 ;;;
-;;; Space-efficient probabilistic set membership for:
+;;; Provides space-efficient probabilistic set membership for:
 ;;; - Fast detection of missing objects during sync
 ;;; - Inventory exchange between federation peers
 ;;; - Content-addressed storage existence checking
@@ -10,8 +10,8 @@
 ;;; better CPU performance, plus counting Bloom for deletion support.
 ;;;
 ;;; Ported from Chicken's bloom.scm.
-;;; Changes: module -> library, SRFI-9 records -> R6RS,
-;;;          #!key -> rest + get-key, blob/u8vector -> bytevector compat.
+;;; Changes: module -> library, (chicken bitwise) -> (rnrs arithmetic bitwise),
+;;;          #!key -> get-key, srfi-1 every -> manual, mutable records -> R6RS.
 
 (library (cyberspace bloom)
   (export
@@ -44,26 +44,21 @@
     inventory-diff)
 
   (import (rnrs)
-          (rnrs arithmetic bitwise)
-          (only (chezscheme) modulo quotient)
+          (only (chezscheme) printf format)
+          (cyberspace crypto-ffi)
           (cyberspace chicken-compatibility blob)
-          (cyberspace chicken-compatibility chicken)
-          (cyberspace crypto-ffi))
-
-  ;; ============================================================
-  ;; SRFI-1 helpers
-  ;; ============================================================
-
-  (define (every pred lst)
-    (cond ((null? lst) #t)
-          ((pred (car lst)) (every pred (cdr lst)))
-          (else #f)))
+          (cyberspace chicken-compatibility chicken))
 
   ;; ============================================================
   ;; Bloom Filter Theory
   ;; ============================================================
   ;;
   ;; False positive rate: p = (1 - e^(-kn/m))^k
+  ;; Where:
+  ;;   m = number of bits
+  ;;   n = number of elements
+  ;;   k = number of hash functions
+  ;;
   ;; Optimal k = (m/n) * ln(2) ~ 0.693 * (m/n)
   ;; Optimal m = -n * ln(p) / (ln(2))^2
 
@@ -83,14 +78,31 @@
     (expt (- 1 (exp (- (/ (* k n) m)))) k))
 
   ;; ============================================================
+  ;; SRFI-1 helpers (avoid full SRFI-1 dependency)
+  ;; ============================================================
+
+  (define (every pred lst)
+    (or (null? lst)
+        (and (pred (car lst))
+             (every pred (cdr lst)))))
+
+  (define (any pred lst)
+    (and (not (null? lst))
+         (or (pred (car lst))
+             (any pred (cdr lst)))))
+
+  ;; ============================================================
   ;; Standard Bloom Filter
   ;; ============================================================
 
-  (define-record-type bloom-filter
+  (define-record-type <bloom-filter>
     (fields (immutable bits bloom-bits)
             (immutable size bloom-size)
             (immutable hash-count bloom-hash-count)
             (mutable element-count bloom-element-count bloom-element-count-set!)))
+
+  (define (make-bloom-internal bits size hash-count element-count)
+    (make-<bloom-filter> bits size hash-count element-count))
 
   (define (make-bloom . opts)
     "Create a Bloom filter with given capacity and error rate"
@@ -98,23 +110,26 @@
            (error-rate (get-key opts 'error-rate: 0.01))
            (m (optimal-bloom-size capacity error-rate))
            (k (optimal-hash-count m capacity))
-           (byte-size (quotient (+ m 7) 8))
+           (byte-size (div (+ m 7) 8))
            (bits (make-u8vector byte-size 0)))
-      (make-bloom-filter bits m k 0)))
+      (make-bloom-internal bits m k 0)))
 
   (define (bloom-hash-indices bloom data)
     "Generate k hash indices for data using double hashing"
-    (let* ((h1-bv (sha256-hash data))
-           (h2-bv (blake2b-hash data))
-           (h1 (bytes->integer h1-bv 0 4))
-           (h2 (bytes->integer h2-bv 0 4))
+    (let* ((data-blob (if (string? data) (string->blob data) data))
+           (h1-blob (sha256-hash data-blob))
+           (h2-blob (blake2b-hash data-blob))
+           (h1-vec (blob->u8vector h1-blob))
+           (h2-vec (blob->u8vector h2-blob))
+           (h1 (bytes->integer h1-vec 0 4))
+           (h2 (bytes->integer h2-vec 0 4))
            (m (bloom-size bloom))
            (k (bloom-hash-count bloom)))
       (let loop ((i 0) (indices '()))
         (if (= i k)
             (reverse indices)
             (loop (+ i 1)
-                  (cons (modulo (+ h1 (* i h2)) m) indices))))))
+                  (cons (mod (+ h1 (* i h2)) m) indices))))))
 
   (define (bytes->integer vec start len)
     "Convert bytes to integer (little-endian)"
@@ -128,16 +143,16 @@
 
   (define (bloom-set-bit! bits index)
     "Set bit at index in u8vector"
-    (let* ((byte-idx (quotient index 8))
-           (bit-idx (modulo index 8))
+    (let* ((byte-idx (div index 8))
+           (bit-idx (mod index 8))
            (mask (bitwise-arithmetic-shift-left 1 bit-idx)))
       (u8vector-set! bits byte-idx
                      (bitwise-ior (u8vector-ref bits byte-idx) mask))))
 
   (define (bloom-get-bit bits index)
     "Get bit at index in u8vector"
-    (let* ((byte-idx (quotient index 8))
-           (bit-idx (modulo index 8))
+    (let* ((byte-idx (div index 8))
+           (bit-idx (mod index 8))
            (mask (bitwise-arithmetic-shift-left 1 bit-idx)))
       (not (zero? (bitwise-and (u8vector-ref bits byte-idx) mask)))))
 
@@ -185,24 +200,31 @@
            (hash-count (cadr (assq 'hash-count (cdr sexp))))
            (element-count (cadr (assq 'element-count (cdr sexp))))
            (bits-blob (cadr (assq 'bits (cdr sexp)))))
-      (make-bloom-filter (blob->u8vector bits-blob)
-                         size hash-count element-count)))
+      (make-bloom-internal (blob->u8vector bits-blob)
+                          size hash-count element-count)))
 
   ;; ============================================================
   ;; Blocked Bloom Filter (Cache-Line Optimized)
   ;; ============================================================
   ;;
+  ;; Standard Bloom filters have poor cache behavior - each hash
+  ;; may access a different cache line. Blocked Bloom filters
+  ;; constrain all k hash probes to a single cache-line block.
+  ;;
   ;; Block size = 64 bytes (512 bits) = typical cache line
 
-  (define *block-size* 64)
-  (define *block-bits* 512)
+  (define *block-size* 64)  ; bytes per block (cache line)
+  (define *block-bits* 512) ; bits per block
 
-  (define-record-type (blocked-bloom make-blocked-bloom-internal blocked-bloom?)
+  (define-record-type <blocked-bloom>
     (fields (immutable blocks blocked-bloom-blocks)
             (immutable block-count blocked-bloom-block-count)
             (immutable hash-count blocked-bloom-hash-count)
             (mutable element-count blocked-bloom-element-count
                      blocked-bloom-element-count-set!)))
+
+  (define (make-blocked-bloom-internal blocks block-count hash-count element-count)
+    (make-<blocked-bloom> blocks block-count hash-count element-count))
 
   (define (make-blocked-bloom . opts)
     "Create a blocked Bloom filter (cache-optimized)"
@@ -210,24 +232,27 @@
            (error-rate (get-key opts 'error-rate: 0.01))
            (m (optimal-bloom-size capacity error-rate))
            (k (min 8 (optimal-hash-count m capacity)))
-           (num-blocks (quotient (+ m *block-bits* -1) *block-bits*))
+           (num-blocks (div (+ m *block-bits* -1) *block-bits*))
            (blocks (make-u8vector (* num-blocks *block-size*) 0)))
       (make-blocked-bloom-internal blocks num-blocks k 0)))
 
   (define (blocked-bloom-add! bloom data)
     "Add element to blocked Bloom filter"
-    (let* ((hash-bv (sha256-hash data))
-           (block-idx (modulo (bytes->integer hash-bv 0 4)
-                              (blocked-bloom-block-count bloom)))
+    (let* ((data-blob (if (string? data) (string->blob data) data))
+           (hash-blob (sha256-hash data-blob))
+           (hash-vec (blob->u8vector hash-blob))
+           (block-idx (mod (bytes->integer hash-vec 0 4)
+                           (blocked-bloom-block-count bloom)))
            (block-offset (* block-idx *block-size*))
            (blocks (blocked-bloom-blocks bloom))
            (k (blocked-bloom-hash-count bloom)))
+      ;; All k probes within same block
       (do ((i 0 (+ i 1)))
           ((= i k))
-        (let* ((bit-idx (modulo (bytes->integer hash-bv (+ 4 (* i 2)) 2)
-                                *block-bits*))
-               (byte-idx (+ block-offset (quotient bit-idx 8)))
-               (bit-pos (modulo bit-idx 8))
+        (let* ((bit-idx (mod (bytes->integer hash-vec (+ 4 (* i 2)) 2)
+                             *block-bits*))
+               (byte-idx (+ block-offset (div bit-idx 8)))
+               (bit-pos (mod bit-idx 8))
                (mask (bitwise-arithmetic-shift-left 1 bit-pos)))
           (u8vector-set! blocks byte-idx
                          (bitwise-ior (u8vector-ref blocks byte-idx) mask))))
@@ -236,19 +261,21 @@
 
   (define (blocked-bloom-contains? bloom data)
     "Check if element might be in blocked Bloom filter"
-    (let* ((hash-bv (sha256-hash data))
-           (block-idx (modulo (bytes->integer hash-bv 0 4)
-                              (blocked-bloom-block-count bloom)))
+    (let* ((data-blob (if (string? data) (string->blob data) data))
+           (hash-blob (sha256-hash data-blob))
+           (hash-vec (blob->u8vector hash-blob))
+           (block-idx (mod (bytes->integer hash-vec 0 4)
+                           (blocked-bloom-block-count bloom)))
            (block-offset (* block-idx *block-size*))
            (blocks (blocked-bloom-blocks bloom))
            (k (blocked-bloom-hash-count bloom)))
       (let loop ((i 0))
         (if (= i k)
             #t
-            (let* ((bit-idx (modulo (bytes->integer hash-bv (+ 4 (* i 2)) 2)
-                                    *block-bits*))
-                   (byte-idx (+ block-offset (quotient bit-idx 8)))
-                   (bit-pos (modulo bit-idx 8))
+            (let* ((bit-idx (mod (bytes->integer hash-vec (+ 4 (* i 2)) 2)
+                                 *block-bits*))
+                   (byte-idx (+ block-offset (div bit-idx 8)))
+                   (bit-pos (mod bit-idx 8))
                    (mask (bitwise-arithmetic-shift-left 1 bit-pos)))
               (if (zero? (bitwise-and (u8vector-ref blocks byte-idx) mask))
                   #f
@@ -276,14 +303,18 @@
   ;; Counting Bloom Filter (Supports Deletion)
   ;; ============================================================
   ;;
-  ;; 4-bit counters, overflow saturates at 15.
+  ;; Uses 4-bit counters instead of single bits, allowing deletion.
+  ;; Counter overflow saturates at 15 (doesn't wrap).
 
-  (define-record-type (counting-bloom make-counting-bloom-internal counting-bloom?)
+  (define-record-type <counting-bloom>
     (fields (immutable counters counting-bloom-counters)
             (immutable size counting-bloom-size)
             (immutable hash-count counting-bloom-hash-count)
             (mutable element-count counting-bloom-element-count
                      counting-bloom-element-count-set!)))
+
+  (define (make-counting-bloom-internal counters size hash-count element-count)
+    (make-<counting-bloom> counters size hash-count element-count))
 
   (define (make-counting-bloom . opts)
     "Create a counting Bloom filter (supports deletion)"
@@ -291,14 +322,14 @@
            (error-rate (get-key opts 'error-rate: 0.01))
            (m (optimal-bloom-size capacity error-rate))
            (k (optimal-hash-count m capacity))
-           (byte-size (quotient (+ m 1) 2))
+           (byte-size (div (+ m 1) 2))
            (counters (make-u8vector byte-size 0)))
       (make-counting-bloom-internal counters m k 0)))
 
   (define (counting-bloom-get counters index)
     "Get 4-bit counter value at index"
-    (let* ((byte-idx (quotient index 2))
-           (nibble (modulo index 2))
+    (let* ((byte-idx (div index 2))
+           (nibble (mod index 2))
            (byte-val (u8vector-ref counters byte-idx)))
       (if (= nibble 0)
           (bitwise-and byte-val #x0F)
@@ -306,8 +337,8 @@
 
   (define (counting-bloom-set! counters index value)
     "Set 4-bit counter value at index"
-    (let* ((byte-idx (quotient index 2))
-           (nibble (modulo index 2))
+    (let* ((byte-idx (div index 2))
+           (nibble (mod index 2))
            (byte-val (u8vector-ref counters byte-idx))
            (clamped (min 15 (max 0 value))))
       (u8vector-set! counters byte-idx
@@ -318,17 +349,20 @@
 
   (define (counting-bloom-hash-indices bloom data)
     "Generate k hash indices for counting Bloom"
-    (let* ((h1-bv (sha256-hash data))
-           (h2-bv (blake2b-hash data))
-           (h1 (bytes->integer h1-bv 0 4))
-           (h2 (bytes->integer h2-bv 0 4))
+    (let* ((data-blob (if (string? data) (string->blob data) data))
+           (h1-blob (sha256-hash data-blob))
+           (h2-blob (blake2b-hash data-blob))
+           (h1-vec (blob->u8vector h1-blob))
+           (h2-vec (blob->u8vector h2-blob))
+           (h1 (bytes->integer h1-vec 0 4))
+           (h2 (bytes->integer h2-vec 0 4))
            (m (counting-bloom-size bloom))
            (k (counting-bloom-hash-count bloom)))
       (let loop ((i 0) (indices '()))
         (if (= i k)
             (reverse indices)
             (loop (+ i 1)
-                  (cons (modulo (+ h1 (* i h2)) m) indices))))))
+                  (cons (mod (+ h1 (* i h2)) m) indices))))))
 
   (define (counting-bloom-add! bloom data)
     "Add element to counting Bloom filter"
@@ -386,7 +420,8 @@
       bloom))
 
   (define (inventory-diff local-bloom remote-bloom local-hashes)
-    "Find objects we might be missing."
+    "Find objects we might be missing.
+     Returns list of local hashes that remote probably has but we might not."
     (filter (lambda (hash)
               (let ((hash-blob (if (string? hash)
                                    (string->blob hash)

@@ -1,83 +1,72 @@
 ;;; SPKI Scheme - Pronounceable Verification Codes
-;;; Chez Scheme Port
+;;; Library of Cyberspace - Chez Port
 ;;;
-;;; Human-readable fingerprints for public keys.
+;;; Provides human-readable fingerprints for public keys.
 ;;; Used during node enrollment (Memo-044) for verbal verification.
 ;;;
 ;;; Supports two modes:
 ;;;   FIPS-181: Automated Password Generator (federal compliance)
 ;;;   PGP:      Biometric word list (legacy/alternative)
-;;;
-;;; Ported from Chicken's wordlist.scm.
-;;; Changes: module -> library, blob/u8vector -> bytevector compat,
-;;;          srfi-1/srfi-4 -> rnrs + blob compat.
 
 (library (cyberspace wordlist)
   (export
-    ;; FIPS-181 (default, federal compliance)
     fips181-encode
     byte->syllable
     pubkey->syllables
     syllables->display
-    ;; PGP word list (alternative)
     byte->word
     pubkey->words
     words->display
-    ;; Configuration
     *verification-mode*
-    ;; Word lists (for PGP mode testing)
     even-words
     odd-words)
 
   (import (rnrs)
-          (only (chezscheme) modulo quotient)
+          (cyberspace crypto-ffi)
           (cyberspace chicken-compatibility blob)
-          (cyberspace crypto-ffi))
+          (cyberspace chicken-compatibility chicken))
 
-  ;; Default to FIPS-181 for federal compliance
   (define *verification-mode* 'fips-181)
 
-  ;; ============================================================
-  ;; FIPS-181: Automated Password Generator
-  ;; ============================================================
-
+  ;; Vowels and consonants for syllable construction
   (define vowels "aeiou")
   (define consonants "bcdfghjklmnpqrstvwxyz")
 
   (define (byte->syllable byte)
     "Convert a byte to a pronounceable syllable (FIPS-181 style)"
-    (let* ((c1-idx (modulo byte 21))
-           (v-idx  (modulo (quotient byte 21) 5))
-           (c2-idx (modulo (quotient byte 105) 21))
+    (let* ((c1-idx (mod byte 21))
+           (v-idx  (mod (div byte 21) 5))
+           (c2-idx (mod (div byte 105) 21))
            (c1 (string-ref consonants c1-idx))
            (v  (string-ref vowels v-idx))
-           (c2 (string-ref consonants (modulo (+ c2-idx c1-idx) 21))))
+           (c2 (string-ref consonants (mod (+ c2-idx c1-idx) 21))))
       (string c1 v c2)))
 
   (define (bytes->fips181 bytes)
-    "Convert bytevector to FIPS-181 pronounceable string"
     (let loop ((i 0) (acc '()))
-      (if (>= i (bytevector-length bytes))
+      (if (>= i (u8vector-length bytes))
           (apply string-append (reverse acc))
           (loop (+ i 1)
-                (cons (byte->syllable (bytevector-u8-ref bytes i)) acc)))))
+                (cons (byte->syllable (u8vector-ref bytes i)) acc)))))
 
   (define (fips181-encode data)
     "Encode arbitrary data as FIPS-181 pronounceable syllables"
-    (bytes->fips181 (if (bytevector? data) data (string->utf8 data))))
+    (let ((bytes (if (bytevector? data)
+                     (blob->u8vector data)
+                     data)))
+      (bytes->fips181 bytes)))
 
   (define (pubkey->syllables pubkey)
-    "Convert public key to FIPS-181 verification syllables.
-     Uses first 4 bytes of SHA-256 hash."
-    (let ((hash (sha256-hash pubkey)))
+    "Convert public key to FIPS-181 verification syllables."
+    (let* ((hash (sha256-hash pubkey))
+           (bytes (blob->u8vector hash)))
       (let loop ((i 0) (acc '()))
         (if (= i 4)
             (reverse acc)
             (loop (+ i 1)
-                  (cons (byte->syllable (bytevector-u8-ref hash i)) acc))))))
+                  (cons (byte->syllable (u8vector-ref bytes i)) acc))))))
 
   (define (syllables->display syllables)
-    "Format FIPS-181 syllables for display"
     (string-join syllables "-"))
 
   ;; Even-position words (two syllables, 256 total)
@@ -193,31 +182,24 @@
        "Yucatan"))
 
   (define (byte->word byte position)
-    "Convert a byte value to a word based on position parity."
     (vector-ref (if (even? position) even-words odd-words)
-                (modulo byte 256)))
+                (mod byte 256)))
 
   (define (pubkey->words pubkey)
-    "Convert public key to 4 verification words."
-    (let ((hash (sha256-hash pubkey)))
-      (list (byte->word (bytevector-u8-ref hash 0) 0)
-            (byte->word (bytevector-u8-ref hash 1) 1)
-            (byte->word (bytevector-u8-ref hash 2) 2)
-            (byte->word (bytevector-u8-ref hash 3) 3))))
+    (let* ((hash (sha256-hash pubkey))
+           (bytes (blob->u8vector hash)))
+      (list (byte->word (u8vector-ref bytes 0) 0)
+            (byte->word (u8vector-ref bytes 1) 1)
+            (byte->word (u8vector-ref bytes 2) 2)
+            (byte->word (u8vector-ref bytes 3) 3))))
 
   (define (words->display words)
-    "Format verification words for display."
     (string-join words "  "))
 
-  ;; Helper: join strings with separator
   (define (string-join strings sep)
-    (if (null? strings)
-        ""
-        (let loop ((rest (cdr strings))
-                   (acc (car strings)))
-          (if (null? rest)
-              acc
-              (loop (cdr rest)
-                    (string-append acc sep (car rest)))))))
+    (if (null? strings) ""
+        (let loop ((rest (cdr strings)) (acc (car strings)))
+          (if (null? rest) acc
+              (loop (cdr rest) (string-append acc sep (car rest)))))))
 
 ) ;; end library

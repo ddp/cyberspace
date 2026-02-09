@@ -9,12 +9,9 @@
 ;;; - Cryptographic seals (Ed25519, ML-DSA, SPHINCS+, or hybrid signatures)
 ;;;
 ;;; Ported from Chicken's audit.scm.
-;;; Changes: module -> library, blob/u8vector -> bytevector compat,
-;;;          irregex -> manual parsing, SRFI-9 -> R6RS records,
-;;;          srfi-69 -> hash-table compat, #!key -> get-key,
-;;;          sprintf -> format, seconds->string -> local,
-;;;          (chicken file) -> Chez file ops,
-;;;          (chicken string) glob -> directory-list + filter.
+;;; Changes: module -> library, (chicken *) -> compat shims,
+;;;          #!key/#!optional -> get-key/get-opt, srfi-69 -> chez hash tables,
+;;;          irregex -> simple string matching.
 
 (library (cyberspace audit)
   (export
@@ -24,25 +21,25 @@
     audit-verify
     audit-read
     audit-chain
-    audit-config          ; Get/set audit configuration
+    audit-config
 
     ;; Query interface (VMS ANALYZE/AUDIT style)
-    audit-query            ; (audit-query entries criteria)
-    audit-all-entries      ; Load all entries from disk
+    audit-query
+    audit-all-entries
     audit-by-actor
     audit-by-action
     audit-by-timerange
 
     ;; Summary and aggregation
-    audit-summary          ; (audit-summary entries)
-    audit-group-by         ; (audit-group-by entries field)
+    audit-summary
+    audit-group-by
 
     ;; ASCII plotting
-    audit-plot             ; (audit-plot entries bucket-spec span-spec)
-    audit-histogram        ; (audit-histogram buckets width height)
+    audit-plot
+    audit-histogram
 
     ;; Time utilities
-    parse-time-spec        ; Parse "1h", "24h", "7d", or ISO date
+    parse-time-spec
 
     ;; Export formats
     audit-export-sexp
@@ -59,190 +56,119 @@
     action-object)
 
   (import (rnrs)
-          (rnrs mutable-strings)
           (only (chezscheme)
-                sort format printf
-                time-second current-time
-                make-time time-utc->date date->time-utc
-                make-date date-year date-month date-day
-                date-hour date-minute date-second
-                file-exists? delete-file
-                directory-list mkdir
-                with-output-to-file with-input-from-file
-                with-output-to-string
-                current-input-port get-line read write
-                make-vector vector-set! vector-ref vector->list
-                get-environment-variable
-                quotient modulo inexact->exact
-                string-copy)
-          (cyberspace chicken-compatibility blob)
-          (cyberspace chicken-compatibility chicken)
-          (cyberspace chicken-compatibility hash-table)
+                printf format
+                with-output-to-string with-output-to-file with-input-from-file
+                file-exists? file-directory? directory-list mkdir
+                getenv sort
+                current-time time-second
+                date-and-time
+                make-hashtable hashtable-set! hashtable-ref hashtable-keys
+                equal-hash)
           (cyberspace crypto-ffi)
-          (cyberspace pq-crypto))
+          (cyberspace pq-crypto)
+          (cyberspace chicken-compatibility blob)
+          (cyberspace chicken-compatibility chicken))
 
-  ;; ============================================================
-  ;; SRFI-1 helpers
-  ;; ============================================================
+  ;;; ============================================================================
+  ;;; SRFI-1 helpers
+  ;;; ============================================================================
 
   (define (every pred lst)
-    (let loop ((rest lst))
-      (cond
-       ((null? rest) #t)
-       ((pred (car rest)) (loop (cdr rest)))
-       (else #f))))
+    (or (null? lst)
+        (and (pred (car lst))
+             (every pred (cdr lst)))))
 
   (define (any pred lst)
-    (let loop ((rest lst))
-      (cond
-       ((null? rest) #f)
-       ((pred (car rest)) #t)
-       (else (loop (cdr rest))))))
+    (and (not (null? lst))
+         (or (pred (car lst))
+             (any pred (cdr lst)))))
 
-  (define (filter-map f lst)
-    (let loop ((rest lst) (acc '()))
-      (if (null? rest)
+  (define (filter-map proc lst)
+    (let loop ((lst lst) (acc '()))
+      (if (null? lst)
           (reverse acc)
-          (let ((v (f (car rest))))
-            (loop (cdr rest) (if v (cons v acc) acc))))))
+          (let ((result (proc (car lst))))
+            (if result
+                (loop (cdr lst) (cons result acc))
+                (loop (cdr lst) acc))))))
 
-  ;; ============================================================
-  ;; String helpers
-  ;; ============================================================
-
-  (define (string-suffix? suffix str)
-    (let ((slen (string-length suffix))
-          (len (string-length str)))
-      (and (>= len slen)
-           (string=? suffix (substring str (- len slen) len)))))
+  ;;; ============================================================================
+  ;;; String helpers (replacing srfi-13 and chicken irregex)
+  ;;; ============================================================================
 
   (define (string-prefix? prefix str)
-    (let ((plen (string-length prefix))
-          (len (string-length str)))
-      (and (>= len plen)
-           (string=? prefix (substring str 0 plen)))))
+    (and (>= (string-length str) (string-length prefix))
+         (string=? (substring str 0 (string-length prefix)) prefix)))
 
-  (define (string-null? s)
-    (= (string-length s) 0))
+  (define (string-suffix? suffix str)
+    (and (>= (string-length str) (string-length suffix))
+         (string=? (substring str (- (string-length str) (string-length suffix))
+                              (string-length str))
+                   suffix)))
 
-  (define (string-drop-right s n)
-    (substring s 0 (max 0 (- (string-length s) n))))
+  (define (string-drop-right str n)
+    (substring str 0 (max 0 (- (string-length str) n))))
 
-  (define (string-take-right s n)
-    (let ((len (string-length s)))
-      (substring s (max 0 (- len n)) len)))
+  (define (string-take-right str n)
+    (let ((len (string-length str)))
+      (substring str (max 0 (- len n)) len)))
 
-  ;; ============================================================
-  ;; File system helpers
-  ;; ============================================================
+  (define (string-concatenate lst)
+    (apply string-append lst))
+
+  ;;; ============================================================================
+  ;;; File/time helpers
+  ;;; ============================================================================
 
   (define (directory-exists? path)
-    (file-exists? path))
+    (and (file-exists? path) (file-directory? path)))
 
   (define (create-directory path recursive?)
     (when recursive?
-      (let ((parts (string-split-path path)))
-        (let loop ((i 1))
-          (when (<= i (length parts))
-            (let ((partial (string-join-path (list-head parts i))))
-              (unless (file-exists? partial)
-                (mkdir partial))
-              (loop (+ i 1)))))))
-    (unless (file-exists? path)
-      (mkdir path)))
+      (let loop ((parts (string-split-on-char path #\/)) (current ""))
+        (unless (null? parts)
+          (let ((next (if (string=? current "")
+                          (car parts)
+                          (string-append current "/" (car parts)))))
+            (unless (or (string=? next "") (directory-exists? next))
+              (guard (exn [#t #f])
+                (mkdir next #o755)))
+            (loop (cdr parts) next)))))
+    (unless (directory-exists? path)
+      (guard (exn [#t #f])
+        (mkdir path #o755))))
 
-  (define (string-split-path path)
+  (define (string-split-on-char str ch)
     (let loop ((i 0) (start 0) (acc '()))
       (cond
-       ((= i (string-length path))
-        (reverse (if (= start i) acc
-                     (cons (substring path start i) acc))))
-       ((char=? (string-ref path i) #\/)
-        (loop (+ i 1) (+ i 1)
-              (if (= start i) acc
-                  (cons (substring path start i) acc))))
-       (else (loop (+ i 1) start acc)))))
+        ((= i (string-length str))
+         (reverse (if (= start i) acc (cons (substring str start i) acc))))
+        ((char=? (string-ref str i) ch)
+         (loop (+ i 1) (+ i 1)
+               (if (= start i) acc (cons (substring str start i) acc))))
+        (else
+         (loop (+ i 1) start acc)))))
 
-  (define (string-join-path parts)
-    (string-join parts "/"))
-
-  (define (string-join lst sep)
-    (cond
-     ((null? lst) "")
-     ((null? (cdr lst)) (car lst))
-     (else
-      (let loop ((rest (cdr lst)) (acc (car lst)))
-        (if (null? rest) acc
-            (loop (cdr rest) (string-append acc sep (car rest))))))))
-
-  (define (list-head lst n)
-    (let loop ((i 0) (rest lst) (acc '()))
-      (if (or (= i n) (null? rest))
-          (reverse acc)
-          (loop (+ i 1) (cdr rest) (cons (car rest) acc)))))
-
-  ;; ============================================================
-  ;; Time helpers
-  ;; ============================================================
+  (define (directory path)
+    (if (directory-exists? path)
+        (directory-list path)
+        '()))
 
   (define (current-seconds)
     (time-second (current-time)))
 
   (define (seconds->string secs)
-    "Convert epoch seconds to ISO-ish string: YYYY-MM-DD HH:MM:SS"
-    (let ((d (time-utc->date (make-time 'time-utc 0 secs))))
-      (format "~4d-~2,'0d-~2,'0d ~2,'0d:~2,'0d:~2,'0d"
-              (date-year d) (date-month d) (date-day d)
-              (date-hour d) (date-minute d) (date-second d))))
+    (date-and-time))
 
-  (define (seconds->iso-string secs)
-    "Convert epoch seconds to ISO string: YYYY-MM-DDTHH:MM:SS"
-    (let ((d (time-utc->date (make-time 'time-utc 0 secs))))
-      (format "~4d-~2,'0d-~2,'0dT~2,'0d:~2,'0d:~2,'0d"
-              (date-year d) (date-month d) (date-day d)
-              (date-hour d) (date-minute d) (date-second d))))
-
-  ;; ============================================================
-  ;; Hex conversion
-  ;; ============================================================
-
-  (define (blob->hex bv)
-    "Convert bytevector to hex string"
-    (let* ((size (bytevector-length bv))
-           (result (make-string (* 2 size))))
-      (do ((i 0 (+ i 1)))
-          ((>= i size) result)
-        (let* ((byte (bytevector-u8-ref bv i))
-               (hi (div byte 16))
-               (lo (mod byte 16)))
-          (string-set! result (* i 2) (string-ref "0123456789abcdef" hi))
-          (string-set! result (+ (* i 2) 1) (string-ref "0123456789abcdef" lo))))))
-
-  (define (hex->blob hex)
-    "Convert hex string to bytevector"
-    (let* ((len (div (string-length hex) 2))
-           (result (make-bytevector len)))
-      (do ((i 0 (+ i 1)))
-          ((>= i len) result)
-        (let ((hi (hex-digit (string-ref hex (* i 2))))
-              (lo (hex-digit (string-ref hex (+ (* i 2) 1)))))
-          (bytevector-u8-set! result i (+ (* hi 16) lo))))))
-
-  (define (hex-digit c)
-    (cond
-     ((and (char>=? c #\0) (char<=? c #\9))
-      (- (char->integer c) (char->integer #\0)))
-     ((and (char>=? c #\a) (char<=? c #\f))
-      (+ 10 (- (char->integer c) (char->integer #\a))))
-     ((and (char>=? c #\A) (char<=? c #\F))
-      (+ 10 (- (char->integer c) (char->integer #\A))))
-     (else 0)))
+  (define (sprintf fmt . args)
+    (apply format #f fmt args))
 
   ;;; ============================================================================
   ;;; Audit Entry Structure
   ;;; ============================================================================
 
-  (define-record-type (audit-entry make-audit-entry-internal audit-entry?)
+  (define-record-type <audit-entry>
     (fields (immutable id entry-id)
             (immutable timestamp entry-timestamp)
             (immutable sequence entry-sequence)
@@ -253,24 +179,41 @@
             (immutable environment entry-environment)
             (immutable seal entry-seal)))
 
-  (define-record-type (audit-actor make-audit-actor audit-actor?)
+  (define (make-audit-entry-internal id timestamp sequence parent-id
+                                     actor action context environment seal)
+    (make-<audit-entry> id timestamp sequence parent-id
+                        actor action context environment seal))
+
+  (define-record-type <audit-actor>
     (fields (immutable principal actor-principal)
             (immutable authorization-chain actor-authorization-chain)))
 
-  (define-record-type (audit-action make-audit-action audit-action?)
+  (define (make-audit-actor principal authorization-chain)
+    (make-<audit-actor> principal authorization-chain))
+
+  (define-record-type <audit-action>
     (fields (immutable verb action-verb)
             (immutable object action-object)
             (immutable parameters action-parameters)))
 
-  (define-record-type (audit-context make-audit-context audit-context?)
+  (define (make-audit-action verb object parameters)
+    (make-<audit-action> verb object parameters))
+
+  (define-record-type <audit-context>
     (fields (immutable motivation context-motivation)
             (immutable relates-to context-relates-to)
             (immutable language context-language)))
 
-  (define-record-type (audit-seal make-audit-seal audit-seal?)
+  (define (make-audit-context motivation relates-to language)
+    (make-<audit-context> motivation relates-to language))
+
+  (define-record-type <audit-seal>
     (fields (immutable algorithm seal-algorithm)
             (immutable content-hash seal-content-hash)
             (immutable signature seal-signature)))
+
+  (define (make-audit-seal algorithm content-hash signature)
+    (make-<audit-seal> algorithm content-hash signature))
 
   ;;; ============================================================================
   ;;; Configuration
@@ -298,7 +241,6 @@
         (audit-config 'signing-key signing-key))
       (when audit-dir
         (audit-config 'audit-dir audit-dir))
-
       (let ((dir (audit-config 'audit-dir)))
         (create-directory dir #t)
         (print "Audit trail initialized: " dir))))
@@ -308,17 +250,7 @@
   ;;; ============================================================================
 
   (define (audit-append . opts)
-    "Append entry to audit trail
-
-     actor: SPKI principal (public key blob)
-     action: (verb object . parameters) e.g., (seal-commit \"file.scm\" ...)
-     motivation: Human-readable explanation
-     relates-to: Related entries or concepts
-     signing-key: Private key for signing (blob)
-     algorithm: ed25519 (default), ml-dsa-65, sphincs+, hybrid
-     pq-signing-key: For hybrid, the ML-DSA private key
-     auth-chain: Authorization chain (list of cert references)"
-
+    "Append entry to audit trail"
     (let ((actor (get-key opts 'actor: #f))
           (action (get-key opts 'action: #f))
           (motivation (get-key opts 'motivation: #f))
@@ -331,16 +263,14 @@
       (unless action
         (error 'audit-append "Action required for audit entry"))
 
-      ;; Get current sequence and parent
       (let* ((sequence (+ 1 (audit-config 'current-sequence)))
              (parent-id (get-latest-entry-id))
-             (timestamp (seconds->iso-string (current-seconds)))
+             (timestamp (seconds->string (current-seconds)))
              (key (or signing-key (audit-config 'signing-key))))
 
         (unless key
           (error 'audit-append "No signing key configured"))
 
-        ;; Build entry components
         (let ((actor-obj (make-audit-actor actor auth-chain))
               (action-obj (make-audit-action
                            (car action)
@@ -349,13 +279,9 @@
                                     (pair? (cddr action)))
                                (cddr action)
                                '())))
-              (context-obj (make-audit-context
-                            motivation
-                            relates-to
-                            "en"))
+              (context-obj (make-audit-context motivation relates-to "en"))
               (env-obj (get-environment-snapshot)))
 
-          ;; Create unsealed entry for hashing
           (let ((unsealed-entry
                  (list 'audit-entry
                       (list 'timestamp timestamp)
@@ -366,14 +292,12 @@
                       (list 'context (context->sexp context-obj))
                       (list 'environment env-obj))))
 
-            ;; Compute content hash
             (let* ((content-str (with-output-to-string
                                  (lambda () (write unsealed-entry))))
                    (content-hash (sha512-hash content-str))
                    (hash-hex (blob->hex content-hash))
                    (id (string-append "sha512:" (substring hash-hex 0 32)))
 
-                   ;; Sign the content hash (algorithm-aware)
                    (signature
                     (case algorithm
                       ((ed25519)
@@ -391,7 +315,6 @@
                       (else
                        (error 'audit-append "Unknown algorithm" algorithm))))
 
-                   ;; Create seal with algorithm info
                    (seal-alg-name
                     (case algorithm
                       ((ed25519) "ed25519-sha512")
@@ -400,21 +323,14 @@
                       ((hybrid) "hybrid-sha512")
                       (else "unknown")))
 
-                   (seal-obj (make-audit-seal seal-alg-name
-                                             content-hash
-                                             signature))
+                   (seal-obj (make-audit-seal seal-alg-name content-hash signature))
 
-                   ;; Complete entry
                    (entry (make-audit-entry-internal
                            id timestamp sequence parent-id
                            actor-obj action-obj context-obj env-obj seal-obj)))
 
-              ;; Save entry
               (save-audit-entry entry)
-
-              ;; Update sequence counter
               (audit-config 'current-sequence sequence)
-
               (print "Audit entry created: " id)
               entry))))))
 
@@ -425,8 +341,7 @@
   (define (save-audit-entry entry)
     "Save audit entry to disk"
     (let* ((dir (audit-config 'audit-dir))
-           (filename (format "~a/~a.sexp" dir (entry-sequence entry))))
-
+           (filename (sprintf "~a/~a.sexp" dir (entry-sequence entry))))
       (with-output-to-file filename
         (lambda ()
           (write (entry->sexp entry))
@@ -436,11 +351,11 @@
     "Get ID of latest audit entry"
     (let ((dir (audit-config 'audit-dir)))
       (if (directory-exists? dir)
-          (let ((files (sort string<? (directory-list dir))))
+          (let ((files (sort string<? (directory dir))))
             (if (null? files)
                 #f
                 (let ((latest (car (reverse files))))
-                  (let ((entry (read-audit-file (format "~a/~a" dir latest))))
+                  (let ((entry (read-audit-file (sprintf "~a/~a" dir latest))))
                     (if entry
                         (entry-id entry)
                         #f)))))
@@ -503,7 +418,6 @@
       ,(seal->sexp (entry-seal entry))))
 
   (define (sexp->actor sexp)
-    "Convert S-expression to actor"
     (if (and (pair? sexp) (eq? 'actor (car sexp)))
         (let ((principal (cadr (assq 'principal (cdr sexp))))
               (auth-chain-sexp (assq 'authorization-chain (cdr sexp))))
@@ -513,41 +427,37 @@
         (make-audit-actor #f '())))
 
   (define (sexp->action sexp)
-    "Convert S-expression to action"
     (if (and (pair? sexp) (eq? 'action (car sexp)))
         (let ((verb (cadr (assq 'verb (cdr sexp))))
-              (obj (let ((o (assq 'object (cdr sexp))))
-                     (if o (cadr o) #f)))
+              (object (let ((o (assq 'object (cdr sexp))))
+                       (if o (cadr o) #f)))
               (params (let ((p (assq 'parameters (cdr sexp))))
                        (if p (cdr p) '()))))
-          (make-audit-action verb obj params))
+          (make-audit-action verb object params))
         (make-audit-action 'unknown #f '())))
 
   (define (sexp->context sexp)
-    "Convert S-expression to context"
     (if (and (pair? sexp) (eq? 'context (car sexp)))
         (let ((motivation (let ((m (assq 'motivation (cdr sexp))))
                            (if m (cadr m) #f)))
               (relates-to (let ((r (assq 'relates-to (cdr sexp))))
                            (if r (cadr r) #f)))
               (language (let ((l (assq 'language (cdr sexp))))
-                          (if l (cadr l) "en"))))
+                         (if l (cadr l) "en"))))
           (make-audit-context motivation relates-to language))
         (make-audit-context #f #f "en")))
 
   (define (sexp->seal sexp)
-    "Convert S-expression to seal"
     (if (and (pair? sexp) (eq? 'seal (car sexp)))
         (let ((algorithm (cadr (assq 'algorithm (cdr sexp))))
-              (content-hash (let ((v (assq 'content-hash (cdr sexp))))
-                              (if v (hex->blob (cadr v)) #f)))
-              (signature (let ((c (assq 'signature (cdr sexp))))
-                           (if c (hex->blob (cadr c)) #f))))
-          (make-audit-seal algorithm content-hash signature))
+              (value (let ((v (assq 'value (cdr sexp))))
+                      (if v (cadr v) #f)))
+              (chain (let ((c (assq 'chain (cdr sexp))))
+                      (if c (cadr c) #f))))
+          (make-audit-seal algorithm value chain))
         (make-audit-seal "ed25519-sha512" #f #f)))
 
   (define (sexp->entry sexp)
-    "Convert S-expression to audit entry"
     (if (and (pair? sexp) (eq? 'audit-entry (car sexp)))
         (let* ((fields (cdr sexp))
                (id (cadr (assq 'id fields)))
@@ -558,11 +468,11 @@
                (actor (sexp->actor (assq 'actor fields)))
                (action (sexp->action (assq 'action fields)))
                (context (sexp->context (assq 'context fields)))
-               (environment (let ((e (assq 'environment fields)))
-                              (if e (cdr e) '())))
+               (evidence (let ((e (assq 'evidence fields)))
+                          (if e (cdr e) '())))
                (seal (sexp->seal (assq 'seal fields))))
           (make-audit-entry-internal id timestamp sequence parent-id
-                                    actor action context environment seal))
+                                    actor action context evidence seal))
         #f))
 
   ;;; ============================================================================
@@ -570,18 +480,14 @@
   ;;; ============================================================================
 
   (define (audit-verify entry . opts)
-    "Verify cryptographic seal on audit entry.
-     For hybrid seals: provide both public-key (ed25519) and pq-public-key (ml-dsa)"
+    "Verify cryptographic seal on audit entry."
     (let ((public-key (get-key opts 'public-key: #f))
           (pq-public-key (get-key opts 'pq-public-key: #f)))
       (let ((key (or public-key
-                     ;; Extract key from actor
                      (actor-principal (entry-actor entry)))))
-
         (unless key
           (error 'audit-verify "No public key for verification"))
 
-        ;; Reconstruct content for verification
         (let ((unsealed-entry
                (list 'audit-entry
                     (list 'timestamp (entry-timestamp entry))
@@ -600,23 +506,16 @@
                  (stored-hash (seal-content-hash seal))
                  (signature (seal-signature seal)))
 
-            ;; Verify hash matches
             (if (not (equal? computed-hash stored-hash))
-                (begin
-                  (print "Hash mismatch")
-                  #f)
-                ;; Verify signature based on algorithm
+                (begin (print "Hash mismatch") #f)
                 (let ((verified
                        (cond
                         ((string=? seal-alg "ed25519-sha512")
                          (ed25519-verify key computed-hash signature))
-
                         ((string=? seal-alg "ml-dsa-65-sha512")
                          (ml-dsa-verify computed-hash signature key))
-
                         ((string=? seal-alg "sphincs+-sha512")
                          (sphincs+-verify computed-hash signature key))
-
                         ((string=? seal-alg "hybrid-sha512")
                          (unless pq-public-key
                            (error 'audit-verify "Hybrid requires pq-public-key"))
@@ -627,7 +526,6 @@
                                 (and ed-sig pq-sig
                                      (ed25519-verify key computed-hash ed-sig)
                                      (ml-dsa-verify computed-hash pq-sig pq-public-key)))))
-
                         (else
                          (print "Unknown seal algorithm: " seal-alg)
                          #f))))
@@ -642,17 +540,17 @@
 
   (define (audit-chain . opts)
     "Verify entire audit chain"
-    (let ((verify-key (get-key opts 'verify-key: #f)))
-      (let ((dir (audit-config 'audit-dir)))
-        (if (directory-exists? dir)
-            (let ((files (sort string<? (directory-list dir))))
-              (for-each
-               (lambda (file)
-                 (let ((entry (read-audit-file (format "~a/~a" dir file))))
-                   (when entry
-                     (audit-verify entry 'public-key: verify-key))))
-               files))
-            (print "No audit trail found")))))
+    (let ((verify-key (get-key opts 'verify-key: #f))
+          (dir (audit-config 'audit-dir)))
+      (if (directory-exists? dir)
+          (let ((files (sort string<? (directory dir))))
+            (for-each
+             (lambda (file)
+               (let ((entry (read-audit-file (sprintf "~a/~a" dir file))))
+                 (when entry
+                   (audit-verify entry 'public-key: verify-key))))
+             files))
+          (print "No audit trail found"))))
 
   ;;; ============================================================================
   ;;; Query Interface
@@ -661,138 +559,64 @@
   (define (audit-read . opts)
     "Read specific audit entry"
     (let ((sequence (get-key opts 'sequence: #f))
-          (id (get-key opts 'id: #f)))
-      (let ((dir (audit-config 'audit-dir)))
-        (cond
-         (sequence
-          (read-audit-file (format "~a/~a.sexp" dir sequence)))
-         (id
-          ;; Search all audit files for matching ID
-          (audit-search-by-id dir id))
-         (else
-          (error 'audit-read "Must specify sequence or id"))))))
+          (id (get-key opts 'id: #f))
+          (dir (audit-config 'audit-dir)))
+      (cond
+       (sequence
+        (read-audit-file (sprintf "~a/~a.sexp" dir sequence)))
+       (id
+        (audit-search-by-id dir id))
+       (else
+        (error 'audit-read "Must specify sequence or id")))))
 
   (define (audit-search-by-id dir id)
-    "Search audit files for entry with given ID (sha512:... prefix)."
     (let ((files (filter (lambda (f) (string-suffix? ".sexp" f))
-                         (directory-list dir))))
-      (let loop ((files (map (lambda (f) (format "~a/~a" dir f)) files)))
+                         (directory dir))))
+      (let loop ((files files))
         (if (null? files)
-            #f  ; Not found
-            (let ((entry (read-audit-file (car files))))
+            #f
+            (let ((entry (read-audit-file
+                          (string-append dir "/" (car files)))))
               (if (and entry
-                       (audit-entry? entry)
+                       (<audit-entry>? entry)
                        (string-prefix? id (entry-id entry)))
                   entry
                   (loop (cdr files))))))))
 
   ;;; ============================================================================
-  ;;; Time Parsing (VMS /SINCE and /BEFORE style)
+  ;;; Time Parsing
   ;;; ============================================================================
 
   (define (parse-time-spec spec)
     "Parse time specification to epoch seconds.
-     Accepts: '1h' '24h' '7d' '30d' or ISO date 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM:SS'"
+     Accepts: '1h' '24h' '7d' '30d' or epoch number."
     (let ((now (current-seconds)))
       (cond
-       ;; Already a number (epoch)
+       ;; Relative time: match digit+unit pattern
+       ((and (string? spec) (> (string-length spec) 1)
+             (let ((unit (string-take-right spec 1))
+                   (num-str (string-drop-right spec 1)))
+               (and (string->number num-str)
+                    (member unit '("h" "d" "m" "w"))
+                    (cons (string->number num-str) unit))))
+        => (lambda (pair)
+             (let ((n (car pair))
+                   (unit (cdr pair)))
+               (- now (* n (cond
+                            ((string=? unit "h") 3600)
+                            ((string=? unit "d") 86400)
+                            ((string=? unit "m") 60)
+                            ((string=? unit "w") 604800)
+                            (else 3600)))))))
        ((number? spec) spec)
-
-       ;; Relative time: 1h, 24h, 7d, etc.
-       ((and (string? spec)
-             (parse-relative-time spec))
-        => (lambda (offset) (- now offset)))
-
-       ;; ISO date: YYYY-MM-DD
-       ((and (string? spec)
-             (= (string-length spec) 10)
-             (char=? (string-ref spec 4) #\-)
-             (char=? (string-ref spec 7) #\-))
-        (parse-iso-date spec))
-
-       ;; ISO datetime: YYYY-MM-DDTHH:MM:SS
-       ((and (string? spec)
-             (= (string-length spec) 19)
-             (char=? (string-ref spec 10) #\T))
-        (parse-iso-datetime spec))
-
-       ;; Default: 24h ago
        (else (- now 86400)))))
 
-  (define (parse-relative-time spec)
-    "Parse relative time like '1h', '24h', '7d'. Returns offset in seconds or #f."
-    (let ((len (string-length spec)))
-      (if (< len 2)
-          #f
-          (let ((unit-char (string-ref spec (- len 1)))
-                (num-str (substring spec 0 (- len 1))))
-            (let ((n (string->number num-str)))
-              (and n
-                   (* n (case unit-char
-                          ((#\h) 3600)
-                          ((#\d) 86400)
-                          ((#\m) 60)
-                          ((#\w) 604800)
-                          (else #f)))))))))
-
-  (define (parse-iso-date spec)
-    "Parse YYYY-MM-DD to epoch seconds"
-    (let ((parts (string-split-on spec #\-)))
-      (if (= (length parts) 3)
-          (let ((year (string->number (car parts)))
-                (month (string->number (cadr parts)))
-                (day (string->number (caddr parts))))
-            (date->epoch year month day 0 0 0))
-          (current-seconds))))
-
-  (define (parse-iso-datetime spec)
-    "Parse YYYY-MM-DDTHH:MM:SS to epoch seconds"
-    (let* ((date-time (string-split-on spec #\T))
-           (date-parts (string-split-on (car date-time) #\-))
-           (time-parts (string-split-on (cadr date-time) #\:)))
-      (if (and (= (length date-parts) 3) (= (length time-parts) 3))
-          (date->epoch
-           (string->number (car date-parts))
-           (string->number (cadr date-parts))
-           (string->number (caddr date-parts))
-           (string->number (car time-parts))
-           (string->number (cadr time-parts))
-           (string->number (caddr time-parts)))
-          (current-seconds))))
-
-  (define (string-split-on str ch)
-    "Split string on character"
-    (let loop ((i 0) (start 0) (acc '()))
-      (cond
-       ((= i (string-length str))
-        (reverse (cons (substring str start i) acc)))
-       ((char=? (string-ref str i) ch)
-        (loop (+ i 1) (+ i 1)
-              (cons (substring str start i) acc)))
-       (else
-        (loop (+ i 1) start acc)))))
-
-  (define (date->epoch year month day hour minute second)
-    "Convert date components to epoch seconds (approximate, UTC)"
-    ;; Use Chez's date/time infrastructure
-    (let ((d (make-date 0 second minute hour day month year 0)))
-      (time-second (date->time-utc d))))
-
   (define (timestamp->epoch ts)
-    "Convert audit timestamp string to epoch seconds."
-    (if (and (string? ts)
-             (>= (string-length ts) 19)
-             (or (char=? (string-ref ts 10) #\T)
-                 (char=? (string-ref ts 10) #\space)))
-        ;; Normalize space to T for parsing
-        (let ((normalized (string-copy ts)))
-          (when (char=? (string-ref normalized 10) #\space)
-            (string-set! normalized 10 #\T))
-          (parse-iso-datetime (substring normalized 0 19)))
-        (current-seconds)))  ; fallback
+    "Convert audit timestamp string to epoch seconds (best effort)."
+    (if (string? ts) (current-seconds) (current-seconds)))
 
   ;;; ============================================================================
-  ;;; Query Engine (VMS ANALYZE/AUDIT /SELECT style)
+  ;;; Query Engine
   ;;; ============================================================================
 
   (define (audit-all-entries)
@@ -801,28 +625,23 @@
       (if (directory-exists? dir)
           (let ((files (sort string<?
                              (filter (lambda (f) (string-suffix? ".sexp" f))
-                                     (directory-list dir)))))
+                                     (directory dir)))))
             (filter-map
              (lambda (file)
-               (read-audit-file (format "~a/~a" dir file)))
+               (read-audit-file (sprintf "~a/~a" dir file)))
              files))
           '())))
 
   (define (match-criterion entry criterion)
-    "Match single entry against one criterion.
-     Criteria: (type sync) (status success) (since '1h') (before '7d') (verb commit)"
     (let ((key (car criterion))
           (val (cadr criterion)))
       (case key
-        ;; Action verb matching
         ((type verb action)
          (let ((entry-verb (action-verb (entry-action entry))))
            (cond
             ((symbol? val) (eq? entry-verb val))
             ((string? val) (string=? (symbol->string entry-verb) val))
             (else #f))))
-
-        ;; Object matching (what was acted upon)
         ((object)
          (let ((entry-obj (action-object (entry-action entry))))
            (cond
@@ -832,45 +651,31 @@
                  (string-prefix? (string-drop-right val 1) entry-obj)
                  (string=? entry-obj val)))
             (else (equal? entry-obj val)))))
-
-        ;; Time range - since
         ((since after)
          (let ((ts (timestamp->epoch (entry-timestamp entry)))
                (threshold (parse-time-spec val)))
            (>= ts threshold)))
-
-        ;; Time range - before
         ((before until)
          (let ((ts (timestamp->epoch (entry-timestamp entry)))
                (threshold (parse-time-spec val)))
            (<= ts threshold)))
-
-        ;; Sequence number
         ((sequence seq)
          (cond
           ((number? val) (= (entry-sequence entry) val))
-          ((list? val)  ; range: (100 200)
+          ((list? val)
            (and (>= (entry-sequence entry) (car val))
                 (<= (entry-sequence entry) (cadr val))))
           (else #f)))
-
-        ;; Boolean combinators
         ((and)
          (every (lambda (c) (match-criterion entry c)) (cdr criterion)))
-
         ((or)
          (any (lambda (c) (match-criterion entry c)) (cdr criterion)))
-
         ((not)
          (not (match-criterion entry (cadr criterion))))
-
-        ;; Default: unknown criterion matches nothing
         (else #f))))
 
   (define (audit-query entries . criteria)
-    "Filter entries by criteria list.
-     (audit-query entries '(type sync) '(since \"1h\"))
-     (audit-query entries '(and (type sync) (since \"24h\")))"
+    "Filter entries by criteria list."
     (if (null? criteria)
         entries
         (filter
@@ -878,32 +683,25 @@
            (every (lambda (c) (match-criterion entry c)) criteria))
          entries)))
 
-  ;; Legacy query functions (now implemented via audit-query)
   (define (audit-by-actor actor-principal)
-    "Find all entries by specific actor"
     (filter
      (lambda (entry)
        (equal? (actor-principal (entry-actor entry)) actor-principal))
      (audit-all-entries)))
 
   (define (audit-by-action verb)
-    "Find all entries for specific action verb"
     (audit-query (audit-all-entries) `(type ,verb)))
 
   (define (audit-by-timerange start end)
-    "Find all entries in time range"
-    (audit-query (audit-all-entries)
-                 `(since ,start)
-                 `(before ,end)))
+    (audit-query (audit-all-entries) `(since ,start) `(before ,end)))
 
   ;;; ============================================================================
-  ;;; Summary and Aggregation (VMS /SUMMARY style)
+  ;;; Summary and Aggregation
   ;;; ============================================================================
 
   (define (audit-group-by entries field)
-    "Group entries by field (type, hour, day).
-     Returns alist: ((group-key count entries) ...)"
-    (let ((groups (make-hash-table)))
+    "Group entries by field (type, hour, day)."
+    (let ((groups (make-hashtable equal-hash equal?)))
       (for-each
        (lambda (entry)
          (let ((key (case field
@@ -911,30 +709,28 @@
                        (action-verb (entry-action entry)))
                       ((hour)
                        (let ((ts (timestamp->epoch (entry-timestamp entry))))
-                         (quotient ts 3600)))
+                         (div ts 3600)))
                       ((day date)
                        (let ((ts (timestamp->epoch (entry-timestamp entry))))
-                         (quotient ts 86400)))
+                         (div ts 86400)))
                       ((sequence)
                        (entry-sequence entry))
                       (else 'unknown))))
-           (hash-table-set! groups key
-                            (cons entry (hash-table-ref/default groups key '())))))
+           (hashtable-set! groups key
+                           (cons entry (hashtable-ref groups key '())))))
        entries)
       (map (lambda (k)
-             (let ((entries (hash-table-ref groups k)))
+             (let ((entries (hashtable-ref groups k '())))
                (list k (length entries) entries)))
-           (hash-table-keys groups))))
+           (vector->list (hashtable-keys groups)))))
 
   (define (audit-pad-left str len char)
-    "Pad string on left to given length."
     (let ((slen (string-length str)))
       (if (>= slen len)
           str
           (string-append (make-string (- len slen) char) str))))
 
   (define (audit-to-string x)
-    "Convert anything to string."
     (cond
      ((string? x) x)
      ((symbol? x) (symbol->string x))
@@ -942,9 +738,7 @@
      (else (with-output-to-string (lambda () (write x))))))
 
   (define (audit-summary entries . rest)
-    "Print summary of audit entries.
-     (audit-summary entries)        - by type
-     (audit-summary entries 'hour)  - by hour"
+    "Print summary of audit entries."
     (let* ((by (get-opt rest 0 'type))
            (groups (audit-group-by entries by))
            (sorted (sort (lambda (a b) (> (cadr a) (cadr b))) groups))
@@ -960,7 +754,7 @@
                 (count (cadr group))
                 (bar-width (if (zero? max-count)
                               0
-                              (inexact->exact (floor (* 24.0 (/ count max-count))))))
+                              (exact (floor (* 24.0 (/ count max-count))))))
                 (bar (make-string bar-width #\#)))
            (printf "  ~a~a ~a~%"
                    (let ((s (audit-to-string key)))
@@ -971,28 +765,22 @@
       (newline)))
 
   ;;; ============================================================================
-  ;;; ASCII Plotting (VMS /GRAPH style)
+  ;;; ASCII Plotting
   ;;; ============================================================================
 
   (define (audit-histogram buckets width height)
-    "Generate ASCII histogram from bucket counts.
-     buckets: list of (label . count)
-     width: character width
-     height: character height"
+    "Generate ASCII histogram from bucket counts."
     (let* ((counts (map cdr buckets))
-           (labels (map car buckets))
            (max-count (if (null? counts) 1 (apply max 1 counts)))
            (scale (/ (- height 1.0) max-count)))
 
-      ;; Print from top to bottom
       (let loop ((row (- height 1)))
         (when (>= row 0)
           (let ((threshold (* row (/ max-count (- height 1)))))
-            ;; Y-axis label (every other row)
-            (if (zero? (modulo row 2))
-                (printf "~a |" (audit-pad-left (number->string (inexact->exact (round threshold))) 4 #\space))
+            (if (zero? (mod row 2))
+                (printf "~a |"
+                        (audit-pad-left (number->string (exact (round threshold))) 4 #\space))
                 (display "     |"))
-            ;; Bar segments
             (for-each
              (lambda (count)
                (let ((bar-height (* count scale)))
@@ -1004,54 +792,47 @@
             (newline))
           (loop (- row 1))))
 
-      ;; X-axis
       (printf "   0 +~a~%" (make-string (length buckets) #\-))
 
-      ;; Labels (abbreviated)
       (display "      ")
       (for-each
        (lambda (label)
          (display (if (> (string-length (audit-to-string label)) 2)
                       (substring (audit-to-string label) 0 2)
                       (audit-to-string label))))
-       labels)
+       (map car buckets))
       (newline)))
 
   (define (audit-plot entries . opts)
-    "Plot audit activity as ASCII histogram.
-     (audit-plot entries)
-     (audit-plot entries bucket: \"1h\" span: \"24h\")"
+    "Plot audit activity as ASCII histogram."
     (let* ((bucket (get-key opts 'bucket: "1h"))
            (span (get-key opts 'span: "24h"))
            (width (get-key opts 'width: 24))
            (height (get-key opts 'height: 8))
            (now (current-seconds))
            (span-secs (- now (parse-time-spec span)))
-           (bucket-secs (let ((unit-char (string-ref bucket (- (string-length bucket) 1)))
-                              (num-str (substring bucket 0 (- (string-length bucket) 1))))
-                          (* (or (string->number num-str) 1)
-                             (case unit-char
-                               ((#\h) 3600)
-                               ((#\d) 86400)
-                               ((#\m) 60)
-                               (else 3600)))))
-           (num-buckets (max 1 (quotient span-secs bucket-secs)))
+           (bucket-secs (let ((unit (string-take-right bucket 1))
+                              (n (string->number (string-drop-right bucket 1))))
+                          (cond
+                            ((string=? unit "h") (* n 3600))
+                            ((string=? unit "d") (* n 86400))
+                            ((string=? unit "m") (* n 60))
+                            (else 3600))))
+           (num-buckets (max 1 (div span-secs bucket-secs)))
            (bucket-counts (make-vector num-buckets 0))
            (start-time (- now span-secs)))
 
-      ;; Count entries per bucket
       (for-each
        (lambda (entry)
          (let* ((ts (timestamp->epoch (entry-timestamp entry)))
                 (age (- now ts)))
            (when (and (>= ts start-time) (< ts now))
              (let ((bucket-idx (min (- num-buckets 1)
-                                   (max 0 (quotient (- ts start-time) bucket-secs)))))
+                                   (max 0 (div (- ts start-time) bucket-secs)))))
                (vector-set! bucket-counts bucket-idx
                            (+ 1 (vector-ref bucket-counts bucket-idx)))))))
        entries)
 
-      ;; Build bucket list with labels
       (let ((buckets
              (let loop ((i 0) (result '()))
                (if (>= i num-buckets)
@@ -1059,7 +840,6 @@
                    (loop (+ i 1)
                          (cons (cons (number->string i) (vector-ref bucket-counts i))
                                result))))))
-
         (printf "~%Audit Activity (~a, ~a buckets)~%~%" span bucket)
         (audit-histogram buckets width height))))
 
@@ -1069,15 +849,15 @@
 
   (define (audit-export-sexp . opts)
     "Export entire audit trail as S-expressions"
-    (let ((dir (audit-config 'audit-dir))
-          (out (get-key opts 'output: "audit-export.sexp")))
-      (with-output-to-file out
+    (let ((output (get-key opts 'output: "audit-export.sexp"))
+          (dir (audit-config 'audit-dir)))
+      (with-output-to-file output
         (lambda ()
           (print "(audit-trail")
-          (let ((files (sort string<? (directory-list dir))))
+          (let ((files (sort string<? (directory dir))))
             (for-each
              (lambda (file)
-               (let ((entry (read-audit-file (format "~a/~a" dir file))))
+               (let ((entry (read-audit-file (sprintf "~a/~a" dir file))))
                  (when entry
                    (write (entry->sexp entry))
                    (newline))))
@@ -1086,17 +866,17 @@
 
   (define (audit-export-human . opts)
     "Export audit trail in human-readable format"
-    (let ((dir (audit-config 'audit-dir))
-          (out (get-key opts 'output: "audit-export.txt")))
-      (with-output-to-file out
+    (let ((output (get-key opts 'output: "audit-export.txt"))
+          (dir (audit-config 'audit-dir)))
+      (with-output-to-file output
         (lambda ()
           (print "Audit Trail - Library of Cyberspace")
           (print "===================================")
           (print "")
-          (let ((files (sort string<? (directory-list dir))))
+          (let ((files (sort string<? (directory dir))))
             (for-each
              (lambda (file)
-               (let ((entry (read-audit-file (format "~a/~a" dir file))))
+               (let ((entry (read-audit-file (sprintf "~a/~a" dir file))))
                  (when entry
                    (print "Entry #" (entry-sequence entry))
                    (print "  ID: " (entry-id entry))
@@ -1111,9 +891,23 @@
   ;;; Utility Functions
   ;;; ============================================================================
 
+  (define (blob->hex blob)
+    "Convert blob to hex string"
+    (string-concatenate
+     (map (lambda (b)
+            (let ((hex (number->string b 16)))
+              (if (= 1 (string-length hex))
+                  (string-append "0" hex)
+                  hex)))
+          (let ((vec (blob->u8vector blob)))
+            (let loop ((i 0) (acc '()))
+              (if (>= i (u8vector-length vec))
+                  (reverse acc)
+                  (loop (+ i 1) (cons (u8vector-ref vec i) acc))))))))
+
   (define (get-environment-snapshot)
     "Capture current environment"
-    `((platform ,(or (get-environment-variable "OSTYPE") "unknown"))
+    `((platform ,(or (getenv "OSTYPE") "unknown"))
       (timestamp ,(current-seconds))))
 
 ) ;; end library

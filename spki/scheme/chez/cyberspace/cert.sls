@@ -1,18 +1,19 @@
 ;;; SPKI Scheme - Certificate Types and Operations
-;;; Chez Scheme Port
+;;; Library of Cyberspace - Chez Port
 ;;;
-;;; SPKI certificates and operations for:
+;;; This module defines SPKI certificates and operations for:
 ;;; - Creating certificates
-;;; - Signing certificates (Ed25519, ML-DSA, SPHINCS+, hybrid)
+;;; - Signing certificates
 ;;; - Verifying certificates
 ;;; - Checking delegation chains
 ;;;
 ;;; Follows SPKI/SDSI specification with Ed25519 signatures.
+;;; Supports post-quantum algorithms via pq-crypto (ML-DSA, SPHINCS+, hybrid).
 ;;;
 ;;; Ported from Chicken's cert.scm.
-;;; Changes: module -> library, SRFI-9 records -> R6RS,
-;;;          #!key/#!optional -> rest + get-key/get-opt,
-;;;          srfi-13/srfi-14 removed (unused in practice).
+;;; Changes: module -> library, define-record-type -> R6RS records,
+;;;          #!optional/#!key -> rest args with get-opt/get-key,
+;;;          srfi-1 filter -> (rnrs lists), blob -> bytevector compat.
 
 (library (cyberspace cert)
   (export
@@ -41,6 +42,7 @@
     ;; Signature
     make-signature
     signature? signature-hash-alg signature-cert-hash signature-sig-bytes
+    signature-sig-alg
     hash-alg->string
 
     ;; Operations
@@ -61,11 +63,10 @@
 
   (import (rnrs)
           (only (chezscheme) format)
-          (cyberspace chicken-compatibility blob)
-          (cyberspace chicken-compatibility chicken)
           (cyberspace sexp)
           (cyberspace crypto-ffi)
-          (cyberspace pq-crypto))
+          (cyberspace pq-crypto)
+          (cyberspace chicken-compatibility chicken))
 
   ;;; Hash algorithms
   (define hash-alg-sha512 'sha512)
@@ -82,55 +83,103 @@
 
   ;;; Principal: either a key or a hash of a key
 
-  (define-record-type (key-principal make-key-principal key-principal?)
+  (define-record-type <key-principal>
     (fields (immutable public-key principal-public-key)))
 
-  (define-record-type (keyhash-principal make-keyhash-principal keyhash-principal?)
+  (define (make-key-principal public-key)
+    (make-<key-principal> public-key))
+
+  (define (key-principal? x)
+    (<key-principal>? x))
+
+  (define-record-type <keyhash-principal>
     (fields (immutable hash-alg principal-hash-alg)
             (immutable hash principal-hash)))
 
+  (define (make-keyhash-principal alg hash)
+    (make-<keyhash-principal> alg hash))
+
+  (define (keyhash-principal? x)
+    (<keyhash-principal>? x))
+
   ;;; Authorization tags
 
-  (define-record-type (tag make-tag tag?)
+  (define-record-type <tag>
     (fields (immutable sexp tag-sexp)))
 
-  (define-record-type (all-perms make-all-perms all-perms?)
-    (fields))
+  (define (make-tag s)
+    (make-<tag> s))
+
+  (define (tag? x)
+    (<tag>? x))
+
+  (define-record-type <all-perms>
+    (fields))  ; no fields
+
+  (define (make-all-perms)
+    (make-<all-perms>))
+
+  (define (all-perms? x)
+    (<all-perms>? x))
 
   ;;; Time validity
 
-  (define-record-type (validity make-validity validity?)
+  (define-record-type <validity>
     (fields (immutable not-before validity-not-before)
             (immutable not-after validity-not-after)))
 
+  ;; Re-export the auto-generated constructor under the same name
+  ;; (R6RS make-<validity> matches our desired make-validity via wrapper)
+  (define (make-validity not-before not-after)
+    (make-<validity> not-before not-after))
+
+  (define (validity? x)
+    (<validity>? x))
+
   ;;; Certificate
 
-  (define-record-type (cert make-cert cert?)
+  (define-record-type <cert>
     (fields (immutable issuer cert-issuer)
             (immutable subject cert-subject)
             (immutable tag cert-tag)
             (immutable validity cert-validity)
             (immutable propagate cert-propagate)))
 
-  ;;; Signature
-  ;;; Supports: ed25519, ml-dsa-65, sphincs+, hybrid
+  (define (make-cert issuer subject tag validity propagate)
+    (make-<cert> issuer subject tag validity propagate))
 
-  (define-record-type (signature make-signature-internal signature?)
+  (define (cert? x)
+    (<cert>? x))
+
+  ;;; Signature
+  ;;; Supports multiple signature algorithms:
+  ;;;   ed25519, ml-dsa-65, sphincs+, hybrid
+
+  (define-record-type <signature>
     (fields (immutable hash-alg signature-hash-alg)
             (immutable cert-hash signature-cert-hash)
             (immutable sig-bytes signature-sig-bytes)
             (immutable sig-alg signature-sig-alg)))
 
-  ;; Backward-compatible constructor (defaults to ed25519)
+  ;; Constructor with optional sig-alg (defaults to ed25519)
   (define (make-signature hash-alg cert-hash sig-bytes . rest)
     (let ((sig-alg (get-opt rest 0 'ed25519)))
-      (make-signature-internal hash-alg cert-hash sig-bytes sig-alg)))
+      (make-<signature> hash-alg cert-hash sig-bytes sig-alg)))
+
+  (define (signature? x)
+    (<signature>? x))
 
   ;;; Signed certificate
 
-  (define-record-type (signed-cert make-signed-cert signed-cert?)
+  (define-record-type <signed-cert>
     (fields (immutable cert signed-cert-cert)
             (immutable signature signed-cert-signature)))
+
+  (define (make-signed-cert cert signature)
+    (make-<signed-cert> cert signature))
+
+  (define (signed-cert? x)
+    (<signed-cert>? x))
 
   ;;; Conversion to/from s-expressions
 
@@ -148,46 +197,46 @@
      (else
       (error 'principal->sexp "Invalid principal" principal))))
 
-  (define (sexp->principal sx)
+  (define (sexp->principal sexp)
     (cond
-     ((sexp-bytes? sx)
-      (make-key-principal (bytes-value sx)))
+     ((sexp-bytes? sexp)
+      (make-key-principal (bytes-value sexp)))
 
-     ((sexp-list? sx)
-      (let ((items (list-items sx)))
+     ((sexp-list? sexp)
+      (let ((items (list-items sexp)))
         (if (and (>= (length items) 3)
                  (sexp-atom? (car items))
                  (string=? (atom-value (car items)) "hash"))
             (let ((alg-str (atom-value (cadr items)))
                   (hash (bytes-value (caddr items))))
               (make-keyhash-principal (string->hash-alg alg-str) hash))
-            (error 'sexp->principal "Invalid principal s-expression" sx))))
+            (error 'sexp->principal "Invalid principal s-expression" sexp))))
 
      (else
-      (error 'sexp->principal "Invalid principal s-expression" sx))))
+      (error 'sexp->principal "Invalid principal s-expression" sexp))))
 
-  (define (tag->sexp tg)
+  (define (tag->sexp tag)
     (cond
-     ((tag? tg)
-      (tag-sexp tg))
+     ((tag? tag)
+      (tag-sexp tag))
 
-     ((all-perms? tg)
+     ((all-perms? tag)
       (sexp-list (list (sexp-atom "*"))))
 
      (else
-      (error 'tag->sexp "Invalid tag" tg))))
+      (error 'tag->sexp "Invalid tag" tag))))
 
-  (define (sexp->tag sx)
-    (if (and (sexp-list? sx)
-             (= (length (list-items sx)) 1)
-             (sexp-atom? (car (list-items sx)))
-             (string=? (atom-value (car (list-items sx))) "*"))
+  (define (sexp->tag sexp)
+    (if (and (sexp-list? sexp)
+             (= (length (list-items sexp)) 1)
+             (sexp-atom? (car (list-items sexp)))
+             (string=? (atom-value (car (list-items sexp))) "*"))
         (make-all-perms)
-        (make-tag sx)))
+        (make-tag sexp)))
 
-  (define (validity->sexp v)
-    (let ((not-before (validity-not-before v))
-          (not-after (validity-not-after v)))
+  (define (validity->sexp validity)
+    (let ((not-before (validity-not-before validity))
+          (not-after (validity-not-after validity)))
       (sexp-list
         (filter (lambda (x) x)
           (list
@@ -199,10 +248,10 @@
                  (sexp-list (list (sexp-atom "not-after")
                                   (sexp-atom (number->string not-after))))))))))
 
-  (define (sexp->validity sx)
-    (when (not (sexp-list? sx))
-      (error 'sexp->validity "Invalid validity s-expression" sx))
-    (let ((items (list-items sx)))
+  (define (sexp->validity sexp)
+    (if (not (sexp-list? sexp))
+        (error 'sexp->validity "Invalid validity s-expression" sexp))
+    (let ((items (list-items sexp)))
       (if (and (>= (length items) 3)
                (sexp-atom? (car items))
                (string=? (atom-value (car items)) "valid"))
@@ -223,72 +272,72 @@
                        (atom-value (cadr (list-items after-sexp)))
                        (error 'sexp->validity "Invalid not-after" after-sexp))))
               (make-validity not-before not-after)))
-          (error 'sexp->validity "Invalid validity s-expression" sx))))
+          (error 'sexp->validity "Invalid validity s-expression" sexp))))
 
-  (define (cert->sexp c)
+  (define (cert->sexp cert)
     (let ((base (list
                  (sexp-atom "cert")
                  (sexp-list (list (sexp-atom "issuer")
-                                  (principal->sexp (cert-issuer c))))
+                                  (principal->sexp (cert-issuer cert))))
                  (sexp-list (list (sexp-atom "subject")
-                                  (principal->sexp (cert-subject c))))
+                                  (principal->sexp (cert-subject cert))))
                  (sexp-list (list (sexp-atom "tag")
-                                  (tag->sexp (cert-tag c)))))))
+                                  (tag->sexp (cert-tag cert)))))))
       (let ((with-validity
-             (if (cert-validity c)
-                 (append base (list (validity->sexp (cert-validity c))))
+             (if (cert-validity cert)
+                 (append base (list (validity->sexp (cert-validity cert))))
                  base)))
         (let ((with-propagate
-               (if (cert-propagate c)
+               (if (cert-propagate cert)
                    (append with-validity (list (sexp-list (list (sexp-atom "propagate")))))
                    with-validity)))
           (sexp-list with-propagate)))))
 
-  (define (sexp->cert sx)
-    (when (not (sexp-list? sx))
-      (error 'sexp->cert "Invalid certificate s-expression" sx))
-    (let ((items (list-items sx)))
+  (define (sexp->cert sexp)
+    (if (not (sexp-list? sexp))
+        (error 'sexp->cert "Invalid certificate s-expression" sexp))
+    (let ((items (list-items sexp)))
       (if (and (>= (length items) 1)
                (sexp-atom? (car items))
                (string=? (atom-value (car items)) "cert"))
           (let ((issuer #f)
                 (subject #f)
-                (tg #f)
-                (v #f)
+                (tag #f)
+                (validity #f)
                 (propagate #f))
             ;; Parse fields
             (for-each
              (lambda (field)
-               (when (sexp-list? field)
-                 (let ((field-items (list-items field)))
-                   (when (and (>= (length field-items) 1)
+               (if (sexp-list? field)
+                   (let ((field-items (list-items field)))
+                     (if (and (>= (length field-items) 1)
                               (sexp-atom? (car field-items)))
-                     (let ((field-name (atom-value (car field-items))))
-                       (cond
-                        ((string=? field-name "issuer")
-                         (when (>= (length field-items) 2)
-                           (set! issuer (sexp->principal (cadr field-items)))))
+                         (let ((field-name (atom-value (car field-items))))
+                           (cond
+                            ((string=? field-name "issuer")
+                             (if (>= (length field-items) 2)
+                                 (set! issuer (sexp->principal (cadr field-items)))))
 
-                        ((string=? field-name "subject")
-                         (when (>= (length field-items) 2)
-                           (set! subject (sexp->principal (cadr field-items)))))
+                            ((string=? field-name "subject")
+                             (if (>= (length field-items) 2)
+                                 (set! subject (sexp->principal (cadr field-items)))))
 
-                        ((string=? field-name "tag")
-                         (when (>= (length field-items) 2)
-                           (set! tg (sexp->tag (cadr field-items)))))
+                            ((string=? field-name "tag")
+                             (if (>= (length field-items) 2)
+                                 (set! tag (sexp->tag (cadr field-items)))))
 
-                        ((string=? field-name "valid")
-                         (set! v (sexp->validity field)))
+                            ((string=? field-name "valid")
+                             (set! validity (sexp->validity field)))
 
-                        ((string=? field-name "propagate")
-                         (set! propagate #t))))))))
+                            ((string=? field-name "propagate")
+                             (set! propagate #t))))))))
              (cdr items))
 
             ;; Validate required fields
-            (if (and issuer subject tg)
-                (make-cert issuer subject tg v propagate)
+            (if (and issuer subject tag)
+                (make-cert issuer subject tag validity propagate)
                 (error 'sexp->cert "Missing required certificate fields")))
-          (error 'sexp->cert "Invalid certificate s-expression" sx))))
+          (error 'sexp->cert "Invalid certificate s-expression" sexp))))
 
   (define (signature->sexp sig)
     (sexp-list (list
@@ -307,20 +356,20 @@
   (define (signed-cert->string sc)
     (sexp->string-indent (signed-cert->sexp sc) ""))
 
-  (define (sexp->signed-cert sx)
-    (when (not (sexp-list? sx))
-      (error 'sexp->signed-cert "Invalid signed certificate s-expression" sx))
-    (let ((items (list-items sx)))
+  (define (sexp->signed-cert sexp)
+    (if (not (sexp-list? sexp))
+        (error 'sexp->signed-cert "Invalid signed certificate s-expression" sexp))
+    (let ((items (list-items sexp)))
       (if (= (length items) 2)
-          (let ((cert-sx (car items))
-                (sig-sx (cadr items)))
-            (let ((c (sexp->cert cert-sx)))
-              (if (and (sexp-list? sig-sx)
-                       (>= (length (list-items sig-sx)) 1)
-                       (sexp-atom? (car (list-items sig-sx)))
-                       (string=? (atom-value (car (list-items sig-sx))) "signature"))
-                  (let ((sig-items (cdr (list-items sig-sx))))
-                    (let ((ha hash-alg-sha512)
+          (let ((cert-sexp (car items))
+                (sig-sexp (cadr items)))
+            (let ((cert (sexp->cert cert-sexp)))
+              (if (and (sexp-list? sig-sexp)
+                       (>= (length (list-items sig-sexp)) 1)
+                       (sexp-atom? (car (list-items sig-sexp)))
+                       (string=? (atom-value (car (list-items sig-sexp))) "signature"))
+                  (let ((sig-items (cdr (list-items sig-sexp))))
+                    (let ((hash-alg hash-alg-sha512)
                           (cert-hash #f)
                           (sig-bytes #f))
                       ;; Parse signature fields
@@ -331,8 +380,8 @@
                                 (>= (length (list-items field)) 3)
                                 (sexp-atom? (car (list-items field)))
                                 (string=? (atom-value (car (list-items field))) "hash"))
-                           (set! ha (string->hash-alg
-                                     (atom-value (cadr (list-items field)))))
+                           (set! hash-alg (string->hash-alg
+                                           (atom-value (cadr (list-items field)))))
                            (set! cert-hash (bytes-value (caddr (list-items field)))))
 
                           ((sexp-bytes? field)
@@ -341,32 +390,37 @@
 
                       (if (and cert-hash sig-bytes)
                           (make-signed-cert
-                           c
-                           (make-signature ha cert-hash sig-bytes))
+                           cert
+                           (make-signature hash-alg cert-hash sig-bytes))
                           (error 'sexp->signed-cert "Missing signature fields"))))
-                  (error 'sexp->signed-cert "Invalid signature s-expression" sig-sx))))
-          (error 'sexp->signed-cert "Invalid signed certificate s-expression" sx))))
+                  (error 'sexp->signed-cert "Invalid signature s-expression" sig-sexp))))
+          (error 'sexp->signed-cert "Invalid signed certificate s-expression" sexp))))
 
   (define (signed-cert-of-string str)
     (sexp->signed-cert (parse-sexp str)))
 
   ;;; Certificate operations
 
-  (define (create-cert issuer subject tg . opts)
+  ;; Chicken: (create-cert issuer subject tag #!key validity propagate)
+  ;; Chez:    (create-cert issuer subject tag . opts) with keyword helpers
+  (define (create-cert issuer subject tag . opts)
     "Create a new certificate"
-    (let ((v (get-key opts 'validity: #f))
+    (let ((validity (get-key opts 'validity: #f))
           (propagate (get-key opts 'propagate: #f)))
-      (make-cert issuer subject tg v (or propagate #f))))
+      (make-cert issuer subject tag validity (or propagate #f))))
 
-  (define (sign-cert c private-key . rest)
+  ;; Chicken: (sign-cert cert private-key #!optional (algorithm 'ed25519) pq-private-key)
+  ;; Chez:    (sign-cert cert private-key . rest)
+  (define (sign-cert cert private-key . rest)
     "Sign a certificate with a private key.
      algorithm: ed25519 (default), ml-dsa-65, sphincs+, hybrid
      For hybrid: provide both private-key (ed25519) and pq-private-key (ml-dsa)"
     (let ((algorithm (get-opt rest 0 'ed25519))
           (pq-private-key (get-opt rest 1 #f)))
+
       ;; Convert cert to canonical s-expression
-      (let* ((cert-sx (cert->sexp c))
-             (canonical (sexp->string cert-sx)))
+      (let* ((cert-sexp (cert->sexp cert))
+             (canonical (sexp->string cert-sexp)))
 
         ;; Hash the certificate using SHA-512
         (let ((cert-hash (sha512-hash canonical)))
@@ -395,16 +449,20 @@
 
             ;; Create signed certificate
             (make-signed-cert
-             c
+             cert
              (make-signature hash-alg-sha512 cert-hash sig-bytes algorithm)))))))
 
+  ;; Chicken: (verify-signed-cert sc public-key #!optional pq-public-key)
+  ;; Chez:    (verify-signed-cert sc public-key . rest)
   (define (verify-signed-cert sc public-key . rest)
     "Verify a signed certificate.
-     For hybrid signatures: provide both public-key (ed25519) and pq-public-key (ml-dsa)"
+     For hybrid signatures: provide both public-key (ed25519) and pq-public-key (ml-dsa)
+     Dispatches verification based on signature algorithm."
     (let ((pq-public-key (get-opt rest 0 #f)))
+
       ;; Recompute certificate hash
-      (let* ((cert-sx (cert->sexp (signed-cert-cert sc)))
-             (canonical (sexp->string cert-sx))
+      (let* ((cert-sexp (cert->sexp (signed-cert-cert sc)))
+             (canonical (sexp->string cert-sexp))
              (computed-hash (sha512-hash canonical)))
 
         ;; Check hash matches
@@ -424,9 +482,11 @@
                  (sphincs+-verify computed-hash (signature-sig-bytes sig) public-key))
 
                 ((hybrid)
+                 ;; Both signatures must verify
                  (let ((hybrid-sig (signature-sig-bytes sig)))
                    (unless pq-public-key
-                     (error 'verify-signed-cert "Hybrid requires both ed25519 and ml-dsa public keys"))
+                     (error 'verify-signed-cert
+                            "Hybrid requires both ed25519 and ml-dsa public keys"))
                    (and (pair? hybrid-sig)
                         (eq? (car hybrid-sig) 'hybrid-signature)
                         (let ((ed-sig (cadr (assq 'ed25519 (cdr hybrid-sig))))
@@ -436,19 +496,28 @@
                                (ml-dsa-verify computed-hash pq-sig pq-public-key))))))
 
                 (else
-                 (error 'verify-signed-cert "Unknown signature algorithm" sig-alg))))))))
+                 (error 'verify-signed-cert
+                        "Unknown signature algorithm" sig-alg))))))))
 
   (define (tag-implies tag1 tag2)
     "Check if tag1 implies tag2 (tag1 >= tag2)"
     (cond
-     ((all-perms? tag1) #t)
-     ((all-perms? tag2) #f)
+     ((all-perms? tag1) #t)  ; AllPerms grants everything
+     ((all-perms? tag2) #f)  ; Nothing but AllPerms grants AllPerms
      ((and (tag? tag1) (tag? tag2))
+      ;; Simple equality check for now
+      ;; Production should support tag intersection/subset semantics
       (equal? (tag-sexp tag1) (tag-sexp tag2)))
      (else #f)))
 
   (define (verify-chain root-key certs target-tag)
-    "Verify a delegation chain."
+    "Verify a delegation chain.
+     Verifies that:
+     1. Each cert is signed by its issuer
+     2. Each cert's issuer matches previous cert's subject
+     3. Tags are properly delegated (each tag implies the next)
+     4. Final cert grants target_tag
+     5. All certs allow propagation (except possibly the last)"
 
     (define (verify-links current-principal remaining-certs current-tag)
       (if (null? remaining-certs)
@@ -459,22 +528,22 @@
 
           ;; Process next certificate
           (let* ((sc (car remaining-certs))
-                 (c (signed-cert-cert sc))
-                 (rest-certs (cdr remaining-certs)))
+                 (cert (signed-cert-cert sc))
+                 (rest (cdr remaining-certs)))
 
             ;; Check issuer matches current principal
-            (let ((iss (cert-issuer c)))
+            (let ((issuer (cert-issuer cert)))
               (cond
                ((and (key-principal? current-principal)
-                     (key-principal? iss)
+                     (key-principal? issuer)
                      (equal? (principal-public-key current-principal)
-                             (principal-public-key iss)))
+                             (principal-public-key issuer)))
                 #t)
 
                ((and (keyhash-principal? current-principal)
-                     (keyhash-principal? iss)
+                     (keyhash-principal? issuer)
                      (equal? (principal-hash current-principal)
-                             (principal-hash iss)))
+                             (principal-hash issuer)))
                 #t)
 
                (else
@@ -486,22 +555,23 @@
                     ((key-principal? current-principal)
                      (principal-public-key current-principal))
                     (else
-                     (error 'verify-chain "Cannot verify with key hash (need actual key)")))))
+                     (error 'verify-chain
+                            "Cannot verify with key hash (need actual key)")))))
 
-              (when (not (verify-signed-cert sc issuer-key))
-                (error 'verify-chain "Invalid signature")))
+              (if (not (verify-signed-cert sc issuer-key))
+                  (error 'verify-chain "Invalid signature")))
 
             ;; Check tag delegation
-            (when (not (tag-implies current-tag (cert-tag c)))
-              (error 'verify-chain "Tag not properly delegated"))
+            (if (not (tag-implies current-tag (cert-tag cert)))
+                (error 'verify-chain "Tag not properly delegated"))
 
             ;; Check propagation allowed (except for last cert)
-            (when (and (not (null? rest-certs))
-                       (not (cert-propagate c)))
-              (error 'verify-chain "Delegation not allowed (propagate=false)"))
+            (if (and (not (null? rest))
+                     (not (cert-propagate cert)))
+                (error 'verify-chain "Delegation not allowed (propagate=false)"))
 
             ;; Continue with next link
-            (verify-links (cert-subject c) rest-certs (cert-tag c)))))
+            (verify-links (cert-subject cert) rest (cert-tag cert)))))
 
     ;; Start with root key and AllPerms
     (verify-links (make-key-principal root-key) certs (make-all-perms)))
