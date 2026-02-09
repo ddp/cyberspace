@@ -35,6 +35,9 @@
    enrollment-status
    ;; Lifecycle
    auto-enroll-status
+   ;; Persistence
+   restore-realm-state
+   reconnect-to-master
    ;; Verbosity
    *realm-verbose*
    realm-verbose!
@@ -60,7 +63,10 @@
           gossip      ; for configure-from-scaling!
           crypto-ffi
           os          ; register-cleanup-hook!
-          (only vault store-membership-cert!))
+          (only vault store-membership-cert!
+                      store-enrollment-keypair! load-enrollment-keypair
+                      store-realm-state! load-realm-state
+                      realm-membership-cert cert-valid?))
 
   ;; ============================================================
   ;; Constants
@@ -95,6 +101,116 @@
 
   ;; Pending membership proposals (for voting, future)
   (define *pending-proposals* '())    ; list of (name timestamp proposer)
+
+  ;; ============================================================
+  ;; Realm State Persistence
+  ;; ============================================================
+
+  (define (save-realm-snapshot!)
+    "Persist current realm state + enrollment keys to vault.
+     Called at every state transition (join, handoff, election)."
+    (when (and *realm-master* *my-name* *my-role*)
+      (store-realm-state! *realm-master* *my-role* *my-name* *realm-members*)
+      (when (and *my-pubkey* *my-privkey*)
+        (store-enrollment-keypair! *my-pubkey* *my-privkey*))
+      (when *realm-verbose*
+        (printf "[realm] Saved realm snapshot: ~a role=~a master=~a~n"
+                *my-name* *my-role* *realm-master*))))
+
+  (define (restore-realm-state)
+    "Restore realm state from vault. Returns #t if successful, #f otherwise.
+     Checks three things:
+       1. realm-state.sexp exists and parses
+       2. enrollment.{pub,key} exist
+       3. membership.sexp is valid
+     All three present → restore state, return #t.
+     Any missing → return #f (fall through to fresh auto-enroll)."
+    (let ((state (load-realm-state))
+          (keypair (load-enrollment-keypair))
+          (cert (realm-membership-cert)))
+      (if (and state keypair (cert-valid? cert))
+          (let* ((fields (cdr state))
+                 (master (cadr (assq 'master fields)))
+                 (role (cadr (assq 'role fields)))
+                 (my-name (cadr (assq 'my-name fields)))
+                 (members (cadr (assq 'members fields))))
+            ;; Restore identity
+            (set! *my-name* my-name)
+            (set! *my-role* role)
+            (set! *realm-master* master)
+            (set! *my-pubkey* (car keypair))
+            (set! *my-privkey* (cadr keypair))
+            ;; Restore member list (hardware unknown, will be re-probed)
+            (set! *realm-members*
+              (map (lambda (n) (cons n #f)) members))
+            ;; Replace our own entry with fresh hardware
+            (let ((my-hw (introspect-hardware)))
+              (set! *realm-members*
+                (cons (cons my-name my-hw)
+                      (remove (lambda (m) (eq? (car m) my-name)) *realm-members*))))
+            ;; Recompute scaling from current hardware
+            (set! *scaling-factors* (compute-scaling-factor *realm-members*))
+            (when *realm-verbose*
+              (printf "[realm] Restored: ~a role=~a master=~a members=~a~n"
+                      my-name role master (length *realm-members*)))
+            ;; Return restored state for caller (repl.scm needs name/role/keys)
+            `((restored . #t)
+              (name . ,my-name)
+              (role . ,role)
+              (master . ,master)
+              (pubkey . ,*my-pubkey*)
+              (privkey . ,*my-privkey*)))
+          ;; Missing pieces — fall through
+          (begin
+            (when *realm-verbose*
+              (printf "[realm] Cannot restore: state=~a keys=~a cert-valid=~a~n"
+                      (if state #t #f)
+                      (if keypair #t #f)
+                      (if (cert-valid? cert) #t #f)))
+            #f))))
+
+  (define (reconnect-to-master)
+    "Background reconnect to master via Bonjour with exponential backoff.
+     After 5 failures, falls back to reset + fresh auto-enroll."
+    (let ((master-name (and *realm-master* (symbol->string *realm-master*)))
+          (max-retries 5)
+          (backoff-schedule '(2 4 8 16 30)))
+      (when master-name
+        (thread-start!
+          (make-thread
+            (lambda ()
+              (let retry ((attempt 0))
+                (if (>= attempt max-retries)
+                    ;; Exhausted retries — fall back to fresh enrollment
+                    (begin
+                      (printf "[realm] Master ~a unreachable after ~a retries, re-enrolling~n"
+                              master-name max-retries)
+                      (reset-enrollment-state!)
+                      ;; Re-enroll from scratch
+                      (let ((name (string->symbol (hostname))))
+                        (start-join-listener name)
+                        (auto-enroll-realm name)))
+                    ;; Try to resolve master via Bonjour
+                    (begin
+                      (when *realm-verbose*
+                        (printf "[realm] Reconnect attempt ~a/~a for ~a~n"
+                                (+ attempt 1) max-retries master-name))
+                      (let ((resolved (handle-exceptions exn #f
+                                        (bonjour-resolve master-name))))
+                        (if resolved
+                            (begin
+                              (when *realm-verbose*
+                                (printf "[realm] Found master ~a at ~a:~a~n"
+                                        master-name (cadr resolved) (caddr resolved)))
+                              ;; Master is back — we're reconnected
+                              (printf "[realm] Reconnected to master ~a~n" master-name))
+                            ;; Not found — backoff and retry
+                            (begin
+                              (thread-sleep!
+                                (list-ref backoff-schedule
+                                          (min attempt (- (length backoff-schedule) 1))))
+                              (retry (+ attempt 1)))))))))
+            "realm-reconnect")))))
 
   ;; ============================================================
   ;; Master-Side Join Listener
@@ -135,7 +251,8 @@
          (set! *scaling-factors* (compute-scaling-factor *realm-members*)))
        ;; Store self-signed membership cert (Memo-050)
        (let ((cert (create-enrollment-cert name *my-pubkey* *my-privkey* role: 'master)))
-         (store-membership-cert! cert)))
+         (store-membership-cert! cert))
+       (save-realm-snapshot!))
 
       ;; Already a member - just starting/restarting listener
       ((assq name *realm-members*)
@@ -293,7 +410,8 @@
                          (sponsor ,*my-name*)
                          (sponsor-pubkey ,*my-pubkey*)
                          (members ,(length *realm-members*))
-                         (member-list ,(map car *realm-members*))))))))))
+                         (member-list ,(map car *realm-members*))))
+                     (save-realm-snapshot!)))))))
 
         ;; Invalid request
         (else
@@ -336,7 +454,10 @@
           (cdr (assq 'my-scale gossip-cfg))
           (cdr (assq 'effective-capacity *scaling-factors*))
           (cdr (assq 'batch-size gossip-cfg))
-          (cdr (assq 'gossip-interval gossip-cfg))))))
+          (cdr (assq 'gossip-interval gossip-cfg))))
+
+      ;; 7. Persist new state (we're now a member)
+      (save-realm-snapshot!)))
 
   ;; ============================================================
   ;; Main Entry: Auto-Enroll a Realm
@@ -398,6 +519,7 @@
                         (when *realm-verbose*
                           (printf "[auto-enroll] Gossip configured: interval=30s, batch=100~n"))
 
+                        (save-realm-snapshot!)
                         (make-realm-result name 'master *realm-members* *scaling-factors*))
 
                       ;; Peers found - run election
@@ -430,6 +552,7 @@
 
                         (when *realm-verbose*
                           (printf "[auto-enroll] Master: ~a (this node: ~a)~n" winner *my-role*))
+                        (save-realm-snapshot!)
                         (make-realm-result winner *my-role* members *scaling-factors*))))))
             (lambda () (set! *join-in-progress* #f))))))
 
@@ -559,6 +682,7 @@
 
                      ;; Store membership cert (Memo-050)
                      (store-membership-cert! cert)
+                     (save-realm-snapshot!)
 
                      ;; Auto-start our own join listener (any member can accept joins)
                      (when *realm-verbose*
@@ -604,6 +728,7 @@
                      ;; Create self-signed master cert
                      (let ((cert (create-enrollment-cert name pubkey privkey role: 'master)))
                        (store-membership-cert! cert))
+                     (save-realm-snapshot!)
 
                      ;; Configure gossip from scaling (as new master)
                      (let ((gossip-cfg (configure-gossip-from-scaling scaling)))
@@ -782,8 +907,11 @@
     (if on "realm verbose on" "realm verbose off"))
 
   ;; Register cleanup hook (runs on exit)
-  ;; stop-join-listener already calls bonjour-unregister
-  (register-cleanup-hook! 'auto-enroll stop-join-listener)
+  ;; Save realm state, then stop listener (which calls bonjour-unregister)
+  (register-cleanup-hook! 'auto-enroll
+    (lambda ()
+      (save-realm-snapshot!)
+      (stop-join-listener)))
 
   ;; ============================================================
   ;; Diagnostics

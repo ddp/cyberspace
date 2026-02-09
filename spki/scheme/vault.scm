@@ -107,6 +107,12 @@
    store-membership-cert!
    revoke-membership!
 
+   ;; Realm persistence (enrollment keys + realm state)
+   store-enrollment-keypair!
+   load-enrollment-keypair
+   store-realm-state!
+   load-realm-state
+
    ;; Address parsing (Memo-041)
    parse-address
    address?
@@ -525,6 +531,100 @@
       (when (file-exists? path)
         (delete-file path)
         (print "Membership revoked. You are now in the Wilderness."))))
+
+  ;;; ============================================================================
+  ;;; Enrollment Key Persistence
+  ;;; ============================================================================
+  ;;;
+  ;;; Enrollment keypairs are ephemeral Ed25519 keys used for realm join/accept.
+  ;;; Without persisting them, the membership cert becomes useless on restart
+  ;;; because the cert references a pubkey that no longer exists.
+  ;;;
+  ;;; Storage: .vault/keystore/enrollment.pub + enrollment.key (plaintext blobs)
+  ;;; These are NOT the vault identity keys (realm.key/realm.pub).
+
+  (define (enrollment-pub-path)
+    ".vault/keystore/enrollment.pub")
+
+  (define (enrollment-key-path)
+    ".vault/keystore/enrollment.key")
+
+  (define (store-enrollment-keypair! pubkey privkey)
+    "Persist enrollment keypair (blobs) to vault keystore."
+    (unless (directory-exists? ".vault")
+      (error "No vault found. Create one first."))
+    (let ((ks-dir (keystore-path)))
+      (unless (directory-exists? ks-dir)
+        (create-directory ks-dir #t)))
+    (with-output-to-file (enrollment-pub-path)
+      (lambda ()
+        (write `(enrollment-public-key
+                  (version 1)
+                  (algorithm "ed25519")
+                  (public-key ,pubkey)
+                  (created ,(current-seconds))))
+        (newline)))
+    (with-output-to-file (enrollment-key-path)
+      (lambda ()
+        (write `(enrollment-private-key
+                  (version 1)
+                  (algorithm "ed25519")
+                  (private-key ,privkey)
+                  (created ,(current-seconds))))
+        (newline))))
+
+  (define (load-enrollment-keypair)
+    "Load enrollment keypair from vault. Returns (pubkey privkey) or #f."
+    (let ((pub-path (enrollment-pub-path))
+          (key-path (enrollment-key-path)))
+      (if (and (file-exists? pub-path) (file-exists? key-path))
+          (handle-exceptions exn #f
+            (let* ((pub-data (with-input-from-file pub-path read))
+                   (key-data (with-input-from-file key-path read))
+                   (pubkey (cadr (assq 'public-key (cdr pub-data))))
+                   (privkey (cadr (assq 'private-key (cdr key-data)))))
+              (if (and (blob? pubkey) (blob? privkey))
+                  (list pubkey privkey)
+                  #f)))
+          #f)))
+
+  ;;; ============================================================================
+  ;;; Realm State Persistence
+  ;;; ============================================================================
+  ;;;
+  ;;; Persists realm topology (master, role, members) so restarts don't
+  ;;; require re-election. Hardware/scaling are NOT persisted — recomputed
+  ;;; from fresh introspection on startup.
+  ;;;
+  ;;; Storage: .vault/realm-state.sexp
+
+  (define (realm-state-path)
+    ".vault/realm-state.sexp")
+
+  (define (store-realm-state! master role my-name members)
+    "Persist realm state to vault."
+    (when (directory-exists? ".vault")
+      (with-output-to-file (realm-state-path)
+        (lambda ()
+          (write `(realm-state
+                    (version 1)
+                    (master ,master)
+                    (role ,role)
+                    (my-name ,my-name)
+                    (members ,(map car members))
+                    (timestamp ,(current-seconds))))
+          (newline)))))
+
+  (define (load-realm-state)
+    "Load realm state from vault. Returns parsed s-expression or #f."
+    (let ((path (realm-state-path)))
+      (if (file-exists? path)
+          (handle-exceptions exn #f
+            (let ((data (with-input-from-file path read)))
+              (if (and (pair? data) (eq? (car data) 'realm-state))
+                  data
+                  #f)))
+          #f)))
 
   ;;; ============================================================================
   ;;; Soup Object Store (Memo-002 Section 2.3)

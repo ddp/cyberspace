@@ -8413,31 +8413,48 @@ The Ten Commandments of λ
 ;; Measure boot-time weave (must be after vault import)
 (hash-table-set! *session-stats* 'boot-weave (measure-weave))
 
-;; Auto-enroll in realm at startup (background, non-blocking)
+;; Realm startup: restore persisted state or fresh auto-enroll
 ;; Registers with Bonjour as _cyberspace._tcp and discovers peers
 (when (directory-exists? (cyberspace-vault-path))
   (handle-exceptions exn
-    (print "[realm] Auto-enroll failed: "
+    (print "[realm] Startup failed: "
            ((condition-property-accessor 'exn 'message) exn))
     (begin
       (ensure-auto-enroll)
-      ;; Start listener to register with Bonjour
-      (let ((name (string->symbol (hostname))))
-        (handle-exceptions exn
-          (print "[realm] Listener failed: "
-                 ((condition-property-accessor 'exn 'message) exn))
-          ((eval 'start-join-listener) name)))
-      ;; Discover peers in background
-      (thread-start!
-       (make-thread
-        (lambda ()
-          (thread-sleep! 2)  ; Let listener settle
-          (handle-exceptions exn
-            (print "[realm] Discovery: "
-                   ((condition-property-accessor 'exn 'message) exn))
+      (let ((restored ((eval 'restore-realm-state))))
+        (if restored
+          ;; Restored from saved state — start listener with saved keys
+          (let ((name (cdr (assq 'name restored)))
+                (role (cdr (assq 'role restored)))
+                (pubkey (cdr (assq 'pubkey restored)))
+                (privkey (cdr (assq 'privkey restored))))
+            (handle-exceptions exn
+              (print "[realm] Listener failed: "
+                     ((condition-property-accessor 'exn 'message) exn))
+              ((eval 'start-join-listener) name
+                keypair: (list pubkey privkey)))
+            (when (eq? role 'member)
+              ;; Background reconnect to master
+              ((eval 'reconnect-to-master))))
+          ;; No saved state — fresh auto-enroll
+          (begin
+            ;; Start listener to register with Bonjour
             (let ((name (string->symbol (hostname))))
-              ((eval 'auto-enroll-realm) name))))
-        "realm-enroll")))))
+              (handle-exceptions exn
+                (print "[realm] Listener failed: "
+                       ((condition-property-accessor 'exn 'message) exn))
+                ((eval 'start-join-listener) name)))
+            ;; Discover peers in background
+            (thread-start!
+             (make-thread
+              (lambda ()
+                (thread-sleep! 2)  ; Let listener settle
+                (handle-exceptions exn
+                  (print "[realm] Discovery: "
+                         ((condition-property-accessor 'exn 'message) exn))
+                  (let ((name (string->symbol (hostname))))
+                    ((eval 'auto-enroll-realm) name))))
+              "realm-enroll"))))))))
 
 ;; Boot output based on verbosity level
 ;; 0 shadow    - just prompt
