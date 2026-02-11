@@ -17,21 +17,34 @@
     hash-table-ref
     hash-table-ref/default
     hash-table-keys
+    hash-table-values
+    hash-table-size
+    hash-table-map
+    hash-table-walk
     hash-table-delete!
     hash-table-exists?)
 
   (import (except (rnrs)
                   make-hashtable hashtable-set! hashtable-ref
                   hashtable-delete! hashtable-contains? hashtable-keys
-                  equal-hash)
+                  hashtable-entries hashtable-size
+                  equal-hash string-hash)
           (only (chezscheme)
                 make-hashtable hashtable-set! hashtable-ref
                 hashtable-delete! hashtable-contains? hashtable-keys
-                equal-hash))
+                hashtable-entries hashtable-size
+                equal-hash string-hash))
 
-  ;; SRFI-69 make-hash-table defaults to equal? comparison
-  (define (make-hash-table)
-    (make-hashtable equal-hash equal?))
+  ;; SRFI-69 make-hash-table: optional comparator argument
+  ;; (make-hash-table) → equal? comparison
+  ;; (make-hash-table string=?) → string comparison with string-hash
+  (define make-hash-table
+    (case-lambda
+      [() (make-hashtable equal-hash equal?)]
+      [(compare)
+       (cond
+         [(eq? compare string=?) (make-hashtable string-hash string=?)]
+         [else (make-hashtable equal-hash compare)])]))
 
   ;; Direct mapping
   (define hash-table-set! hashtable-set!)
@@ -55,6 +68,33 @@
 
   ;; Direct mapping
   (define hash-table-delete! hashtable-delete!)
+
+  ;; Return all values as a list
+  (define (hash-table-values ht)
+    (let-values (((keys vals) (hashtable-entries ht)))
+      (vector->list vals)))
+
+  ;; Return number of entries
+  (define hash-table-size hashtable-size)
+
+  ;; Apply proc to each (key value) pair, return list of results
+  (define (hash-table-map ht proc)
+    (let-values (((keys vals) (hashtable-entries ht)))
+      (let ((len (vector-length keys)))
+        (let loop ((i 0) (acc '()))
+          (if (= i len)
+              (reverse acc)
+              (loop (+ i 1)
+                    (cons (proc (vector-ref keys i) (vector-ref vals i))
+                          acc)))))))
+
+  ;; Apply proc to each (key value) pair for side effects
+  (define (hash-table-walk ht proc)
+    (let-values (((keys vals) (hashtable-entries ht)))
+      (let ((len (vector-length keys)))
+        (do ((i 0 (+ i 1)))
+            ((= i len))
+          (proc (vector-ref keys i) (vector-ref vals i))))))
 
   ;; Name mapping: SRFI-69 hash-table-exists? -> Chez hashtable-contains?
   (define hash-table-exists? hashtable-contains?)
