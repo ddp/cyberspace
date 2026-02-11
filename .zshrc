@@ -43,7 +43,9 @@ if [[ -o interactive ]]; then
     # Environment variables
     export EGG_FRECKELS=T
 
-    # Ollama local LLM (Anthropic-compatible API)
+    export CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000  # ~4,000 LOC for vault.scm
+
+# Ollama local LLM (Anthropic-compatible API)
 #    export ANTHROPIC_AUTH_TOKEN=ollama
 #    export ANTHROPIC_BASE_URL=http://localhost:11434
     
@@ -166,16 +168,15 @@ if [[ -o interactive ]]; then
     alias avatar='cd ~/cyberspace && claude -c'
     alias cb='cd ~/cyberspace/spki/scheme && ./cyberspace-repl'
     alias cc='claude --continue'
-    alias chibi='rlwrap chibi-scheme'
-    alias chez='rlwrap chez'
+    alias chez='scheme --libdirs ~/cyberspace/spki/scheme/chez'
     alias chicken='rlwrap csi'
     alias cr='claude --resume'
     alias clone='stash && clone-fluffy --with-dotfiles'
     alias csi='rlwrap csi'
-    # Cyberspace REPL - uses linenoise for line editing (no rlwrap needed)
     alias cyberspace='cd ~/cyberspace/spki/scheme && ./repl'
     alias cs='cd ~/cyberspace/spki/scheme && ./repl'
-    alias kludge='cd ~/cyberspace && git pull'
+    alias cs-chez='scheme --libdirs /home/user/cyberspace/spki/scheme/chez'
+    alias kludge='cd ~/cyberspace && git pull && cd spki/scheme && git pull'
     alias epoch='date +%s'
     alias fen='~/bin/forge-word'
     alias gonorns='ssh we@192.168.0.161'
@@ -184,7 +185,6 @@ if [[ -o interactive ]]; then
     alias cb='yt-dlp --merge-output-format mkv https://chaturbate.com/'
     alias grep='grep -i'            # ignore case
     alias gstat='git status -uno'   # ignore untracked files
-    alias guile='rlwrap guile'      # Keep guile if you still want it
     alias hd='xxd -g 4'
     alias hext="open -a 'HexEdit'"
     alias hst='~/bin/hst.pl'
@@ -200,6 +200,7 @@ if [[ -o interactive ]]; then
     alias lsflags='ls -laO'
     alias lsmod='ls -lat'
     alias lsnew='ls -laU'
+    alias lssicp='cd ~/cyberspace/spki/scheme && ./sicp'
     alias lssym='ls -la | grep -e "->" | sort'
     alias lsuse='ls -lau'
     alias lstree='tree -h -L 2 . && echo "Total size: $(du -sh . | cut -f1)"'
@@ -223,10 +224,10 @@ if [[ -o interactive ]]; then
     alias portmap='nmap -sT -Pn -v 192.168.0.0/24'
     alias portscan='nmap -sT -Pn -v 192.168.0.0/24'
     alias purge='~/bin/purge'
-    alias scheme='rlwrap csi'       # Chicken Scheme
     alias ssh='ssh -X -K'           # X11 forwarding, delegate Kerberos
     alias stash='ssh-add --apple-use-keychain'
     alias weather='curl http://wttr.in/94903'
+
     # Host-specific DISPLAY setting
     case "$HOST" in
         om|ombra)
@@ -296,5 +297,3 @@ if [[ "$PWD" == "$HOME/cyberspace" && -d .git ]]; then
     git pull --quiet 2>/dev/null || true
 fi
 
-# Cyberspace SICP metrics
-alias lscs='cd ~/cyberspace/spki/scheme && ./sicp'

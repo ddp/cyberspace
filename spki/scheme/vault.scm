@@ -107,6 +107,12 @@
    store-membership-cert!
    revoke-membership!
 
+   ;; Realm persistence (enrollment keys + realm state)
+   store-enrollment-keypair!
+   load-enrollment-keypair
+   store-realm-state!
+   load-realm-state
+
    ;; Address parsing (Memo-041)
    parse-address
    address?
@@ -525,6 +531,100 @@
       (when (file-exists? path)
         (delete-file path)
         (print "Membership revoked. You are now in the Wilderness."))))
+
+  ;;; ============================================================================
+  ;;; Enrollment Key Persistence
+  ;;; ============================================================================
+  ;;;
+  ;;; Enrollment keypairs are ephemeral Ed25519 keys used for realm join/accept.
+  ;;; Without persisting them, the membership cert becomes useless on restart
+  ;;; because the cert references a pubkey that no longer exists.
+  ;;;
+  ;;; Storage: .vault/keystore/enrollment.pub + enrollment.key (plaintext blobs)
+  ;;; These are NOT the vault identity keys (realm.key/realm.pub).
+
+  (define (enrollment-pub-path)
+    ".vault/keystore/enrollment.pub")
+
+  (define (enrollment-key-path)
+    ".vault/keystore/enrollment.key")
+
+  (define (store-enrollment-keypair! pubkey privkey)
+    "Persist enrollment keypair (blobs) to vault keystore."
+    (unless (directory-exists? ".vault")
+      (error "No vault found. Create one first."))
+    (let ((ks-dir (keystore-path)))
+      (unless (directory-exists? ks-dir)
+        (create-directory ks-dir #t)))
+    (with-output-to-file (enrollment-pub-path)
+      (lambda ()
+        (write `(enrollment-public-key
+                  (version 1)
+                  (algorithm "ed25519")
+                  (public-key ,pubkey)
+                  (created ,(current-seconds))))
+        (newline)))
+    (with-output-to-file (enrollment-key-path)
+      (lambda ()
+        (write `(enrollment-private-key
+                  (version 1)
+                  (algorithm "ed25519")
+                  (private-key ,privkey)
+                  (created ,(current-seconds))))
+        (newline))))
+
+  (define (load-enrollment-keypair)
+    "Load enrollment keypair from vault. Returns (pubkey privkey) or #f."
+    (let ((pub-path (enrollment-pub-path))
+          (key-path (enrollment-key-path)))
+      (if (and (file-exists? pub-path) (file-exists? key-path))
+          (handle-exceptions exn #f
+            (let* ((pub-data (with-input-from-file pub-path read))
+                   (key-data (with-input-from-file key-path read))
+                   (pubkey (cadr (assq 'public-key (cdr pub-data))))
+                   (privkey (cadr (assq 'private-key (cdr key-data)))))
+              (if (and (blob? pubkey) (blob? privkey))
+                  (list pubkey privkey)
+                  #f)))
+          #f)))
+
+  ;;; ============================================================================
+  ;;; Realm State Persistence
+  ;;; ============================================================================
+  ;;;
+  ;;; Persists realm topology (master, role, members) so restarts don't
+  ;;; require re-election. Hardware/scaling are NOT persisted — recomputed
+  ;;; from fresh introspection on startup.
+  ;;;
+  ;;; Storage: .vault/realm-state.sexp
+
+  (define (realm-state-path)
+    ".vault/realm-state.sexp")
+
+  (define (store-realm-state! master role my-name members)
+    "Persist realm state to vault."
+    (when (directory-exists? ".vault")
+      (with-output-to-file (realm-state-path)
+        (lambda ()
+          (write `(realm-state
+                    (version 1)
+                    (master ,master)
+                    (role ,role)
+                    (my-name ,my-name)
+                    (members ,(map car members))
+                    (timestamp ,(current-seconds))))
+          (newline)))))
+
+  (define (load-realm-state)
+    "Load realm state from vault. Returns parsed s-expression or #f."
+    (let ((path (realm-state-path)))
+      (if (file-exists? path)
+          (handle-exceptions exn #f
+            (let ((data (with-input-from-file path read)))
+              (if (and (pair? data) (eq? (car data) 'realm-state))
+                  data
+                  #f)))
+          #f)))
 
   ;;; ============================================================================
   ;;; Soup Object Store (Memo-002 Section 2.3)
@@ -4019,10 +4119,13 @@ Object Types:
         (string-prefix? "https://" str)))
 
   (define (publish-http url version archive-file)
-    "Publish archive to HTTP endpoint"
-    ;; Placeholder - would use curl or HTTP client
-    (print "HTTP publication not yet implemented")
-    (print "Would POST " archive-file " to " url))
+    "Publish archive to HTTP endpoint via curl PUT"
+    (let* ((target (sprintf "~a/~a" url version))
+           (cmd (sprintf "curl -s -f -X PUT -T '~a' '~a'" archive-file target))
+           (result (system cmd)))
+      (if (= result 0)
+          (print "✓ Published " archive-file " to " target)
+          (error "publish-http: curl failed" target result))))
 
   (define (publish-filesystem target-dir version archive-file)
     "Publish archive to filesystem location"
@@ -4046,9 +4149,13 @@ Object Types:
                 (loop (cons line tags))))))))
 
   (define (fetch-http-releases url)
-    "Fetch release list from HTTP endpoint"
-    ;; Placeholder
-    '())
+    "Fetch release list from HTTP endpoint via curl"
+    (let ((target (sprintf "~a/releases.txt" url)))
+      (handle-exceptions exn '()
+        (let ((lines (with-input-from-pipe
+                       (sprintf "curl -s -f '~a'" target)
+                       read-lines)))
+          (filter (lambda (s) (not (string=? s ""))) lines)))))
 
   (define (fetch-filesystem-releases dir)
     "Fetch releases from filesystem directory"
@@ -4064,14 +4171,28 @@ Object Types:
         '()))
 
   (define (download-release url target-dir version)
-    "Download release archive"
-    ;; Placeholder - would use curl or copy
-    (print "Download from: " url))
+    "Download release archive via curl"
+    (let* ((dest (sprintf "~a/vault-~a.archive" target-dir version))
+           (cmd (sprintf "curl -s -f -o '~a' '~a'" dest url)))
+      (create-directory target-dir #t)
+      (let ((result (system cmd)))
+        (if (= result 0)
+            (begin (print "✓ Downloaded to " dest) dest)
+            (error "download-release: curl failed" url result)))))
 
   (define (download-single-release remote version verify-key)
-    "Download and verify single release"
-    ;; Placeholder
-    (print "Would download " version " from " remote))
+    "Download and verify single release from remote"
+    (let ((target-dir (vault-config 'archive-dir)))
+      (cond
+       ((http-url? remote)
+        (let ((url (sprintf "~a/vault-~a.archive" remote version)))
+          (download-release url target-dir version)))
+       ((git-remote? remote)
+        (run-command "git" "fetch" remote "tag" version)
+        (print "✓ Fetched tag " version " from " remote))
+       (else
+        (let ((src (sprintf "~a/vault-~a.archive" remote version)))
+          (download-release src target-dir version))))))
 
   (define (get-local-releases)
     "Get list of local sealed releases"
@@ -4092,8 +4213,9 @@ Object Types:
 
   (define (upload-release-asset remote version archive-file)
     "Upload release asset to remote (e.g., GitHub releases)"
-    ;; Placeholder
-    (print "Would upload " archive-file " as release asset"))
+    (if (http-url? remote)
+        (publish-http remote version archive-file)
+        (print "upload-release-asset: non-HTTP remotes use git push")))
 
   ;;; ============================================================================
   ;;; Migration Paths - Explicit version transitions

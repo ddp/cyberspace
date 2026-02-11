@@ -103,6 +103,8 @@
     "cert" "capability" "bloom" "audit"
     ;; Level 4: Storage (depends on audit, os)
     "vault" "catalog" "merkle"
+    ;; Level 4b: Query (depends on vault)
+    "query"
     ;; Level 5: Security
     "security" "keyring"
     ;; Level 6: Network

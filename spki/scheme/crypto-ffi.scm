@@ -60,6 +60,12 @@
    ward unward                   ; Protective barrier
    veil unveil                   ; Hidden from view
    entrust recover               ; Key relationship
+   ;; AEAD ChaCha20-Poly1305 (CIP secure channel)
+   aead-chacha20poly1305-ietf-encrypt
+   aead-chacha20poly1305-ietf-decrypt
+   aead-chacha20poly1305-ietf-keybytes
+   aead-chacha20poly1305-ietf-npubbytes
+   aead-chacha20poly1305-ietf-abytes
    ;; X25519 key exchange (Memo-039 network encryption)
    x25519-keypair
    x25519-scalarmult
@@ -745,6 +751,71 @@ static int shake256_hash_c(unsigned char *out, size_t outlen,
         (if (= result 0)
             shared
             (error "x25519-scalarmult failed")))))
+
+  ;;; ============================================================================
+  ;;; AEAD ChaCha20-Poly1305 (CIP Secure Channel)
+  ;;; ============================================================================
+
+  ;; Constants for AEAD
+  (define aead-chacha20poly1305-ietf-keybytes 32)
+  (define aead-chacha20poly1305-ietf-npubbytes 12)
+  (define aead-chacha20poly1305-ietf-abytes 16)
+
+  ;; AEAD encrypt (ChaCha20-Poly1305 IETF)
+  ;; @param plaintext: data to encrypt (blob)
+  ;; @param ad: additional data to authenticate (blob or #f for none)
+  ;; @param nonce: 12-byte nonce (blob)
+  ;; @param key: 32-byte key (blob)
+  ;; @return: ciphertext blob (plaintext-len + 16 bytes tag)
+  (define (aead-chacha20poly1305-ietf-encrypt plaintext ad nonce key)
+    (let* ((plen (blob-size plaintext))
+           (ciphertext (make-blob (+ plen aead-chacha20poly1305-ietf-abytes)))
+           (clen-buf (make-blob 8))  ; unsigned long long
+           (ad-ptr (if ad ad #f))
+           (ad-len (if ad (blob-size ad) 0)))
+      (let ((result
+             ((foreign-lambda int "crypto_aead_chacha20poly1305_ietf_encrypt"
+                             scheme-pointer     ; ciphertext
+                             scheme-pointer     ; ciphertext_len (out)
+                             scheme-pointer     ; plaintext
+                             unsigned-integer   ; plaintext length
+                             scheme-pointer     ; ad
+                             unsigned-integer   ; ad length
+                             scheme-pointer     ; nsec (NULL)
+                             scheme-pointer     ; nonce
+                             scheme-pointer)    ; key
+              ciphertext clen-buf plaintext plen ad-ptr ad-len #f nonce key)))
+        (if (= result 0)
+            ciphertext
+            (error "aead-chacha20poly1305-ietf-encrypt failed")))))
+
+  ;; AEAD decrypt (ChaCha20-Poly1305 IETF)
+  ;; @param ciphertext: encrypted data with tag (blob)
+  ;; @param ad: additional data that was authenticated (blob or #f for none)
+  ;; @param nonce: 12-byte nonce (blob)
+  ;; @param key: 32-byte key (blob)
+  ;; @return: plaintext blob or #f if authentication failed
+  (define (aead-chacha20poly1305-ietf-decrypt ciphertext ad nonce key)
+    (let* ((clen (blob-size ciphertext))
+           (plaintext (make-blob (- clen aead-chacha20poly1305-ietf-abytes)))
+           (mlen-buf (make-blob 8))  ; unsigned long long
+           (ad-ptr (if ad ad #f))
+           (ad-len (if ad (blob-size ad) 0)))
+      (let ((result
+             ((foreign-lambda int "crypto_aead_chacha20poly1305_ietf_decrypt"
+                             scheme-pointer     ; plaintext
+                             scheme-pointer     ; plaintext_len (out)
+                             scheme-pointer     ; nsec (NULL)
+                             scheme-pointer     ; ciphertext
+                             unsigned-integer   ; ciphertext length
+                             scheme-pointer     ; ad
+                             unsigned-integer   ; ad length
+                             scheme-pointer     ; nonce
+                             scheme-pointer)    ; key
+              plaintext mlen-buf #f ciphertext clen ad-ptr ad-len nonce key)))
+        (if (= result 0)
+            plaintext
+            #f))))  ; Authentication failed
 
   ;;; ============================================================================
   ;;; Helper Functions

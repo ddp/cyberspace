@@ -4649,10 +4649,13 @@
   sig)
 
 (define (verify-blind-attestation blinded-sig capability-hash signer-pubkey)
-  "Verify blind attestation without knowing signer identity"
-  ;; The signer proved they have a valid capability
-  ;; We verified the signature without learning who they are
-  #t)  ; Placeholder
+  "Verify blind attestation without knowing signer identity.
+   Chaum blind signatures require RSA which libsodium does not provide.
+   When blind attestation is enabled, signal that it is not yet implemented.
+   When disabled, return #f (attestation not verified)."
+  (if *blind-attestation-enabled*
+      (error "verify-blind-attestation: Chaum blind signatures require RSA (not available in libsodium)")
+      #f))
 
 ;;; ============================================================
 ;;; Protocol Version Negotiation (Minimal)
@@ -4830,26 +4833,39 @@
                  (payload (read-string len in)))
             (values type (string->blob payload)))))))
 
-;;; Encrypt message with ChaCha20-Poly1305 (simulated)
-(define (channel-encrypt key seq plaintext)
-  "Encrypt and authenticate message"
-  ;; Real impl: crypto_aead_chacha20poly1305_ietf_encrypt
-  ;; Nonce: 12 bytes from seq
-  ;; For now: XOR with key hash (NOT SECURE - placeholder)
-  (let* ((nonce (string->blob (string-append
-                                (number->string seq)
-                                (make-string (- 12 (string-length (number->string seq))) #\null))))
-         (key-stream (blake2b-hash (blob-append key nonce))))
-    ;; Simulated encryption (real impl uses ChaCha20-Poly1305)
-    (print "    [Encrypt] seq=" seq " len=" (blob-size plaintext))
-    plaintext))  ; Placeholder - returns plaintext
+;;; Build 12-byte AEAD nonce from sequence number
+;;; Format: 4 zero bytes || 8-byte little-endian sequence
+(define (seq->nonce seq)
+  (let ((nonce (make-blob 12))
+        (vec (blob->u8vector/shared nonce)))
+    ;; First 4 bytes: zero
+    (u8vector-set! vec 0 0)
+    (u8vector-set! vec 1 0)
+    (u8vector-set! vec 2 0)
+    (u8vector-set! vec 3 0)
+    ;; Next 8 bytes: little-endian sequence number
+    (u8vector-set! vec 4  (bitwise-and seq #xff))
+    (u8vector-set! vec 5  (bitwise-and (arithmetic-shift seq -8) #xff))
+    (u8vector-set! vec 6  (bitwise-and (arithmetic-shift seq -16) #xff))
+    (u8vector-set! vec 7  (bitwise-and (arithmetic-shift seq -24) #xff))
+    (u8vector-set! vec 8  (bitwise-and (arithmetic-shift seq -32) #xff))
+    (u8vector-set! vec 9  (bitwise-and (arithmetic-shift seq -40) #xff))
+    (u8vector-set! vec 10 (bitwise-and (arithmetic-shift seq -48) #xff))
+    (u8vector-set! vec 11 (bitwise-and (arithmetic-shift seq -56) #xff))
+    nonce))
 
-;;; Decrypt message
+;;; Encrypt message with ChaCha20-Poly1305 IETF AEAD
+(define (channel-encrypt key seq plaintext)
+  "Encrypt and authenticate message using AEAD"
+  (let ((nonce (seq->nonce seq)))
+    (aead-chacha20poly1305-ietf-encrypt plaintext #f nonce key)))
+
+;;; Decrypt and authenticate message with ChaCha20-Poly1305 IETF AEAD
 (define (channel-decrypt key seq ciphertext)
-  "Decrypt and verify message"
-  ;; Real impl: crypto_aead_chacha20poly1305_ietf_decrypt
-  (print "    [Decrypt] seq=" seq " len=" (blob-size ciphertext))
-  ciphertext)  ; Placeholder - returns ciphertext
+  "Decrypt and verify message using AEAD"
+  (let ((nonce (seq->nonce seq)))
+    (or (aead-chacha20poly1305-ietf-decrypt ciphertext #f nonce key)
+        (error "channel-decrypt: authentication failed" seq))))
 
 ;;; ============================================================
 ;;; Protocol Implementation - Initiator Side
@@ -7647,9 +7663,10 @@ The Ten Commandments of λ
           (tty-set-raw)
           ;; Poll with 500ms timeout - allows signal handling
           (if (not (tty-char-ready? 500))
-              ;; No input ready - check if still a tty, then retry
+              ;; No input ready - yield to green threads, then retry
               (begin
                 (tty-set-cooked)
+                (thread-yield!)  ; schedule green threads (join-listener, etc.)
                 (if (zero? (tty?))
                     #f  ; Terminal gone, exit
                     (read-char)))  ; Still have tty, keep waiting
@@ -7701,8 +7718,10 @@ The Ten Commandments of λ
 ;; Intercepts ,<cmd> before Scheme reader parses it as (unquote <cmd>)
 (define (command-repl)
   (let loop ()
-    ;; Don't clear *last-call-chain* here - it should persist until next exception
-    ;; capture-exception will overwrite it when a new exception occurs
+    ;; Yield to green threads before blocking in linenoise (C call).
+    ;; Without this, cooperative threads (join-listener, auto-enroll)
+    ;; never get scheduled while the REPL waits for keyboard input.
+    (thread-yield!)
     (let ((line (repl-read-line (current-prompt))))
       (cond
         ;; EOF (lineage returns #f, read-line returns eof-object)
@@ -8410,31 +8429,48 @@ The Ten Commandments of λ
 ;; Measure boot-time weave (must be after vault import)
 (hash-table-set! *session-stats* 'boot-weave (measure-weave))
 
-;; Auto-enroll in realm at startup (background, non-blocking)
+;; Realm startup: restore persisted state or fresh auto-enroll
 ;; Registers with Bonjour as _cyberspace._tcp and discovers peers
 (when (directory-exists? (cyberspace-vault-path))
   (handle-exceptions exn
-    (print "[realm] Auto-enroll failed: "
+    (print "[realm] Startup failed: "
            ((condition-property-accessor 'exn 'message) exn))
     (begin
       (ensure-auto-enroll)
-      ;; Start listener to register with Bonjour
-      (let ((name (string->symbol (hostname))))
-        (handle-exceptions exn
-          (print "[realm] Listener failed: "
-                 ((condition-property-accessor 'exn 'message) exn))
-          ((eval 'start-join-listener) name)))
-      ;; Discover peers in background
-      (thread-start!
-       (make-thread
-        (lambda ()
-          (thread-sleep! 2)  ; Let listener settle
-          (handle-exceptions exn
-            (print "[realm] Discovery: "
-                   ((condition-property-accessor 'exn 'message) exn))
+      (let ((restored ((eval 'restore-realm-state))))
+        (if restored
+          ;; Restored from saved state — start listener with saved keys
+          (let ((name (cdr (assq 'name restored)))
+                (role (cdr (assq 'role restored)))
+                (pubkey (cdr (assq 'pubkey restored)))
+                (privkey (cdr (assq 'privkey restored))))
+            (handle-exceptions exn
+              (print "[realm] Listener failed: "
+                     ((condition-property-accessor 'exn 'message) exn))
+              ((eval 'start-join-listener) name
+                keypair: (list pubkey privkey)))
+            (when (eq? role 'member)
+              ;; Background reconnect to master
+              ((eval 'reconnect-to-master))))
+          ;; No saved state — fresh auto-enroll
+          (begin
+            ;; Start listener to register with Bonjour
             (let ((name (string->symbol (hostname))))
-              ((eval 'auto-enroll-realm) name))))
-        "realm-enroll")))))
+              (handle-exceptions exn
+                (print "[realm] Listener failed: "
+                       ((condition-property-accessor 'exn 'message) exn))
+                ((eval 'start-join-listener) name)))
+            ;; Discover peers in background
+            (thread-start!
+             (make-thread
+              (lambda ()
+                (thread-sleep! 2)  ; Let listener settle
+                (handle-exceptions exn
+                  (print "[realm] Discovery: "
+                         ((condition-property-accessor 'exn 'message) exn))
+                  (let ((name (string->symbol (hostname))))
+                    ((eval 'auto-enroll-realm) name))))
+              "realm-enroll"))))))))
 
 ;; Boot output based on verbosity level
 ;; 0 shadow    - just prompt

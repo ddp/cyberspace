@@ -1,16 +1,19 @@
 ;;; SPKI Scheme - Certificate Types and Operations
 ;;; Library of Cyberspace - Chez Port
 ;;;
-;;; SPKI certificates with Ed25519 signatures:
-;;;   - Creating certificates
-;;;   - Signing certificates
-;;;   - Verifying certificates
-;;;   - Checking delegation chains
+;;; This module defines SPKI certificates and operations for:
+;;; - Creating certificates
+;;; - Signing certificates
+;;; - Verifying certificates
+;;; - Checking delegation chains
+;;;
+;;; Follows SPKI/SDSI specification with Ed25519 signatures.
+;;; Supports post-quantum algorithms via pq-crypto (ML-DSA, SPHINCS+, hybrid).
 ;;;
 ;;; Ported from Chicken's cert.scm.
-;;; Changes: module -> library, SRFI-9 -> R6RS records,
-;;;          #!key/#!optional -> get-key/get-opt,
-;;;          pq-crypto deferred (ed25519 only).
+;;; Changes: module -> library, define-record-type -> R6RS records,
+;;;          #!optional/#!key -> rest args with get-opt/get-key,
+;;;          srfi-1 filter -> (rnrs lists), blob -> bytevector compat.
 
 (library (cyberspace cert)
   (export
@@ -59,11 +62,11 @@
     signed-cert->string signed-cert-of-string)
 
   (import (rnrs)
-          (only (chezscheme) format printf)
+          (only (chezscheme) format)
           (cyberspace sexp)
           (cyberspace crypto-ffi)
-          (cyberspace chicken-compatibility chicken)
-          (cyberspace chicken-compatibility blob))
+          (cyberspace pq-crypto)
+          (cyberspace chicken-compatibility chicken))
 
   ;;; Hash algorithms
   (define hash-alg-sha512 'sha512)
@@ -80,69 +83,103 @@
 
   ;;; Principal: either a key or a hash of a key
 
-  (define-record-type (<key-principal> make-key-principal-internal key-principal?)
+  (define-record-type <key-principal>
     (fields (immutable public-key principal-public-key)))
 
-  (define-record-type (<keyhash-principal> make-keyhash-principal-internal keyhash-principal?)
+  (define (make-key-principal public-key)
+    (make-<key-principal> public-key))
+
+  (define (key-principal? x)
+    (<key-principal>? x))
+
+  (define-record-type <keyhash-principal>
     (fields (immutable hash-alg principal-hash-alg)
             (immutable hash principal-hash)))
 
-  ;; Public constructors
-  (define (make-key-principal public-key)
-    (make-key-principal-internal public-key))
-
   (define (make-keyhash-principal alg hash)
-    (make-keyhash-principal-internal alg hash))
+    (make-<keyhash-principal> alg hash))
+
+  (define (keyhash-principal? x)
+    (<keyhash-principal>? x))
 
   ;;; Authorization tags
 
-  (define-record-type (<tag> make-tag-internal tag?)
+  (define-record-type <tag>
     (fields (immutable sexp tag-sexp)))
 
-  (define-record-type (<all-perms> make-all-perms-internal all-perms?))
+  (define (make-tag s)
+    (make-<tag> s))
 
-  ;; Public constructors
-  (define (make-tag sexp)
-    (make-tag-internal sexp))
+  (define (tag? x)
+    (<tag>? x))
+
+  (define-record-type <all-perms>
+    (fields))  ; no fields
 
   (define (make-all-perms)
-    (make-all-perms-internal))
+    (make-<all-perms>))
+
+  (define (all-perms? x)
+    (<all-perms>? x))
 
   ;;; Time validity
 
-  (define-record-type (<validity> make-validity validity?)
+  (define-record-type <validity>
     (fields (immutable not-before validity-not-before)
             (immutable not-after validity-not-after)))
 
+  ;; Re-export the auto-generated constructor under the same name
+  ;; (R6RS make-<validity> matches our desired make-validity via wrapper)
+  (define (make-validity not-before not-after)
+    (make-<validity> not-before not-after))
+
+  (define (validity? x)
+    (<validity>? x))
+
   ;;; Certificate
 
-  (define-record-type (<cert> make-cert cert?)
+  (define-record-type <cert>
     (fields (immutable issuer cert-issuer)
             (immutable subject cert-subject)
             (immutable tag cert-tag)
             (immutable validity cert-validity)
             (immutable propagate cert-propagate)))
 
-  ;;; Signature
-  ;;; Supports multiple algorithms: ed25519, ml-dsa-65, sphincs+, hybrid
-  ;;; (PQ algorithms deferred in Chez port -- ed25519 only for now)
+  (define (make-cert issuer subject tag validity propagate)
+    (make-<cert> issuer subject tag validity propagate))
 
-  (define-record-type (<signature> make-signature-internal signature?)
+  (define (cert? x)
+    (<cert>? x))
+
+  ;;; Signature
+  ;;; Supports multiple signature algorithms:
+  ;;;   ed25519, ml-dsa-65, sphincs+, hybrid
+
+  (define-record-type <signature>
     (fields (immutable hash-alg signature-hash-alg)
             (immutable cert-hash signature-cert-hash)
             (immutable sig-bytes signature-sig-bytes)
             (immutable sig-alg signature-sig-alg)))
 
-  ;; Backward-compatible constructor (defaults to ed25519)
-  (define (make-signature hash-alg cert-hash sig-bytes . opts)
-    (let ((sig-alg (get-opt opts 0 'ed25519)))
-      (make-signature-internal hash-alg cert-hash sig-bytes sig-alg)))
+  ;; Constructor with optional sig-alg (defaults to ed25519)
+  (define (make-signature hash-alg cert-hash sig-bytes . rest)
+    (let ((sig-alg (get-opt rest 0 'ed25519)))
+      (make-<signature> hash-alg cert-hash sig-bytes sig-alg)))
+
+  (define (signature? x)
+    (<signature>? x))
 
   ;;; Signed certificate
 
-  (define-record-type (<signed-cert> make-signed-cert signed-cert?)
+  (define-record-type <signed-cert>
     (fields (immutable cert signed-cert-cert)
             (immutable signature signed-cert-signature)))
+
+  (define (make-signed-cert cert signature)
+    (make-<signed-cert> cert signature))
+
+  (define (signed-cert? x)
+    (<signed-cert>? x))
 
   ;;; Conversion to/from s-expressions
 
@@ -366,17 +403,22 @@
 
   ;;; Certificate operations
 
-  ;; Create a new certificate
+  ;; Chicken: (create-cert issuer subject tag #!key validity propagate)
+  ;; Chez:    (create-cert issuer subject tag . opts) with keyword helpers
   (define (create-cert issuer subject tag . opts)
+    "Create a new certificate"
     (let ((validity (get-key opts 'validity: #f))
           (propagate (get-key opts 'propagate: #f)))
       (make-cert issuer subject tag validity (or propagate #f))))
 
-  ;; Sign a certificate with a private key.
-  ;; Ed25519 only in Chez port (PQ algorithms deferred).
-  (define (sign-cert cert private-key . opts)
-    (let ((algorithm (get-opt opts 0 'ed25519))
-          (pq-private-key (get-opt opts 1 #f)))
+  ;; Chicken: (sign-cert cert private-key #!optional (algorithm 'ed25519) pq-private-key)
+  ;; Chez:    (sign-cert cert private-key . rest)
+  (define (sign-cert cert private-key . rest)
+    "Sign a certificate with a private key.
+     algorithm: ed25519 (default), ml-dsa-65, sphincs+, hybrid
+     For hybrid: provide both private-key (ed25519) and pq-private-key (ml-dsa)"
+    (let ((algorithm (get-opt rest 0 'ed25519))
+          (pq-private-key (get-opt rest 1 #f)))
 
       ;; Convert cert to canonical s-expression
       (let* ((cert-sexp (cert->sexp cert))
@@ -391,10 +433,18 @@
                    ((ed25519)
                     (ed25519-sign private-key cert-hash))
 
-                   ((ml-dsa-65 ml-dsa sphincs+ sphincs+-shake-256s hybrid)
-                    (error 'sign-cert
-                           "Post-quantum algorithms not yet available in Chez port"
-                           algorithm))
+                   ((ml-dsa-65 ml-dsa)
+                    (ml-dsa-sign cert-hash private-key))
+
+                   ((sphincs+ sphincs+-shake-256s)
+                    (sphincs+-sign cert-hash private-key))
+
+                   ((hybrid)
+                    (unless pq-private-key
+                      (error 'sign-cert "Hybrid requires both ed25519 and ml-dsa private keys"))
+                    `(hybrid-signature
+                      (ed25519 ,(ed25519-sign private-key cert-hash))
+                      (ml-dsa ,(ml-dsa-sign cert-hash pq-private-key))))
 
                    (else
                     (error 'sign-cert "Unknown algorithm" algorithm)))))
@@ -404,10 +454,13 @@
              cert
              (make-signature hash-alg-sha512 cert-hash sig-bytes algorithm)))))))
 
-  ;; Verify a signed certificate.
-  ;; Ed25519 only in Chez port (PQ algorithms deferred).
-  (define (verify-signed-cert sc public-key . opts)
-    (let ((pq-public-key (get-opt opts 0 #f)))
+  ;; Chicken: (verify-signed-cert sc public-key #!optional pq-public-key)
+  ;; Chez:    (verify-signed-cert sc public-key . rest)
+  (define (verify-signed-cert sc public-key . rest)
+    "Verify a signed certificate.
+     For hybrid signatures: provide both public-key (ed25519) and pq-public-key (ml-dsa)
+     Dispatches verification based on signature algorithm."
+    (let ((pq-public-key (get-opt rest 0 #f)))
 
       ;; Recompute certificate hash
       (let* ((cert-sexp (cert->sexp (signed-cert-cert sc)))
@@ -424,16 +477,32 @@
                 ((ed25519)
                  (ed25519-verify public-key computed-hash (signature-sig-bytes sig)))
 
-                ((ml-dsa-65 ml-dsa sphincs+ sphincs+-shake-256s hybrid)
-                 (error 'verify-signed-cert
-                        "Post-quantum algorithms not yet available in Chez port"
-                        sig-alg))
+                ((ml-dsa-65 ml-dsa)
+                 (ml-dsa-verify computed-hash (signature-sig-bytes sig) public-key))
+
+                ((sphincs+ sphincs+-shake-256s)
+                 (sphincs+-verify computed-hash (signature-sig-bytes sig) public-key))
+
+                ((hybrid)
+                 ;; Both signatures must verify
+                 (let ((hybrid-sig (signature-sig-bytes sig)))
+                   (unless pq-public-key
+                     (error 'verify-signed-cert
+                            "Hybrid requires both ed25519 and ml-dsa public keys"))
+                   (and (pair? hybrid-sig)
+                        (eq? (car hybrid-sig) 'hybrid-signature)
+                        (let ((ed-sig (cadr (assq 'ed25519 (cdr hybrid-sig))))
+                              (pq-sig (cadr (assq 'ml-dsa (cdr hybrid-sig)))))
+                          (and ed-sig pq-sig
+                               (ed25519-verify public-key computed-hash ed-sig)
+                               (ml-dsa-verify computed-hash pq-sig pq-public-key))))))
 
                 (else
-                 (error 'verify-signed-cert "Unknown signature algorithm" sig-alg))))))))
+                 (error 'verify-signed-cert
+                        "Unknown signature algorithm" sig-alg))))))))
 
-  ;; Check if tag1 implies tag2 (tag1 >= tag2)
   (define (tag-implies tag1 tag2)
+    "Check if tag1 implies tag2 (tag1 >= tag2)"
     (cond
      ((all-perms? tag1) #t)  ; AllPerms grants everything
      ((all-perms? tag2) #f)  ; Nothing but AllPerms grants AllPerms
@@ -443,13 +512,14 @@
       (sexp-equal? (tag-sexp tag1) (tag-sexp tag2)))
      (else #f)))
 
-  ;; Verify a delegation chain:
-  ;; 1. Each cert is signed by its issuer
-  ;; 2. Each cert's issuer matches previous cert's subject
-  ;; 3. Tags are properly delegated (each tag implies the next)
-  ;; 4. Final cert grants target_tag
-  ;; 5. All certs allow propagation (except possibly the last)
   (define (verify-chain root-key certs target-tag)
+    ;; Verify a delegation chain.
+    ;; Verifies that:
+    ;; 1. Each cert is signed by its issuer
+    ;; 2. Each cert's issuer matches previous cert's subject
+    ;; 3. Tags are properly delegated (each tag implies the next)
+    ;; 4. Final cert grants target_tag
+    ;; 5. All certs allow propagation (except possibly the last)
     (define (verify-links current-principal remaining-certs current-tag)
       (if (null? remaining-certs)
           ;; End of chain: check if current tag implies target
@@ -486,7 +556,8 @@
                     ((key-principal? current-principal)
                      (principal-public-key current-principal))
                     (else
-                     (error 'verify-chain "Cannot verify with key hash (need actual key)")))))
+                     (error 'verify-chain
+                            "Cannot verify with key hash (need actual key)")))))
 
               (if (not (verify-signed-cert sc issuer-key))
                   (error 'verify-chain "Invalid signature")))
