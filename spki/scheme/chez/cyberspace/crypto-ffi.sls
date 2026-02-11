@@ -623,9 +623,6 @@
         ((= i 510))
       (u8vector-set! gf256-exp i (u8vector-ref gf256-exp (- i 255)))))
 
-  ;; Initialize tables on module load
-  (init-gf256-tables!)
-
   (define (gf256-add a b)
     (bitwise-xor a b))
 
@@ -761,5 +758,9 @@
     (if (or (= n 0) (null? lst))
         '()
         (cons (car lst) (take (cdr lst) (- n 1)))))
+
+  ;; Initialize GF(256) tables on module load
+  ;; (Must be after all definitions per R6RS)
+  (init-gf256-tables!)
 
 ) ;; end library

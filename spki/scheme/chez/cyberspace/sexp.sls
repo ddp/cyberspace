@@ -25,7 +25,8 @@
     sexp->string
     sexp->string-indent
     find-tag
-    get-tag-value)
+    get-tag-value
+    sexp-equal?)
 
   (import (rnrs)
           (only (chezscheme) printf format)
@@ -48,16 +49,15 @@
   (define (sexp-bytes b) (make-bytes b))
 
   ;;; Base64 encoding/decoding (using compat library)
+  ;; base64 module now works directly on bytevectors
 
   (define (base64-encode bytes)
-    "Encode bytevector to base64 string."
     (if (bytevector? bytes)
-        (b64:base64-encode (blob->string bytes))
+        (b64:base64-encode bytes)
         ""))
 
   (define (base64-decode str)
-    "Decode base64 string to bytevector."
-    (string->blob (b64:base64-decode str)))
+    (b64:base64-decode str))
 
   ;;; Tokenizer
 
@@ -276,5 +276,23 @@
            (let ((items (list-items tagged)))
              (and (>= (length items) 2)
                   (cadr items))))))
+
+  ;; Structural equality for sexp records.
+  ;; R6RS equal? returns #f on opaque records, so we need this.
+  (define (sexp-equal? a b)
+    (cond
+      ((and (sexp-atom? a) (sexp-atom? b))
+       (string=? (atom-value a) (atom-value b)))
+      ((and (sexp-bytes? a) (sexp-bytes? b))
+       (bytevector=? (bytes-value a) (bytes-value b)))
+      ((and (sexp-list? a) (sexp-list? b))
+       (let loop ((xs (list-items a)) (ys (list-items b)))
+         (cond
+           ((and (null? xs) (null? ys)) #t)
+           ((or (null? xs) (null? ys)) #f)
+           ((sexp-equal? (car xs) (car ys))
+            (loop (cdr xs) (cdr ys)))
+           (else #f))))
+      (else #f)))
 
 ) ;; end library

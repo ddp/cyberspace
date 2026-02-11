@@ -4,6 +4,7 @@
 ;;; Replaces Chicken's base64 egg.
 ;;; Used by sexp.scm for SPKI certificate binary data (|base64...|).
 ;;;
+;;; API: bytevector in, string out (encode); string in, bytevector out (decode).
 ;;; RFC 4648 compliant.
 
 (library (cyberspace chicken-compatibility base64)
@@ -22,15 +23,15 @@
           ((= i 64) tbl)
         (vector-set! tbl (char->integer (string-ref *encode-table* i)) i))))
 
-  (define (base64-encode str)
-    "Encode a string to base64.  Input is raw bytes (Latin-1)."
-    (let* ((len (string-length str))
+  ;; Encode a bytevector to base64 string.
+  (define (base64-encode bv)
+    (let* ((len (bytevector-length bv))
            (out (open-output-string)))
       (let loop ((i 0))
         (when (< i len)
-          (let* ((b0 (char->integer (string-ref str i)))
-                 (b1 (if (< (+ i 1) len) (char->integer (string-ref str (+ i 1))) 0))
-                 (b2 (if (< (+ i 2) len) (char->integer (string-ref str (+ i 2))) 0))
+          (let* ((b0 (bytevector-u8-ref bv i))
+                 (b1 (if (< (+ i 1) len) (bytevector-u8-ref bv (+ i 1)) 0))
+                 (b2 (if (< (+ i 2) len) (bytevector-u8-ref bv (+ i 2)) 0))
                  (remaining (- len i)))
             ;; Encode 3 bytes -> 4 base64 chars
             (put-char out (string-ref *encode-table* (bitwise-arithmetic-shift-right b0 2)))
@@ -50,10 +51,10 @@
             (loop (+ i 3)))))
       (get-output-string out)))
 
+  ;; Decode a base64 string to bytevector.
   (define (base64-decode str)
-    "Decode a base64 string to raw bytes (Latin-1 string)."
     (let* ((len (string-length str))
-           (out (open-output-string)))
+           (bytes '()))
       (let loop ((i 0))
         (when (< i len)
           (let skip-ws ((j i))
@@ -72,25 +73,33 @@
                                   (not (char=? (string-ref str (+ j 3)) #\=))
                                   (vector-ref *decode-table* (char->integer (string-ref str (+ j 3)))))))
                     (when (and c0 c1)
-                      (put-char out (integer->char
-                                     (bitwise-ior
-                                      (bitwise-arithmetic-shift-left c0 2)
-                                      (bitwise-arithmetic-shift-right c1 4))))
+                      (set! bytes (cons (bitwise-ior
+                                         (bitwise-arithmetic-shift-left c0 2)
+                                         (bitwise-arithmetic-shift-right c1 4))
+                                        bytes))
                       (when c2
-                        (put-char out (integer->char
-                                       (bitwise-and
-                                        #xFF
-                                        (bitwise-ior
-                                         (bitwise-arithmetic-shift-left (bitwise-and c1 #x0F) 4)
-                                         (bitwise-arithmetic-shift-right c2 2)))))
+                        (set! bytes (cons (bitwise-and
+                                           #xFF
+                                           (bitwise-ior
+                                            (bitwise-arithmetic-shift-left (bitwise-and c1 #x0F) 4)
+                                            (bitwise-arithmetic-shift-right c2 2)))
+                                          bytes))
                         (when c3
-                          (put-char out (integer->char
-                                         (bitwise-and
-                                          #xFF
-                                          (bitwise-ior
-                                           (bitwise-arithmetic-shift-left (bitwise-and c2 #x03) 6)
-                                           c3)))))))
-                    (loop (+ j 4))))))))
-      (get-output-string out)))
+                          (set! bytes (cons (bitwise-and
+                                             #xFF
+                                             (bitwise-ior
+                                              (bitwise-arithmetic-shift-left (bitwise-and c2 #x03) 6)
+                                              c3))
+                                            bytes))))))
+                  (loop (+ j 4)))))))
+      ;; Convert accumulated bytes to bytevector
+      (let* ((byte-list (reverse bytes))
+             (bv (make-bytevector (length byte-list))))
+        (let fill ((i 0) (rest byte-list))
+          (if (null? rest)
+              bv
+              (begin
+                (bytevector-u8-set! bv i (car rest))
+                (fill (+ i 1) (cdr rest))))))))
 
 ) ;; end library
