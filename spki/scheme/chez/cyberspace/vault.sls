@@ -140,7 +140,27 @@
     capabilities
     capability-intersect
     capability-difference
-    capability-audit-enable!)
+    capability-audit-enable!
+
+    ;; Phase 2: Soup introspection & display
+    soup
+    soup?
+    soup-stat
+    soup-hash
+    soup-du
+    soup-collect-objects
+    soup-find
+    soup-query
+    soup-inspect
+    complete
+    seal-inspect
+
+    ;; Phase 2: Cross-module reflection
+    seek
+    dashboard
+
+    ;; Phase 2: Natural language query (Memo-038)
+    ask)
 
   (import (rnrs)
           (only (chezscheme)
@@ -148,11 +168,16 @@
                 file-directory? directory-list mkdir
                 getenv sort date-and-time
                 current-time time-second time-nanosecond
-                system port-length)
+                system port-length
+                file-length file-modification-time
+                inexact->exact)
           (cyberspace crypto-ffi)
           (cyberspace audit)
           (only (cyberspace os)
-                session-stat! hostname)
+                session-stat! session-stats hostname
+                string-display-width
+                make-box box-top box-bottom box-separator box-print
+                *box-rounded*)
           (cyberspace chicken-compatibility blob)
           (only (cyberspace chicken-compatibility chicken)
                 print conc string-intersperse string-split
@@ -2399,5 +2424,1365 @@
             (print "")
             (print "(migrate-" from-version "-to-" to-version ")")))
         (print "Migration template created: " migration-file))))
+
+  ;;; ============================================================================
+  ;;; Phase 2: Additional Helpers
+  ;;; ============================================================================
+
+  (define (delete-duplicates lst)
+    (let loop ((rest lst) (seen '()) (acc '()))
+      (cond
+        ((null? rest) (reverse acc))
+        ((member (car rest) seen) (loop (cdr rest) seen acc))
+        (else (loop (cdr rest) (cons (car rest) seen) (cons (car rest) acc))))))
+
+  (define (take-right lst n)
+    (let ((len (length lst)))
+      (if (<= len n) lst
+          (let loop ((rest lst) (i 0))
+            (if (< i (- len n))
+                (loop (cdr rest) (+ i 1))
+                rest)))))
+
+  (define (take-right-pad lst n default)
+    (let ((len (length lst)))
+      (if (>= len n)
+          (take-right lst n)
+          (append (make-list (- n len) default) lst))))
+
+  (define (make-list n val)
+    (let loop ((i 0) (acc '()))
+      (if (= i n) acc (loop (+ i 1) (cons val acc)))))
+
+  (define (pad-left str len . rest)
+    (let ((ch (if (null? rest) #\space (car rest)))
+          (slen (string-length str)))
+      (if (>= slen len) str
+          (string-append (make-string (- len slen) ch) str))))
+
+  (define (string-map proc str)
+    (list->string
+      (let loop ((i 0))
+        (if (= i (string-length str)) '()
+            (cons (proc (string-ref str i))
+                  (loop (+ i 1)))))))
+
+  (define (string-translate* str replacements)
+    "Replace substrings according to alist of (old . new) pairs"
+    (let loop ((s str) (reps replacements))
+      (if (null? reps) s
+          (let* ((old (caar reps))
+                 (new (cdar reps))
+                 (idx (string-contains s old)))
+            (if idx
+                (loop (string-append
+                       (substring s 0 idx)
+                       new
+                       (substring s (+ idx (string-length old)) (string-length s)))
+                      reps)
+                (loop s (cdr reps)))))))
+
+  (define (find-common-prefix strings)
+    (if (null? strings) ""
+        (let loop ((i 0))
+          (if (or (>= i (string-length (car strings)))
+                  (not (every (lambda (s)
+                                (and (> (string-length s) i)
+                                     (char=? (string-ref (car strings) i)
+                                             (string-ref s i))))
+                              (cdr strings))))
+              (substring (car strings) 0 i)
+              (loop (+ i 1))))))
+
+  ;;; ============================================================================
+  ;;; Phase 2: Box-drawing helpers for vault display
+  ;;; ============================================================================
+
+  (define (vault-box-top width)
+    (string-append "╭" (make-string (- width 1) #\─) "╮"))
+
+  (define (vault-box-bottom width)
+    (string-append "╰" (make-string (- width 1) #\─) "╯"))
+
+  (define (vault-box-divider width)
+    (string-append "├" (make-string (- width 1) #\─) "┤"))
+
+  (define (vault-box-line content width)
+    (let* ((content-width (string-display-width content))
+           (padded (if (> content-width (- width 2))
+                       (substring content 0 (- width 2))
+                       content))
+           (padding (- width 2 (string-display-width padded))))
+      (string-append "│ " padded (make-string (max 0 padding) #\space) "│")))
+
+  (define (box-line-pair label value width)
+    (let* ((formatted (format #f "~a:~a~a"
+                              label
+                              (make-string (max 1 (- 20 (string-display-width label))) #\space)
+                              value)))
+      (vault-box-line formatted width)))
+
+  (define (print-box-header title type width)
+    (print (vault-box-top width))
+    (print (vault-box-line (format #f "object: ~a" title) width))
+    (print (vault-box-line (format #f "type:   ~a" type) width))
+    (print (vault-box-divider width)))
+
+  (define (print-section-header title width)
+    (print (vault-box-line "" width))
+    (print (vault-box-line title width))
+    (print (vault-box-line "" width)))
+
+  ;;; ============================================================================
+  ;;; Phase 2: Soup Object Collection
+  ;;; ============================================================================
+
+  (define *soup-types*
+    '((archives  . "Sealed archives")
+      (releases  . "Tagged releases")
+      (certs     . "SPKI certificates")
+      (audit     . "Audit trail entries")
+      (keys      . "Cryptographic keys")
+      (metadata  . "Commit metadata")
+      (forge     . "Compiled module metadata")
+      (objects   . "User-created soup objects")))
+
+  (define (get-file-size path)
+    "Get file size using Chez file-length"
+    (guard (exn [#t 0])
+      (file-length path)))
+
+  (define (get-file-mtime path)
+    "Get file modification time"
+    (guard (exn [#t 0])
+      (time-second (file-modification-time path))))
+
+  (define (get-archive-crypto path)
+    (handle-exceptions exn '("unknown")
+      (let ((manifest (with-input-from-file path read)))
+        (if (and (pair? manifest) (eq? 'sealed-archive (car manifest)))
+            (let* ((fields (cdr manifest))
+                   (fmt (assq 'format fields))
+                   (hash (assq 'hash fields))
+                   (ts (assq 'timestamp fields))
+                   (format-sym (if fmt (cadr fmt) 'unknown))
+                   (attrs (case format-sym
+                            ((zstd-age) '("age" "zstd" "sha256"))
+                            ((cryptographic) '("gzip" "sha256"))
+                            ((tarball) '("tar" "gzip"))
+                            ((bundle) '("git-bundle"))
+                            (else '("unknown")))))
+              (append attrs
+                      (if hash (list (format #f "~a.." (substring (cadr hash) 0
+                                                                  (min 8 (string-length (cadr hash)))))) '())
+                      (if ts (list (format-timestamp (cadr ts))) '())))
+            '("unknown")))))
+
+  (define (get-release-crypto version)
+    (let ((sig-file (format #f ".vault/releases/~a.sig" version)))
+      (if (file-exists? sig-file)
+          (handle-exceptions exn '("ed25519" "sha512")
+            (let* ((sig-data (with-input-from-file sig-file read))
+                   (hash (assq 'hash (cdr sig-data))))
+              (append '("ed25519" "sha512")
+                      (if hash (list (format #f "~a.." (substring (cadr hash) 0
+                                                                  (min 8 (string-length (cadr hash)))))) '()))))
+          '("unsigned"))))
+
+  (define (get-audit-crypto path)
+    (handle-exceptions exn '("entry")
+      (let ((entry (with-input-from-file path read)))
+        (if (and (pair? entry) (pair? (cdr entry)))
+            (let* ((fields (cdr entry))
+                   (seal (assq 'seal fields))
+                   (ts (assq 'timestamp fields))
+                   (id (assq 'id fields)))
+              (append
+               (if seal '("ed25519" "sha512" "sealed") '("entry"))
+               (if (and id (> (string-length (cadr id)) 8))
+                   (list (format #f "~a.." (substring (cadr id) 0 8))) '())
+               (if ts (list (format-timestamp (cadr ts))) '())))
+            '("entry")))))
+
+  (define (get-key-crypto path)
+    (handle-exceptions exn '("unknown")
+      (let* ((size (get-file-size path))
+             (content (with-input-from-file path (lambda () (read-string))))
+             (key-hash-blob (sha256-hash content))
+             (fp-hex (blob->hex key-hash-blob))
+             (fp (substring fp-hex 0 (min 16 (string-length fp-hex))))
+             (identity (pathname-strip-extension (pathname-file path)))
+             (date (format-timestamp (get-file-mtime path))))
+        (cond
+         ((string-suffix? ".pub" path)
+          (list "ed25519/256" "public" "sign"
+                (format #f "sha256:~a.." fp)
+                (format #f "id:~a" identity) date))
+         ((string-suffix? ".key" path)
+          (list "ed25519/256" "private" "sign"
+                (format #f "sha256:~a.." fp)
+                (format #f "id:~a" identity) date))
+         ((string-suffix? ".age" path)
+          (list "x25519/256" "age" "encrypt"
+                (format #f "sha256:~a.." fp)
+                (format #f "id:~a" identity) date))
+         (else '("unknown"))))))
+
+  (define (get-cert-info path)
+    (handle-exceptions exn '("unknown")
+      (let ((data (with-input-from-file path read)))
+        (if (and (pair? data) (eq? 'signed-enrollment-cert (car data)))
+            (let* ((body (cadr data))
+                   (body-fields (if (and (pair? body) (eq? 'spki-cert (car body)))
+                                    (cdr body) '()))
+                   (name (assq 'name body-fields))
+                   (role (assq 'role body-fields))
+                   (validity (assq 'validity body-fields))
+                   (not-after (and validity (assq 'not-after (cdr validity)))))
+              (list (if name (symbol->string (cadr name)) "?")
+                    (if role (symbol->string (cadr role)) "?")
+                    (if not-after
+                        (let ((remaining (- (cadr not-after) (current-seconds))))
+                          (if (> remaining 0)
+                              (format #f "~ad" (div remaining 86400))
+                              "expired"))
+                        "no-expiry")))
+            '("not-enrollment-cert")))))
+
+  (define (get-node-info)
+    (handle-exceptions exn '("unknown")
+      (let ((data (with-input-from-file ".vault/node.sexp" read)))
+        (if (and (pair? data) (eq? 'node-identity (car data)))
+            (let* ((fields (cdr data))
+                   (name (assq 'name fields))
+                   (role (assq 'role fields)))
+              (list (if name (cadr name) "unknown")
+                    (if role (symbol->string (cadr role)) "unknown")))
+            '("invalid")))))
+
+  (define (get-node-identity)
+    (handle-exceptions exn #f
+      (let ((data (with-input-from-file ".vault/node.sexp" read)))
+        (if (and (pair? data) (eq? 'node-identity (car data)))
+            (cdr data) #f))))
+
+  (define (get-soup-object-info path)
+    (handle-exceptions exn '("unknown")
+      (let ((data (with-input-from-file path read)))
+        (if (and (pair? data) (eq? 'soup-object (car data)))
+            (let* ((fields (cdr data))
+                   (lifetime (assq 'lifetime fields))
+                   (expires (assq 'expires fields))
+                   (tags (assq 'tags fields))
+                   (now (current-seconds))
+                   (remaining (if expires (max 0 (- (cadr expires) now)) 0))
+                   (days (div remaining 86400)))
+              (list (if lifetime (symbol->string (cadr lifetime)) "?")
+                    (format #f "~ad" days)
+                    (if (and tags (pair? (cadr tags)))
+                        (string-intersperse (map symbol->string (cadr tags)) ",")
+                        "")))
+            '("invalid")))))
+
+  (define (get-forge-info path)
+    (handle-exceptions exn '("unknown")
+      (let ((data (with-input-from-file path read)))
+        (if (pair? data)
+            (let* ((metrics (assq 'metrics data))
+                   (loc (and metrics (assq 'loc (cdr metrics))))
+                   (lambdas (and metrics (assq 'lambdas (cdr metrics))))
+                   (loc/lambda (and metrics (assq 'loc/lambda (cdr metrics))))
+                   (so-size (assq 'so-size data)))
+              (list (if loc (format #f "~aL" (cdr loc)) "?")
+                    (if lambdas (format #f "~aλ" (cdr lambdas)) "?")
+                    (if loc/lambda (format #f "~a/λ" (cdr loc/lambda)) "?")
+                    (if so-size (format-size (cdr so-size)) "?")))
+            '("invalid")))))
+
+  (define (get-archive-manifest path)
+    (handle-exceptions exn #f
+      (let ((data (with-input-from-file path read)))
+        (if (and (pair? data) (eq? 'sealed-archive (car data)))
+            (cdr data) #f))))
+
+  (define (get-audit-entry name)
+    (handle-exceptions exn #f
+      (let ((path (if (string-prefix? ".vault/audit/" name) name
+                      (format #f ".vault/audit/~a" name))))
+        (let ((data (with-input-from-file path read)))
+          (if (pair? data) (cdr data) #f)))))
+
+  (define (soup-collect-objects)
+    "Collect all objects from the soup"
+    (session-stat! 'reads)
+    (let ((objects '()))
+
+      ;; Archives (*.archive files in current dir)
+      (when (directory-exists? ".")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".archive" f)
+             (set! objects (cons (list 'archives f (get-file-size f)
+                                       (get-archive-crypto f)) objects))))
+         (directory ".")))
+
+      ;; Releases (.vault/releases/*.sig)
+      (when (directory-exists? ".vault/releases")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sig" f)
+             (let* ((version (pathname-strip-extension f))
+                    (path (format #f ".vault/releases/~a" f)))
+               (set! objects (cons (list 'releases version (get-file-size path)
+                                         (get-release-crypto version)) objects)))))
+         (directory ".vault/releases")))
+
+      ;; Unsigned releases (git tags without .sig)
+      (let ((tags (get-git-tags)))
+        (for-each
+         (lambda (tag)
+           (unless (file-exists? (format #f ".vault/releases/~a.sig" tag))
+             (set! objects (cons (list 'releases tag 0 '("unsigned")) objects))))
+         tags))
+
+      ;; Audit entries (.vault/audit/*.sexp)
+      (when (directory-exists? ".vault/audit")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sexp" f)
+             (let ((path (format #f ".vault/audit/~a" f)))
+               (set! objects (cons (list 'audit f (get-file-size path)
+                                         (get-audit-crypto path)) objects)))))
+         (directory ".vault/audit")))
+
+      ;; Keys (*.pub, *.key, *.age files)
+      (when (directory-exists? ".")
+        (for-each
+         (lambda (f)
+           (when (or (string-suffix? ".pub" f)
+                     (string-suffix? ".key" f)
+                     (string-suffix? ".age" f))
+             (set! objects (cons (list 'keys f (get-file-size f)
+                                       (get-key-crypto f)) objects))))
+         (directory ".")))
+
+      ;; Metadata (.vault/metadata/*.sexp)
+      (when (directory-exists? ".vault/metadata")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sexp" f)
+             (let ((path (format #f ".vault/metadata/~a" f)))
+               (set! objects (cons (list 'metadata f (get-file-size path) '("metadata")) objects)))))
+         (directory ".vault/metadata")))
+
+      ;; Certs (.vault/certs/*.sexp)
+      (when (directory-exists? ".vault/certs")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sexp" f)
+             (let ((path (format #f ".vault/certs/~a" f)))
+               (set! objects (cons (list 'certs f (get-file-size path)
+                                         (get-cert-info path)) objects)))))
+         (directory ".vault/certs")))
+
+      ;; Node identity (.vault/node.sexp)
+      (when (file-exists? ".vault/node.sexp")
+        (set! objects (cons (list 'identity "node" (get-file-size ".vault/node.sexp")
+                                  (get-node-info)) objects)))
+
+      ;; Forge metadata (.forge/*.meta)
+      (when (directory-exists? ".forge")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".meta" f)
+             (let* ((path (format #f ".forge/~a" f))
+                    (module (pathname-strip-extension f)))
+               (set! objects (cons (list 'forge module (get-file-size path)
+                                         (get-forge-info path)) objects)))))
+         (directory ".forge")))
+
+      ;; Soup objects (.vault/soup/*.sexp)
+      (when (directory-exists? ".vault/soup")
+        (for-each
+         (lambda (f)
+           (when (string-suffix? ".sexp" f)
+             (let* ((path (format #f ".vault/soup/~a" f))
+                    (id (pathname-strip-extension f)))
+               (set! objects (cons (list 'objects id (get-file-size path)
+                                         (get-soup-object-info path)) objects)))))
+         (directory ".vault/soup")))
+
+      (reverse objects)))
+
+  ;;; ============================================================================
+  ;;; Phase 2: Soup Tree View
+  ;;; ============================================================================
+
+  (define *sparkline-chars* '#("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█"))
+
+  (define (sparkline values width)
+    (if (or (null? values) (every zero? values))
+        (make-string width #\─)
+        (let* ((max-val (apply max values))
+               (scale (if (zero? max-val) 1 (/ 7.0 max-val))))
+          (apply string-append
+                 (map (lambda (v)
+                        (vector-ref *sparkline-chars*
+                                    (inexact->exact (min 7 (floor (* v scale))))))
+                      (take-right-pad values width 0))))))
+
+  (define (soup-summary-archives objs)
+    (if (null? objs) ""
+        (format-size (apply + (map caddr objs)))))
+
+  (define (soup-summary-releases objs)
+    (if (null? objs) ""
+        (let* ((signed (filter (lambda (o)
+                                 (let ((info (cadddr o)))
+                                   (not (member "unsigned" (if (list? info) info '())))))
+                               objs))
+               (unsigned (- (length objs) (length signed))))
+          (cond
+           ((zero? unsigned) (format #f "~a signed" (length signed)))
+           ((zero? (length signed)) "unsigned")
+           (else (format #f "~a signed, ~a pending" (length signed) unsigned))))))
+
+  (define (soup-summary-audit objs)
+    (if (null? objs) ""
+        (let* ((now (current-seconds))
+               (buckets 8)
+               (bucket-size 3600)
+               (counts (make-vector buckets 0)))
+          (for-each
+           (lambda (o)
+             (let* ((name (cadr o))
+                    (ts-start (string-contains name "sync-")))
+               (when ts-start
+                 (let* ((after (substring name (+ ts-start 5) (string-length name)))
+                        (dot (string-index after #\.))
+                        (ts-str (if dot (substring after 0 dot) after))
+                        (ts (string->number ts-str)))
+                   (when ts
+                     (let* ((age (- now ts))
+                            (bucket (min (- buckets 1) (max 0 (div age bucket-size)))))
+                       (vector-set! counts bucket (+ 1 (vector-ref counts bucket)))))))))
+           objs)
+          (let ((vals (reverse (vector->list counts))))
+            (format #f "~a (~ah)" (sparkline vals buckets) (* buckets (div bucket-size 3600)))))))
+
+  (define (soup-summary-keys objs)
+    (if (null? objs) ""
+        (let* ((identities (filter-map
+                            (lambda (o)
+                              (let* ((info (cadddr o))
+                                     (id-str (find (lambda (s)
+                                                     (and (string? s)
+                                                          (string-prefix? "id:" s)))
+                                                   (if (list? info) info '()))))
+                                (and id-str (substring id-str 3 (string-length id-str)))))
+                            objs))
+               (unique (delete-duplicates identities)))
+          (if (<= (length unique) 4)
+              (string-intersperse unique ", ")
+              (format #f "~a identities" (length unique))))))
+
+  (define (soup-summary-metadata objs)
+    (if (null? objs) "" (format #f "~a entries" (length objs))))
+
+  (define (soup-summary-certs objs)
+    (if (null? objs) "" (format #f "~a certs" (length objs))))
+
+  (define (soup-summary-identity objs)
+    (if (null? objs) ""
+        (let ((info (cadddr (car objs))))
+          (if (and (list? info) (>= (length info) 2))
+              (format #f "~a (~a)" (car info) (cadr info))
+              "configured"))))
+
+  (define (soup-summary-forge objs)
+    (if (null? objs) ""
+        (let ((total-loc 0) (total-lambdas 0))
+          (for-each
+           (lambda (o)
+             (let ((info (cadddr o)))
+               (when (and (list? info) (>= (length info) 2))
+                 (let ((loc-str (car info))
+                       (lambda-str (cadr info)))
+                   (when (string-suffix? "L" loc-str)
+                     (let ((n (string->number (substring loc-str 0 (- (string-length loc-str) 1)))))
+                       (when n (set! total-loc (+ total-loc n)))))
+                   (when (and (>= (string-length lambda-str) 3)
+                              (string-suffix? "λ" lambda-str))
+                     (let ((n (string->number (substring lambda-str 0 (- (string-length lambda-str) 2)))))
+                       (when n (set! total-lambdas (+ total-lambdas n)))))))))
+           objs)
+          (if (> total-lambdas 0)
+              (format #f "~aL ~aλ (~a/λ)" total-loc total-lambdas (div total-loc total-lambdas))
+              (format #f "~a modules" (length objs))))))
+
+  (define (soup-get-summary type objs)
+    (case type
+      ((archives) (soup-summary-archives objs))
+      ((releases) (soup-summary-releases objs))
+      ((audit) (soup-summary-audit objs))
+      ((keys) (soup-summary-keys objs))
+      ((metadata) (soup-summary-metadata objs))
+      ((certs) (soup-summary-certs objs))
+      ((identity) (soup-summary-identity objs))
+      ((forge) (soup-summary-forge objs))
+      (else "")))
+
+  (define (soup-tree-view grouped types)
+    (let* ((non-empty (filter (lambda (t)
+                                (not (null? (hash-table-ref/default grouped (car t) '()))))
+                              types))
+           (total (apply + (map (lambda (t)
+                                  (length (hash-table-ref/default grouped (car t) '())))
+                                types)))
+           (last-idx (- (length non-empty) 1)))
+      (if (zero? total)
+          (let ((name (realm-name)))
+            (if name
+                (printf "~%Empty (realm: ~a)~%" name)
+                (printf "~%Empty~%")))
+          (begin
+            (printf "~%Soup~%")
+            (let loop ((remaining non-empty) (idx 0))
+              (unless (null? remaining)
+                (let* ((type-pair (car remaining))
+                       (type (car type-pair))
+                       (objs (reverse (hash-table-ref/default grouped type '())))
+                       (count (length objs))
+                       (summary (soup-get-summary type objs))
+                       (branch (if (= idx last-idx) "└─" "├─"))
+                       (type-str (symbol->string type))
+                       (padding (make-string (max 1 (- 12 (string-length type-str))) #\space)))
+                  (printf "~a ~a/~a~a~a~a~%"
+                          branch type-str padding
+                          (pad-left (number->string count) 3)
+                          (if (string=? summary "") "" "   ")
+                          summary))
+                (loop (cdr remaining) (+ idx 1))))))))
+
+  ;;; ============================================================================
+  ;;; Phase 2: Soup Display & Query
+  ;;; ============================================================================
+
+  (define (match-pattern? name pattern)
+    "Match name against glob pattern string"
+    (cond
+     ((string? pattern)
+      ;; Simple glob: * matches anything, ? matches one char
+      (let ((pat pattern))
+        (cond
+         ((string=? pat "*") #t)
+         ((and (> (string-length pat) 0) (char=? (string-ref pat 0) #\*))
+          (string-suffix? (substring pat 1 (string-length pat)) name))
+         ((and (> (string-length pat) 0)
+               (char=? (string-ref pat (- (string-length pat) 1)) #\*))
+          (string-prefix? (substring pat 0 (- (string-length pat) 1)) name))
+         ((string-contains pat "*")
+          ;; Wildcard in middle: split and check prefix/suffix
+          (let ((idx (string-index pat #\*)))
+            (and (string-prefix? (substring pat 0 idx) name)
+                 (string-suffix? (substring pat (+ idx 1) (string-length pat)) name))))
+         (else (string=? pat name)))))
+     (else #t)))
+
+  (define (soup? . args)
+    "Show soup help and available object types"
+    (print "
+SOUP - Object Store Query Syntax
+─────────────────────────────────────────────────────────────
+
+  (soup)                     Compact tree view with summaries
+  (soup 'full)               Detailed listing of all objects
+
+  (soup 'archives)           Drill down to type
+  (soup 'releases)
+  (soup 'certs)
+  (soup 'audit)
+  (soup 'keys)
+  (soup 'metadata)
+  (soup 'forge)
+
+  (soup \"pattern\")           Glob pattern (* = any, ? = single char)
+  (soup \"genesis*\")          All objects starting with 'genesis'
+  (soup \"*.archive\")         All archive files
+
+  (soup 'type \"pattern\")     Combine type filter with pattern
+  (soup 'releases \"1.*\")     Releases matching 1.*
+
+  (complete \"gen\")           Complete partial object name
+
+Object Types:
+")
+    (for-each
+     (lambda (type-pair)
+       (printf "  ~a~a~a~%"
+               (car type-pair)
+               (make-string (max 1 (- 12 (string-length (symbol->string (car type-pair))))) #\space)
+               (cdr type-pair)))
+     *soup-types*))
+
+  (define (soup . args)
+    "List objects in the soup with optional type filter and pattern"
+    (let ((type-filter #f)
+          (pattern #f)
+          (full-view #f))
+
+      (for-each
+       (lambda (arg)
+         (cond
+          ((eq? arg 'full) (set! full-view #t))
+          ((symbol? arg) (set! type-filter arg))
+          ((string? arg) (set! pattern arg))))
+       args)
+
+      (let* ((all-objects (soup-collect-objects))
+             (filtered
+              (filter
+               (lambda (obj)
+                 (let ((obj-type (car obj))
+                       (obj-name (cadr obj)))
+                   (and (or (not type-filter) (eq? type-filter obj-type))
+                        (or (not pattern) (match-pattern? obj-name pattern)))))
+               all-objects)))
+
+        (let ((grouped (make-hash-table)))
+          (for-each
+           (lambda (obj)
+             (hash-table-set! grouped (car obj)
+                              (cons obj (hash-table-ref/default grouped (car obj) '()))))
+           filtered)
+
+          (let ((all-types (append *soup-types* '((identity . "Node identity")))))
+            (if (and (not type-filter) (not pattern) (not full-view))
+                (soup-tree-view grouped all-types)
+                (let ((width 60)
+                      (count (length filtered)))
+                  (print "")
+                  (print (repeat-string "─" width))
+                  (printf " Soup Directory  ~a object~a~%"
+                          count (if (= count 1) "" "s"))
+                  (print (repeat-string "─" width))
+
+                  (if (zero? count)
+                      (print " (empty)")
+                      (for-each
+                       (lambda (type-pair)
+                         (let* ((type (car type-pair))
+                                (objs (reverse (hash-table-ref/default grouped type '()))))
+                           (unless (null? objs)
+                             (print "")
+                             (printf " ~a/~%" type)
+                             (for-each
+                              (lambda (obj)
+                                (let ((name (cadr obj))
+                                      (size (caddr obj))
+                                      (info (cadddr obj)))
+                                  (printf "   ~a, ~a, ~a~%"
+                                          name
+                                          (format-size size)
+                                          (if (list? info) (string-intersperse info " ") info))))
+                              objs))))
+                       all-types))
+
+                  (print "")
+                  (print (repeat-string "─" width)))))))))
+
+  (define (complete prefix)
+    "Complete partial object name"
+    (let* ((all-objects (soup-collect-objects))
+           (names (map cadr all-objects))
+           (matches (filter (lambda (n) (string-prefix? prefix n)) names)))
+      (cond
+       ((null? matches) (print "No matches for: " prefix))
+       ((= 1 (length matches))
+        (print "Completion: " (car matches))
+        (car matches))
+       (else
+        (print "Matches:")
+        (for-each (lambda (m) (print "  " m)) matches)
+        (let ((common (find-common-prefix matches)))
+          (when (> (string-length common) (string-length prefix))
+            (print "Common prefix: " common))
+          common)))))
+
+  ;;; ============================================================================
+  ;;; Phase 2: Extended Introspection
+  ;;; ============================================================================
+
+  (define (soup-hash name)
+    "Compute and display hashes of an object"
+    (session-stat! 'hashes)
+    (let* ((all-objects (soup-collect-objects))
+           (obj (find (lambda (o) (equal? (cadr o) name)) all-objects)))
+      (if (not obj)
+          (print "Object not found: " name)
+          (let ((path (case (car obj)
+                        ((archives keys) name)
+                        ((releases) (format #f ".vault/releases/~a.sig" name))
+                        ((audit) (format #f ".vault/audit/~a" name))
+                        (else name))))
+            (if (file-exists? path)
+                (let ((hashes (soup-dual-hash-file path)))
+                  (print "")
+                  (printf "sha512:~a~%" (car hashes))
+                  (printf "shake256:~a~%" (cdr hashes))
+                  (printf "  ~a (~a)~%" name (format-size (caddr obj)))
+                  (print "")
+                  (car hashes))
+                (print "File not found: " path))))))
+
+  (define (soup-stat name)
+    "Detailed status of a soup object"
+    (let* ((all-objects (soup-collect-objects))
+           (obj (find (lambda (o) (equal? (cadr o) name)) all-objects))
+           (w 58))
+      (if (not obj)
+          (print "Object not found: " name)
+          (let ((type (car obj))
+                (size (caddr obj))
+                (info (cadddr obj)))
+            (print "")
+            (print (vault-box-top w))
+            (print (vault-box-line name w))
+            (print (vault-box-divider w))
+            (print (vault-box-line (format #f "Type:  ~a" type) w))
+            (print (vault-box-line (format #f "Size:  ~a" (format-size size)) w))
+
+            (case type
+              ((releases)
+               (let* ((tag-commit (get-tag-commit name))
+                      (sig-file (format #f ".vault/releases/~a.sig" name))
+                      (has-sig (file-exists? sig-file))
+                      (archive-file (find-archive-for-release name))
+                      (has-archive (and archive-file (file-exists? archive-file))))
+                 (print (vault-box-line (format #f "Tag:   ~a" (if tag-commit "yes" "no")) w))
+                 (when tag-commit
+                   (print (vault-box-line (format #f "Commit: ~a.." (substring tag-commit 0 (min 12 (string-length tag-commit)))) w)))
+                 (print (vault-box-line (format #f "Signed: ~a" (if has-sig "yes" "no")) w))
+                 (print (vault-box-line (format #f "Archived: ~a" (if has-archive "yes" "no")) w))))
+
+              ((archives)
+               (let ((hash (soup-hash-file name)))
+                 (print (vault-box-line (format #f "SHA-512: ~a.." (substring hash 0 (min 24 (string-length hash)))) w))))
+
+              ((keys)
+               (let* ((hash (soup-hash-file name))
+                      (fp (substring hash 0 (min 16 (string-length hash)))))
+                 (print (vault-box-line (format #f "Fingerprint: sha512:~a.." fp) w))
+                 (print (vault-box-line (format #f "Algorithm: ~a"
+                   (cond ((string-suffix? ".pub" name) "Ed25519 public")
+                         ((string-suffix? ".key" name) "Ed25519 private")
+                         ((string-suffix? ".age" name) "X25519 age")
+                         (else "unknown"))) w))))
+
+              ((audit)
+               (let ((entry (get-audit-entry name)))
+                 (when entry
+                   (let ((id (assq 'id entry))
+                         (action (assq 'action entry))
+                         (ts (assq 'timestamp entry)))
+                     (when id (print (vault-box-line (format #f "ID: ~a" (cadr id)) w)))
+                     (when action (print (vault-box-line (format #f "Action: ~a" (cadr action)) w)))
+                     (when ts (print (vault-box-line (format #f "Timestamp: ~a" (format-timestamp (cadr ts))) w)))))))
+              (else (values)))
+
+            (print (vault-box-bottom w))
+            (print "")))))
+
+  (define (soup-du)
+    "Disk usage summary"
+    (let ((all-objects (soup-collect-objects))
+          (by-type (make-hash-table))
+          (total 0)
+          (w 42))
+
+      (for-each
+       (lambda (obj)
+         (let ((type (car obj))
+               (size (caddr obj)))
+           (set! total (+ total size))
+           (hash-table-set! by-type type
+                            (+ size (hash-table-ref/default by-type type 0)))))
+       all-objects)
+
+      (print "")
+      (print (vault-box-top w))
+      (print (vault-box-line "Soup Disk Usage" w))
+      (print (vault-box-divider w))
+
+      (for-each
+       (lambda (type)
+         (let ((size (hash-table-ref/default by-type type 0)))
+           (when (> size 0)
+             (let ((size-str (format-size size)))
+               (print (vault-box-line
+                       (format #f "~a~a~a"
+                               size-str
+                               (make-string (max 1 (- 10 (string-length size-str))) #\space)
+                               (symbol->string type)) w))))))
+       '(archives releases keys audit metadata identity))
+
+      (print (vault-box-divider w))
+      (let ((total-str (format-size total)))
+        (print (vault-box-line
+                (format #f "~a~aTOTAL"
+                        total-str
+                        (make-string (max 1 (- 10 (string-length total-str))) #\space)) w)))
+      (print (vault-box-bottom w))
+      (print "")))
+
+  (define (soup-find . criteria)
+    "Find objects matching criteria"
+    (let ((all-objects (soup-collect-objects))
+          (type-filter #f)
+          (size-filter #f)
+          (name-filter #f)
+          (signed-filter #f))
+
+      (let loop ((args criteria))
+        (unless (null? args)
+          (case (car args)
+            ((type:) (set! type-filter (cadr args)) (loop (cddr args)))
+            ((size:) (set! size-filter (cadr args)) (loop (cddr args)))
+            ((name:) (set! name-filter (cadr args)) (loop (cddr args)))
+            ((signed:) (set! signed-filter (cadr args)) (loop (cddr args)))
+            (else (loop (cdr args))))))
+
+      (let ((results
+             (filter
+              (lambda (obj)
+                (let ((type (car obj))
+                      (name (cadr obj))
+                      (size (caddr obj))
+                      (info (cadddr obj)))
+                  (and (or (not type-filter) (eq? type type-filter))
+                       (or (not size-filter)
+                           (case (car size-filter)
+                             ((>) (> size (cadr size-filter)))
+                             ((<) (< size (cadr size-filter)))
+                             ((=) (= size (cadr size-filter)))
+                             (else #t)))
+                       (or (not name-filter) (match-pattern? name name-filter))
+                       (or (not signed-filter)
+                           (if signed-filter
+                               (not (member "unsigned" info))
+                               (member "unsigned" info))))))
+              all-objects)))
+
+        (print "")
+        (printf "Found ~a object~a:~%" (length results) (if (= 1 (length results)) "" "s"))
+        (for-each
+         (lambda (obj)
+           (printf "  ~a/~a (~a)~%" (car obj) (cadr obj) (format-size (caddr obj))))
+         results)
+        (print "")
+        results)))
+
+  (define (soup-query query . rest)
+    "Query soup using S-expression patterns"
+    (session-stat! 'queries)
+    (let ((silent (and (pair? rest) (car rest))))
+
+      (define (eval-query pattern obj)
+        (let ((type (car obj))
+              (name (cadr obj))
+              (size (caddr obj))
+              (info (cadddr obj)))
+          (cond
+           ((and (pair? pattern) (eq? (car pattern) 'type))
+            (eq? type (cadr pattern)))
+           ((and (pair? pattern) (eq? (car pattern) 'name))
+            (match-pattern? name (cadr pattern)))
+           ((and (pair? pattern) (eq? (car pattern) 'size))
+            (let ((op (cadr pattern)) (val (caddr pattern)))
+              (case op
+                ((>) (> size val)) ((<) (< size val)) ((=) (= size val))
+                ((>=) (>= size val)) ((<=) (<= size val)) (else #f))))
+           ((and (pair? pattern) (eq? (car pattern) 'signed))
+            (not (member "unsigned" info)))
+           ((and (pair? pattern) (eq? (car pattern) 'unsigned))
+            (member "unsigned" info))
+           ((and (pair? pattern) (eq? (car pattern) 'has-field))
+            (member (symbol->string (cadr pattern)) info))
+           ((and (pair? pattern) (eq? (car pattern) 'and))
+            (every (lambda (p) (eval-query p obj)) (cdr pattern)))
+           ((and (pair? pattern) (eq? (car pattern) 'or))
+            (any (lambda (p) (eval-query p obj)) (cdr pattern)))
+           ((and (pair? pattern) (eq? (car pattern) 'not))
+            (not (eval-query (cadr pattern) obj)))
+           ((symbol? pattern) (eq? type pattern))
+           ((string? pattern) (match-pattern? name pattern))
+           (else (print "Warning: unknown query pattern: " pattern) #f))))
+
+      (let* ((all-objects (soup-collect-objects))
+             (results (filter (lambda (obj) (eval-query query obj)) all-objects)))
+        (unless silent
+          (print "")
+          (printf "Query: ~s~%" query)
+          (printf "Found ~a object~a:~%" (length results) (if (= 1 (length results)) "" "s"))
+          (for-each
+           (lambda (obj)
+             (printf "  ~a/~a (~a)~%" (car obj) (cadr obj) (format-size (caddr obj))))
+           results)
+          (print ""))
+        results)))
+
+  (define (soup-inspect name)
+    "Interactive object inspector - returns a closure for subcommands"
+    (let* ((all-objects (soup-collect-objects))
+           (obj (find (lambda (o) (equal? (cadr o) name)) all-objects)))
+      (if (not obj)
+          (begin (print "Object not found: " name) #f)
+          (let* ((type (car obj))
+                 (size (caddr obj))
+                 (info (cadddr obj))
+                 (path (case type
+                         ((archives keys) name)
+                         ((releases) (or (find-archive-for-release name)
+                                        (format #f ".vault/releases/~a.sig" name)))
+                         ((audit) (format #f ".vault/audit/~a" name))
+                         ((metadata) name)
+                         (else name))))
+
+            (let ((w 61))
+              (print "")
+              (print (vault-box-top w))
+              (print (vault-box-line (format #f "Inspector: ~a" name) w))
+              (print (vault-box-line (format #f "Type: ~a   Size: ~a" type (format-size size)) w))
+              (print (vault-box-divider w))
+              (print (vault-box-line "Commands: 'help 'stat 'view 'hash 'verify 'export 'history" w))
+              (print (vault-box-bottom w))
+              (print ""))
+
+            (lambda (cmd . args)
+              (case cmd
+                ((help ?)
+                 (print "")
+                 (print "Inspector commands:")
+                 (print "  'stat     - detailed object status")
+                 (print "  'view     - view content (first 50 lines)")
+                 (print "  'hash     - compute SHA-512 hash")
+                 (print "  'verify   - verify integrity/signature")
+                 (print "  'export   - export to file")
+                 (print "  'history  - related audit entries")
+                 (print "  'path     - show filesystem path")
+                 (print "  'raw      - return raw S-expression data")
+                 (print ""))
+
+                ((stat) (soup-stat name))
+
+                ((hash)
+                 (if (file-exists? path)
+                     (let ((hash (soup-hash-file path)))
+                       (print "")
+                       (printf "sha512:~a~%" (hex-abbrev hash))
+                       (printf "       ~a~%" hash)
+                       (print "")
+                       hash)
+                     (print "No file at path: " path)))
+
+                ((view)
+                 (if (file-exists? path)
+                     (let ((is-binary (or (string-suffix? ".tar.gz" path)
+                                         (string-suffix? ".tar.zst" path)
+                                         (string-suffix? ".age" path)
+                                         (string-suffix? ".key" path)
+                                         (string-suffix? ".pub" path))))
+                       (if is-binary
+                           (print "\nBinary file - use 'raw or 'hash instead\n")
+                           (begin
+                             (print "")
+                             (print "─── Content (first 50 lines) ───")
+                             (handle-exceptions exn (print "(error reading file)")
+                               (with-input-from-file path
+                                 (lambda ()
+                                   (let loop ((n 0))
+                                     (let ((line (read-line)))
+                                       (unless (or (eof-object? line) (>= n 50))
+                                         (let ((num-str (number->string (+ n 1))))
+                                           (printf "~a│ ~a~%"
+                                                   (string-append (make-string (- 4 (string-length num-str)) #\space) num-str)
+                                                   line))
+                                         (loop (+ n 1))))))))
+                             (print "─────────────────────────────────")
+                             (print ""))))
+                     (print "No file at path: " path)))
+
+                ((verify)
+                 (case type
+                   ((releases)
+                    (print "")
+                    (print "Verifying release " name "...")
+                    (let* ((tag-commit (get-tag-commit name))
+                           (sig-file (format #f ".vault/releases/~a.sig" name))
+                           (has-sig (file-exists? sig-file))
+                           (archive (find-archive-for-release name))
+                           (has-archive (and archive (file-exists? archive))))
+                      (printf "  Git tag:     ~a~%" (if tag-commit "✓" "✗"))
+                      (printf "  Signature:   ~a~%" (if has-sig "✓" "✗"))
+                      (printf "  Archive:     ~a~%" (if has-archive "✓" "✗"))
+                      (print "")))
+                   (else (print "Verification not applicable for type: " type))))
+
+                ((export)
+                 (let ((dest (if (null? args)
+                                 (format #f "/tmp/soup-export-~a" name)
+                                 (car args))))
+                   (if (file-exists? path)
+                       (begin
+                         (system (format #f "cp ~a ~a" (shell-escape path) (shell-escape dest)))
+                         (printf "Exported to: ~a~%" dest))
+                       (print "No file to export"))))
+
+                ((history)
+                 (print "")
+                 (print "Related audit entries:")
+                 (let ((audit-dir ".vault/audit"))
+                   (when (directory-exists? audit-dir)
+                     (for-each
+                      (lambda (entry-file)
+                        (let ((entry-path (string-append audit-dir "/" entry-file)))
+                          (handle-exceptions exn #f
+                            (let ((data (with-input-from-file entry-path read)))
+                              (when (and (pair? data) (eq? 'audit-entry (car data)))
+                                (let* ((entry (cdr data))
+                                       (action (assq 'action entry)))
+                                  (when (and action
+                                             (string-contains (format #f "~a" action) name))
+                                    (printf "  ~a: ~a~%" entry-file (cadr action)))))))))
+                      (directory audit-dir))))
+                 (print ""))
+
+                ((path)
+                 (print "")
+                 (printf "Path: ~a~%" path)
+                 (printf "Exists: ~a~%" (if (file-exists? path) "yes" "no"))
+                 (print "")
+                 path)
+
+                ((raw)
+                 (if (file-exists? path)
+                     (handle-exceptions exn (begin (print "Not valid S-expression") #f)
+                       (with-input-from-file path read))
+                     (begin (print "File not found") #f)))
+
+                (else (printf "Unknown command: ~a (try 'help)~%" cmd))))))))
+
+  ;;; ============================================================================
+  ;;; Phase 2: Object Inspection
+  ;;; ============================================================================
+
+  (define (seal-inspect object . opts)
+    "Inspect security and migration properties of a Cyberspace object"
+    (let ((verify-key (get-key opts 'verify-key: #f))
+          (verbose (get-key opts 'verbose: #f)))
+      (cond
+       ((and (string? object) (file-exists? object))
+        (inspect-archive-file object verify-key verbose))
+       ((and (string? object) (tag-exists? object))
+        (inspect-release object verify-key verbose))
+       ((and (pair? object) (eq? 'signed-cert (car object)))
+        (inspect-signed-cert object verify-key verbose))
+       ((and (pair? object) (eq? 'audit-entry (car object)))
+        (inspect-audit-entry object verify-key verbose))
+       (else
+        (error 'seal-inspect "Unknown object type" object)))))
+
+  (define (inspect-archive-file path verify-key verbose)
+    (let ((width 60)
+          (manifest (with-input-from-file path read)))
+      (unless (and (pair? manifest) (eq? 'sealed-archive (car manifest)))
+        (error 'seal-inspect "Not a sealed archive" path))
+      (let* ((fields (cdr manifest))
+             (version (let ((v (assq 'version fields))) (if v (cadr v) "?")))
+             (fmt (let ((f (assq 'format fields))) (if f (cadr f) 'unknown)))
+             (hash-hex (let ((h (assq 'hash fields))) (if h (cadr h) "")))
+             (sig-hex (let ((s (assq 'signature fields))) (if s (cadr s) "")))
+             (recipients (let ((r (assq 'recipients fields))) (if r (cadr r) '()))))
+        (print-box-header (pathname-file path) "sealed-archive" width)
+        (print-section-header "Security Properties" width)
+        (print (box-line-pair "Signing Algorithm" "ed25519-sha512" width))
+        (print (box-line-pair "Content Hash"
+               (string-append "sha512:" (substring hash-hex 0 (min 16 (string-length hash-hex))) "...") width))
+        (case fmt
+          ((zstd-age)
+           (print (box-line-pair "Encryption" "age (X25519)" width))
+           (print (box-line-pair "Recipients" (format #f "~a key(s)" (length recipients)) width)))
+          ((cryptographic)
+           (print (box-line-pair "Encryption" "none (signed only)" width)))
+          (else (values)))
+        (print-section-header "Migration Properties" width)
+        (print (box-line-pair "Format" (symbol->string fmt) width))
+        (print (box-line-pair "Version" version width))
+        (print (vault-box-bottom width))
+        (print ""))))
+
+  (define (inspect-release version verify-key verbose)
+    (let* ((width 60)
+           (tag-commit (get-tag-commit version))
+           (sig-file (format #f ".vault/releases/~a.sig" version))
+           (has-sig (file-exists? sig-file)))
+      (print-box-header version "release" width)
+      (print-section-header "Security Properties" width)
+      (print (box-line-pair "Git Tag" (if tag-commit "present" "missing") width))
+      (when tag-commit
+        (print (box-line-pair "Commit" (substring tag-commit 0 (min 12 (string-length tag-commit))) width)))
+      (print (box-line-pair "Signature" (if has-sig "present" "missing") width))
+      (print (vault-box-bottom width))
+      (print "")))
+
+  (define (inspect-signed-cert object verify-key verbose)
+    (let ((width 60))
+      (print-box-header "signed-cert" "certificate" width)
+      (print-section-header "Security Properties" width)
+      (print (box-line-pair "Type" "SPKI signed certificate" width))
+      (print (vault-box-bottom width))
+      (print "")))
+
+  (define (inspect-audit-entry object verify-key verbose)
+    (let ((width 60))
+      (print-box-header "audit-entry" "audit" width)
+      (print-section-header "Security Properties" width)
+      (print (box-line-pair "Type" "Cryptographic audit entry" width))
+      (print (vault-box-bottom width))
+      (print "")))
+
+  ;;; ============================================================================
+  ;;; Phase 2: Cross-Module Reflection
+  ;;; ============================================================================
+
+  (define (seek query)
+    "Search for a hash or identifier across soup, audit, and wormhole stores"
+    (let ((soup-results '())
+          (audit-results '()))
+
+      ;; Search soup objects
+      (for-each
+       (lambda (obj)
+         (let* ((name (cadr obj))
+                (path (case (car obj)
+                        ((archives keys) name)
+                        ((releases) (format #f ".vault/releases/~a.sig" name))
+                        ((audit) (format #f ".vault/audit/~a" name))
+                        (else name)))
+                (hash (and (file-exists? path)
+                           (handle-exceptions exn #f
+                             (soup-hash-file path)))))
+           (when (or (string-contains name query)
+                     (and hash (string-prefix? query hash))
+                     (and hash (string-prefix? (string-append "sha512:" query) hash)))
+             (set! soup-results (cons `(soup ,(car obj) ,name ,hash) soup-results)))))
+       (soup-collect-objects))
+
+      ;; Search audit entries
+      (let ((dir (audit-config 'audit-dir)))
+        (when (directory-exists? dir)
+          (for-each
+           (lambda (file)
+             (when (string-suffix? ".sexp" file)
+               (handle-exceptions exn #f
+                 (let ((path (string-append dir "/" file)))
+                   (let ((data (with-input-from-file path read)))
+                     (when (and (pair? data) (pair? (cdr data)))
+                       (let* ((fields (cdr data))
+                              (id (assq 'id fields))
+                              (action (assq 'action fields)))
+                         (when (or (and id (string-contains (cadr id) query))
+                                   (and action (string-contains (format #f "~a" (cadr action)) query)))
+                           (set! audit-results
+                                 (cons `(audit ,file ,(and id (cadr id)) ,(and action (cadr action)))
+                                       audit-results))))))))))
+           (directory dir))))
+
+      `((soup . ,(reverse soup-results))
+        (audit . ,(reverse audit-results))
+        (wormhole . ()))))
+
+  (define (dashboard . args)
+    "Unified status dashboard across soup, audit, and session"
+    (let* ((show-all? (and (pair? args) (eq? (car args) 'full)))
+           (w 72)
+           (b (make-box w *box-rounded*)))
+
+      (let* ((soup-objects (soup-collect-objects))
+             (soup-by-type (make-hash-table)))
+        (for-each
+         (lambda (obj) (hash-table-set! soup-by-type (car obj)
+                                        (+ 1 (hash-table-ref/default soup-by-type (car obj) 0))))
+         soup-objects)
+
+        (let* ((stats (session-stats))
+               (non-zero (filter (lambda (s) (not (equal? (cdr s) 0))) stats))
+               (session-to-show (if show-all? stats non-zero))
+               (zeros (- (length stats) (length non-zero)))
+               (col 20)
+               (fmt-row (lambda (key val)
+                          (let* ((key-str (if (symbol? key) (symbol->string key) key))
+                                 (val-str (cond ((number? val)
+                                                 (if (> val 1000000) (format-size val)
+                                                     (number->string val)))
+                                                (else (format #f "~a" val)))))
+                            (box-print b (format #f "  ~a~a~a"
+                                                 key-str
+                                                 (make-string (max 1 (- col (string-length key-str))) #\space)
+                                                 val-str))))))
+
+          (print "")
+          (print (box-top b "Dashboard"))
+
+          ;; Session stats
+          (box-print b "Session")
+          (if (null? stats)
+              (box-print b "  (no activity)")
+              (begin
+                (for-each (lambda (stat) (fmt-row (car stat) (cdr stat))) session-to-show)
+                (when (and (not show-all?) (> zeros 0))
+                  (box-print b (format #f "  ... and ~a zeros (use 'full)" zeros)))))
+
+          (print (box-separator b))
+
+          ;; Soup summary
+          (box-print b "Soup")
+          (if (null? soup-objects)
+              (box-print b "  (empty)")
+              (for-each
+               (lambda (type)
+                 (let ((count (hash-table-ref/default soup-by-type type 0)))
+                   (when (> count 0)
+                     (fmt-row type count))))
+               '(archives releases keys audit metadata certs forge)))
+
+          (print (box-separator b))
+
+          ;; Audit summary
+          (box-print b "Audit")
+          (let ((dir (audit-config 'audit-dir)))
+            (if (and dir (directory-exists? dir))
+                (let* ((files (filter (lambda (f) (string-suffix? ".sexp" f)) (directory dir)))
+                       (count (length files)))
+                  (fmt-row "entries" count)
+                  (fmt-row "directory" dir))
+                (box-print b "  (not initialized)")))
+
+          (print (box-separator b))
+
+          ;; Keystore status
+          (box-print b "Keystore")
+          (if (keystore-exists?)
+              (fmt-row "status" (if (vault-config 'signing-key) "unlocked" "locked"))
+              (box-print b "  (not created)"))
+
+          (let ((lt (lamport-time)))
+            (when (> lt 0)
+              (box-print b (format #f "  lamport~a~a" (make-string 8 #\space) lt))))
+
+          (print (box-bottom b))
+          (print "")))))
+
+  ;;; ============================================================================
+  ;;; Phase 2: Natural Language Soup Query (Memo-038)
+  ;;; ============================================================================
+
+  (define *ollama-base* "http://localhost:11434")
+  (define *ollama-model* "llama3.2")
+
+  (define (ollama-available?)
+    (handle-exceptions exn #f
+      (let ((result (with-input-from-pipe
+                     (format #f "curl -s -o /dev/null -w '%{http_code}' ~a/api/tags 2>/dev/null"
+                             *ollama-base*)
+                     read-line)))
+        (and result (string=? result "200")))))
+
+  (define (find-json-string-end str)
+    (let loop ((i 0) (escaped #f))
+      (if (>= i (string-length str)) #f
+          (let ((c (string-ref str i)))
+            (cond
+             (escaped (loop (+ i 1) #f))
+             ((char=? c #\\) (loop (+ i 1) #t))
+             ((char=? c #\") i)
+             (else (loop (+ i 1) #f)))))))
+
+  (define (ollama-chat model system-prompt user-message)
+    (let* ((payload (format #f "{\"model\":\"~a\",\"messages\":[{\"role\":\"system\",\"content\":~s},{\"role\":\"user\",\"content\":~s}],\"stream\":false}"
+                            model system-prompt user-message))
+           (cmd (format #f "curl -s -X POST ~a/api/chat -H 'Content-Type: application/json' -d ~a 2>/dev/null"
+                        *ollama-base*
+                        (shell-escape payload)))
+           (response (with-input-from-pipe cmd read-string)))
+      (if (and response (> (string-length response) 0))
+          (let ((start (string-contains response "\"content\":\"")))
+            (if start
+                (let* ((content-start (+ start 11))
+                       (rest (substring response content-start (string-length response)))
+                       (content-end (find-json-string-end rest)))
+                  (if content-end
+                      (let ((content (substring rest 0 content-end)))
+                        (string-translate* content
+                                           '(("\\n" . "\n")
+                                             ("\\\"" . "\"")
+                                             ("\\\\" . "\\"))))
+                      response))
+                response))
+          #f)))
+
+  (define (soup-context)
+    (let* ((objects (soup-collect-objects))
+           (grouped (make-hash-table)))
+      (for-each
+       (lambda (obj)
+         (hash-table-set! grouped (car obj)
+                          (cons obj (hash-table-ref/default grouped (car obj) '()))))
+       objects)
+      (with-output-to-string
+        (lambda ()
+          (printf "Vault soup contents (~a objects):~%~%" (length objects))
+          (for-each
+           (lambda (type-pair)
+             (let* ((type (car type-pair))
+                    (objs (reverse (hash-table-ref/default grouped type '()))))
+               (unless (null? objs)
+                 (printf "~a/ (~a items):~%" type (length objs))
+                 (for-each
+                  (lambda (obj)
+                    (let ((name (cadr obj))
+                          (size (caddr obj))
+                          (info (cadddr obj)))
+                      (printf "  - ~a (~a) ~a~%"
+                              name (format-size size)
+                              (if (list? info) (string-intersperse info " ") info))))
+                  (if (> (length objs) 10)
+                      (append (take objs 5) (list '(... ... ... ("..."))) (take-right objs 3))
+                      objs))
+                 (newline))))
+           (append *soup-types* '((identity . "Node identity"))))))))
+
+  (define (ask question)
+    "Ask a natural language question about the soup"
+    (if (not (ollama-available?))
+        (begin
+          (print "")
+          (print "Local inference not available.")
+          (print "")
+          (print "  curl -fsSL https://ollama.com/install.sh | sh")
+          (print "  ollama pull " *ollama-model*))
+        (let* ((context (soup-context))
+               (system-prompt
+                (string-append
+                 "You are a helpful assistant for the Library of Cyberspace vault system. "
+                 "Answer questions about the vault contents based on the context provided. "
+                 "Be concise and direct. Use the exact names from the context. "
+                 "If asked about timestamps, convert Unix timestamps to readable dates. "
+                 "Here is the current vault state:\n\n"
+                 context))
+               (response (ollama-chat *ollama-model* system-prompt question)))
+          (if response
+              (begin (print "") (print response) (print ""))
+              (print "No response from inference server")))))
 
 ) ;; end library
