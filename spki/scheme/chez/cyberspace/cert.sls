@@ -511,14 +511,13 @@
      (else #f)))
 
   (define (verify-chain root-key certs target-tag)
-    "Verify a delegation chain.
-     Verifies that:
-     1. Each cert is signed by its issuer
-     2. Each cert's issuer matches previous cert's subject
-     3. Tags are properly delegated (each tag implies the next)
-     4. Final cert grants target_tag
-     5. All certs allow propagation (except possibly the last)"
-
+    ;; Verify a delegation chain.
+    ;; Verifies that:
+    ;; 1. Each cert is signed by its issuer
+    ;; 2. Each cert's issuer matches previous cert's subject
+    ;; 3. Tags are properly delegated (each tag implies the next)
+    ;; 4. Final cert grants target_tag
+    ;; 5. All certs allow propagation (except possibly the last)
     (define (verify-links current-principal remaining-certs current-tag)
       (if (null? remaining-certs)
           ;; End of chain: check if current tag implies target

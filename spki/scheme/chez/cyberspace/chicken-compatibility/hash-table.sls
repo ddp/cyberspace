@@ -20,7 +20,10 @@
     hash-table-delete!
     hash-table-exists?)
 
-  (import (rnrs)
+  (import (except (rnrs)
+                  make-hashtable hashtable-set! hashtable-ref
+                  hashtable-delete! hashtable-contains? hashtable-keys
+                  equal-hash)
           (only (chezscheme)
                 make-hashtable hashtable-set! hashtable-ref
                 hashtable-delete! hashtable-contains? hashtable-keys

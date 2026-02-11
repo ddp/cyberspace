@@ -26,10 +26,10 @@
     hash-combine
     sorted-hash-tree)
 
-  (import (rnrs)
+  (import (except (rnrs) make-hashtable equal-hash)
           (only (chezscheme) sort make-hashtable equal-hash)
           (cyberspace crypto-ffi)
-          (cyberspace chicken-compatibility blob)
+          (except (cyberspace chicken-compatibility blob) blob=?)
           (cyberspace chicken-compatibility chicken))
 
   ;; ============================================================

@@ -55,7 +55,8 @@
     shell-success?
 
     ;; Session statistics (primitives for cross-module instrumentation)
-    *session-stats*
+    ;; *session-stats* not exported: R6RS forbids exporting set! variables
+    ;; Use session-stat!, session-stat, session-stats, session-stats-reset! instead
     session-stat!
     session-stat
     session-stats        ; return all stats as alist
@@ -83,7 +84,7 @@
 
   (import (rnrs)
           (only (chezscheme)
-                sort format getenv file-exists?
+                sort format getenv
                 inexact->exact)
           (cyberspace chicken-compatibility chicken)
           (cyberspace chicken-compatibility hash-table)

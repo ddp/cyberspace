@@ -34,11 +34,10 @@
     display-chain
     display-capability)
 
-  (import (rnrs)
+  (import (except (rnrs) find)
           (only (chezscheme)
                 printf format
-                file-exists?
-                with-input-from-file with-output-to-string)
+                with-output-to-string)
           (cyberspace crypto-ffi)
           (cyberspace cert)
           (cyberspace sexp)
@@ -119,7 +118,7 @@
          (let loop ((s (substring hex 0 32)) (acc '()))
            (if (< (string-length s) 4)
                (reverse (if (string-null? s) acc (cons s acc)))
-               (loop (substring s 4) (cons (substring s 0 4) acc))))
+               (loop (substring s 4 (string-length s)) (cons (substring s 0 4) acc))))
          ":")))
      ((keyhash-principal? principal)
       (let* ((hash (principal-hash principal))

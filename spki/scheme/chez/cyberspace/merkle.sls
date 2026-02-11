@@ -50,7 +50,13 @@
 
   (import (rnrs)
           (only (chezscheme) format)
-          (cyberspace crypto-ffi)
+          (except (cyberspace crypto-ffi)
+                  merkle-root merkle-chunk-size merkle-fanout
+                  merkle-hash-leaf merkle-hash-node
+                  merkle-prove merkle-verify-proof
+                  merkle-proof? merkle-proof-chunk-index
+                  merkle-proof-chunk-hash merkle-proof-path
+                  dual-hash)
           (cyberspace chicken-compatibility blob)
           (cyberspace chicken-compatibility chicken))
 

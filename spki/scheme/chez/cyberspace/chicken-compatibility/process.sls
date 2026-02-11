@@ -19,8 +19,7 @@
   (import (rnrs)
           (only (chezscheme)
                 open-process-ports current-transcoder
-                parameterize current-input-port
-                system get-line close-port))
+                parameterize system))
 
   ;; Chicken's read-line: reads from current-input-port, no args
   ;; Chez's get-line requires a port argument

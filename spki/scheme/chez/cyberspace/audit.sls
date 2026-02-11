@@ -58,13 +58,11 @@
   (import (rnrs)
           (only (chezscheme)
                 printf format
-                with-output-to-string with-output-to-file with-input-from-file
-                file-exists? file-directory? directory-list mkdir
+                with-output-to-string
+                file-directory? directory-list mkdir
                 getenv sort
                 current-time time-second
-                date-and-time
-                make-hashtable hashtable-set! hashtable-ref hashtable-keys
-                equal-hash)
+                date-and-time)
           (cyberspace crypto-ffi)
           (cyberspace pq-crypto)
           (cyberspace chicken-compatibility blob)

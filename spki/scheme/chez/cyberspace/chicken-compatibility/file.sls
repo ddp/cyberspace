@@ -35,14 +35,13 @@
 
   (import (rnrs)
           (only (chezscheme)
-                file-exists? file-directory?
+                file-directory?
                 directory-list mkdir
                 with-output-to-string
-                with-output-to-file with-input-from-file
                 getenv
                 current-time time-second time-nanosecond
                 date-and-time
-                sort parameterize current-input-port current-output-port))
+                sort parameterize))
 
   ;; Chicken's directory-exists? -> Chez's file-directory?
   (define (directory-exists? path)

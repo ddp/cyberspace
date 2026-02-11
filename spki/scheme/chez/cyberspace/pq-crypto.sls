@@ -62,60 +62,69 @@
                         "../libpq-bridge.so"
                         "libpq-bridge.so")))
       (if (null? paths)
-          (error 'cyberspace-pq-crypto
-                 "Cannot find libpq-bridge -- run build-pq-bridge.sh")
+          #f  ;; Graceful degradation: PQ crypto unavailable without native bridge
           (guard (exn [#t (loop (cdr paths))])
             (load-shared-object (car paths))
             #t))))
 
   ;; ============================================================
   ;; Foreign Procedure Declarations
+  ;; Deferred: only resolved when *pq-bridge-loaded* is #t
   ;; ============================================================
 
+  (define-syntax define-pq-foreign
+    (syntax-rules ()
+      [(_ name expr)
+       (define name
+         (if *pq-bridge-loaded*
+             expr
+             (lambda args
+               (error 'pq-crypto "PQ bridge not loaded -- run build-pq-bridge.sh"))))]))
+
   ;; Initialization
-  (define %pq-init
+  (define-pq-foreign %pq-init
     (foreign-procedure "pq_init" () int))
 
   ;; Size accessors
-  (define %sphincs-pk-bytes
+  (define-pq-foreign %sphincs-pk-bytes
     (foreign-procedure "sphincs_pk_bytes" () unsigned-64))
 
-  (define %sphincs-sk-bytes
+  (define-pq-foreign %sphincs-sk-bytes
     (foreign-procedure "sphincs_sk_bytes" () unsigned-64))
 
-  (define %sphincs-sig-bytes
+  (define-pq-foreign %sphincs-sig-bytes
     (foreign-procedure "sphincs_sig_bytes" () unsigned-64))
 
-  (define %mldsa-pk-bytes
+  (define-pq-foreign %mldsa-pk-bytes
     (foreign-procedure "mldsa_pk_bytes" () unsigned-64))
 
-  (define %mldsa-sk-bytes
+  (define-pq-foreign %mldsa-sk-bytes
     (foreign-procedure "mldsa_sk_bytes" () unsigned-64))
 
-  (define %mldsa-sig-bytes
+  (define-pq-foreign %mldsa-sig-bytes
     (foreign-procedure "mldsa_sig_bytes" () unsigned-64))
 
   ;; SPHINCS+ operations
-  (define %sphincs-keypair
+  (define-pq-foreign %sphincs-keypair
     (foreign-procedure "sphincs_keypair" (u8* u8*) int))
 
-  (define %sphincs-sign
+  (define-pq-foreign %sphincs-sign
     (foreign-procedure "sphincs_sign"
       (u8* u8* u8* unsigned-64 u8*) int))
 
-  (define %sphincs-verify
+  (define-pq-foreign %sphincs-verify
     (foreign-procedure "sphincs_verify"
       (u8* unsigned-64 u8* unsigned-64 u8*) int))
 
   ;; ML-DSA operations
-  (define %mldsa-keypair
+  (define-pq-foreign %mldsa-keypair
     (foreign-procedure "mldsa_keypair" (u8* u8*) int))
 
-  (define %mldsa-sign
+  (define-pq-foreign %mldsa-sign
     (foreign-procedure "mldsa_sign"
       (u8* u8* u8* unsigned-64 u8*) int))
 
-  (define %mldsa-verify
+  (define-pq-foreign %mldsa-verify
     (foreign-procedure "mldsa_verify"
       (u8* unsigned-64 u8* unsigned-64 u8*) int))
 

@@ -41,13 +41,12 @@
     keyring-path
     key-path)
 
-  (import (rnrs)
+  (import (except (rnrs) find)
           (only (chezscheme)
                 printf format
-                file-exists? file-directory?
+                file-directory?
                 directory-list mkdir
-                with-output-to-file with-input-from-file
-                delete-file rename-file
+                rename-file
                 sort
                 current-time time-second)
           (cyberspace crypto-ffi)
@@ -171,7 +170,7 @@
        (let loop ((s (substring hex 0 32)) (acc '()))
          (if (< (string-length s) 4)
              (reverse (if (string-null? s) acc (cons s acc)))
-             (loop (substring s 4) (cons (substring s 0 4) acc))))
+             (loop (substring s 4 (string-length s)) (cons (substring s 0 4) acc))))
        ":")))
 
   ;; ============================================================

@@ -624,7 +624,8 @@
       (u8vector-set! gf256-exp i (u8vector-ref gf256-exp (- i 255)))))
 
   ;; Initialize tables on module load
-  (init-gf256-tables!)
+  ;; Wrapped in define to satisfy R6RS body ordering (definitions before expressions)
+  (define initialize-gf256-tables (begin (init-gf256-tables!) #t))
 
   (define (gf256-add a b)
     (bitwise-xor a b))
