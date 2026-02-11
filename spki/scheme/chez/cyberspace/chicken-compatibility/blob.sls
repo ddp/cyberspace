@@ -58,15 +58,31 @@
   ;; ============================================================
   ;; Blob <-> String
   ;;
-  ;; string->blob: UTF-8 encode
-  ;; blob->string: UTF-8 decode
+  ;; string->blob: UTF-8 encode (for text)
+  ;; blob->string: Latin-1 decode (byte-for-byte, for binary data
+  ;;               passed to base64 encoding)
   ;; ============================================================
 
   (define (string->blob s)
-    (string->utf8 s))
+    "Convert string to bytevector (Latin-1, byte-for-byte).
+     For text input (ASCII subset), equivalent to string->utf8."
+    (let* ((len (string-length s))
+           (bv (make-bytevector len)))
+      (let loop ((i 0))
+        (if (= i len) bv
+            (begin
+              (bytevector-u8-set! bv i (char->integer (string-ref s i)))
+              (loop (+ i 1)))))))
 
   (define (blob->string b)
-    (utf8->string b))
+    "Convert bytevector to Latin-1 string (byte-for-byte).
+     Required for base64 encoding of binary data (keys, signatures)."
+    (let* ((len (bytevector-length b))
+           (chars (let loop ((i 0) (acc '()))
+                    (if (= i len) (reverse acc)
+                        (loop (+ i 1)
+                              (cons (integer->char (bytevector-u8-ref b i)) acc))))))
+      (list->string chars)))
 
   ;; ============================================================
   ;; U8Vector Operations (SRFI-4 compatible names)

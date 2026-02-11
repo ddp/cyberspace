@@ -155,6 +155,10 @@
     complete
     seal-inspect
 
+    ;; Integrity & migration
+    seal-migrate
+    seal-check
+
     ;; Phase 2: Cross-module reflection
     seek
     dashboard
@@ -170,7 +174,7 @@
                 current-time time-second time-nanosecond
                 system port-length
                 file-length file-modification-time
-                inexact->exact)
+                inexact->exact load)
           (cyberspace crypto-ffi)
           (cyberspace audit)
           (only (cyberspace os)
@@ -3784,5 +3788,62 @@ Object Types:
           (if response
               (begin (print "") (print response) (print ""))
               (print "No response from inference server")))))
+
+  ;;; ============================================================================
+  ;;; Integrity Checking & Migration
+  ;;; ============================================================================
+
+  (define (get-sealed-releases)
+    "Get list of releases with seals"
+    (if (directory-exists? ".vault/releases")
+        (let ((files (directory-list ".vault/releases")))
+          (filter-map
+           (lambda (f)
+             (and (string-suffix? ".sig" f)
+                  (let ((name (pathname-strip-extension f)))
+                    name)))
+           files))
+        '()))
+
+  (define (seal-migrate from-version to-version . opts)
+    "Migrate between sealed versions"
+    (let ((script (get-key opts 'script: #f))
+          (dry-run (get-key opts 'dry-run: #f)))
+      (let ((migration-script
+             (or script
+                 (format #f "~a/~a-to-~a.scm"
+                         (vault-config 'migration-dir)
+                         from-version
+                         to-version))))
+        (unless (file-exists? migration-script)
+          (error 'seal-migrate "Migration script not found" migration-script))
+        (print "Migrating: " from-version " -> " to-version)
+        (if dry-run
+            (begin
+              (print "Dry Run - would execute: " migration-script)
+              (print "Migration script:")
+              (run-command "cat" migration-script))
+            (begin
+              (load migration-script)
+              (print "Migration complete"))))))
+
+  (define (seal-check . opts)
+    "Check vault integrity"
+    (let ((deep (get-key opts 'deep: #f)))
+      (print "Checking vault integrity...")
+      (print "Repository status:")
+      (run-command "git" "fsck" "--quick")
+      (when deep
+        (print "")
+        (print "Verifying sealed releases:")
+        (let ((releases (get-sealed-releases)))
+          (for-each
+           (lambda (version)
+             (guard (exn [#t (print "  ✗ " version " - "
+                                    (condition-message exn))])
+               (if (seal-verify version)
+                   (print "  ✓ " version)
+                   (print "  ✗ " version " - signature invalid"))))
+           releases)))))
 
 ) ;; end library

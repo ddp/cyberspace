@@ -1,0 +1,222 @@
+#!/usr/bin/env chez --libdirs . --script
+;;; seal - Cryptographically sealed version control CLI
+;;; Chez Scheme Port
+;;;
+;;; Usage:
+;;;   seal commit <message> [files...]   - Seal changes into vault
+;;;   seal update                        - Update vault from origin
+;;;   seal undo [--hard] [file]          - Undo changes
+;;;   seal history [--count N]           - Show vault history
+;;;   seal branch <name> [--from ref]    - Create sealed branch
+;;;   seal merge <from>                  - Merge sealed changes
+;;;
+;;;   seal release <version> [--message M] [--migrate-from V]
+;;;                                      - Create sealed release
+;;;   seal verify <version>              - Verify release seal
+;;;   seal archive <version> [--format F] - Create sealed archive
+;;;   seal restore <archive>             - Restore from archive
+;;;   seal migrate <from> <to> [--script S] [--dry-run]
+;;;                                      - Migrate between versions
+;;;   seal check [--deep]                - Check vault integrity
+;;;
+;;;   seal init [--signing-key KEY]      - Initialize vault
+
+(import (rnrs)
+        (only (chezscheme) command-line format)
+        (cyberspace chicken-compatibility chicken)
+        (cyberspace vault))
+
+;;; ============================================================
+;;; Argument Parsing
+;;; ============================================================
+
+(define (string-prefix? prefix str)
+  (let ((plen (string-length prefix)))
+    (and (>= (string-length str) plen)
+         (string=? prefix (substring str 0 plen)))))
+
+(define (usage)
+  (print "seal - Cryptographically sealed version control")
+  (print "")
+  (print "Usage:")
+  (print "  seal commit <message> [files...]      Seal changes into vault
+           [--catalog]                   Add discovery metadata
+           [--subjects S1,S2,...]         Subject headings
+           [--keywords K1,K2,...]         Search keywords
+           [--description TEXT]           Extended description
+           [--preserve]                   Full preservation metadata")
+  (print "  seal update                           Update vault from origin")
+  (print "  seal undo [--hard] [file]             Undo changes")
+  (print "  seal history [--count N]              Show vault history")
+  (print "  seal branch <name> [--from ref]       Create sealed branch")
+  (print "  seal merge <from>                     Merge sealed changes")
+  (print "")
+  (print "  seal release <version> [--message M]  Create sealed release")
+  (print "           [--migrate-from V]")
+  (print "  seal verify <version>                 Verify release seal")
+  (print "  seal archive <version> [--format F]   Create sealed archive")
+  (print "  seal restore <archive>                Restore from archive")
+  (print "  seal migrate <from> <to> [--script S] Migrate between versions")
+  (print "           [--dry-run]")
+  (print "  seal check [--deep]                   Check vault integrity")
+  (print "")
+  (print "  seal init [--signing-key KEY]         Initialize vault")
+  (print "")
+  (print "The seal metaphor connects:")
+  (print "  - Cryptographic sealing (SPKI signatures)")
+  (print "  - Library seals (official marks)")
+  (print "  - Vault seals (securing archives)")
+  (exit 1))
+
+(define (parse-args args)
+  "Parse command line arguments into (command . options)"
+  (if (null? args)
+      (usage)
+      (let ((command (car args))
+            (rest (cdr args)))
+        (cons command (parse-options rest)))))
+
+(define (parse-options args)
+  "Parse options and positional arguments"
+  (let loop ((args args)
+             (options '())
+             (positional '()))
+    (if (null? args)
+        (cons (reverse options) (reverse positional))
+        (let ((arg (car args)))
+          (if (string-prefix? "--" arg)
+              ;; Option flag
+              (let ((key (string->symbol (substring arg 2 (string-length arg)))))
+                (if (and (not (null? (cdr args)))
+                         (not (string-prefix? "--" (cadr args))))
+                    ;; Has value
+                    (loop (cddr args)
+                          (cons (cons key (cadr args)) options)
+                          positional)
+                    ;; Boolean flag
+                    (loop (cdr args)
+                          (cons (cons key #t) options)
+                          positional)))
+              ;; Positional argument
+              (loop (cdr args)
+                    options
+                    (cons arg positional)))))))
+
+(define (get-option options key . rest)
+  "Get option value by key"
+  (let ((default (if (null? rest) #f (car rest)))
+        (pair (assq key options)))
+    (if pair (cdr pair) default)))
+
+;;; ============================================================
+;;; Command Handlers
+;;; ============================================================
+
+(define (cmd-commit positional options)
+  (when (null? positional)
+    (print "Error: commit message required") (exit 1))
+  (seal-commit (car positional)
+               files: (if (null? (cdr positional)) #f (cdr positional))
+               catalog: (get-option options 'catalog)
+               subjects: (let ((s (get-option options 'subjects)))
+                           (and s (string-split s ",")))
+               keywords: (let ((k (get-option options 'keywords)))
+                           (and k (string-split k ",")))
+               description: (get-option options 'description)
+               preserve: (get-option options 'preserve)))
+
+(define (cmd-update positional options)
+  (seal-update))
+
+(define (cmd-undo positional options)
+  (seal-undo file: (and (pair? positional) (car positional))
+             hard: (get-option options 'hard)))
+
+(define (cmd-history positional options)
+  (let ((c (get-option options 'count)))
+    (seal-history count: (and c (string->number c)))))
+
+(define (cmd-branch positional options)
+  (when (null? positional)
+    (print "Error: branch name required") (exit 1))
+  (seal-branch (car positional) from: (get-option options 'from)))
+
+(define (cmd-merge positional options)
+  (when (null? positional)
+    (print "Error: source branch required") (exit 1))
+  (seal-merge (car positional) strategy: (get-option options 'strategy)))
+
+(define (cmd-release positional options)
+  (when (null? positional)
+    (print "Error: version required") (exit 1))
+  (seal-release (car positional)
+                message: (get-option options 'message)
+                migrate-from: (get-option options 'migrate-from)))
+
+(define (cmd-verify positional options)
+  (when (null? positional)
+    (print "Error: version required") (exit 1))
+  (seal-verify (car positional) verify-key: (get-option options 'verify-key)))
+
+(define (cmd-archive positional options)
+  (when (null? positional)
+    (print "Error: version required") (exit 1))
+  (let ((fmt (get-option options 'format)))
+    (seal-archive (car positional)
+                  format: (and fmt (string->symbol fmt))
+                  output: (get-option options 'output))))
+
+(define (cmd-restore positional options)
+  (when (null? positional)
+    (print "Error: archive file required") (exit 1))
+  (seal-restore (car positional)
+                verify-key: (get-option options 'verify-key)
+                target: (get-option options 'target)))
+
+(define (cmd-migrate positional options)
+  (when (< (length positional) 2)
+    (print "Error: from and to versions required") (exit 1))
+  (seal-migrate (car positional) (cadr positional)
+                script: (get-option options 'script)
+                dry-run: (get-option options 'dry-run)))
+
+(define (cmd-check positional options)
+  (seal-check deep: (get-option options 'deep)))
+
+(define (cmd-init positional options)
+  (vault-init signing-key: (get-option options 'signing-key)))
+
+;; Command dispatch table
+(define *seal-commands*
+  `((commit   . ,cmd-commit)
+    (update   . ,cmd-update)
+    (undo     . ,cmd-undo)
+    (history  . ,cmd-history)
+    (branch   . ,cmd-branch)
+    (merge    . ,cmd-merge)
+    (release  . ,cmd-release)
+    (verify   . ,cmd-verify)
+    (archive  . ,cmd-archive)
+    (restore  . ,cmd-restore)
+    (migrate  . ,cmd-migrate)
+    (check    . ,cmd-check)
+    (init     . ,cmd-init)))
+
+;;; ============================================================
+;;; Main
+;;; ============================================================
+
+(define (main args)
+  (when (null? args) (usage))
+  (let* ((parsed (parse-args args))
+         (command (string->symbol (car parsed)))
+         (options (cadr parsed))
+         (positional (cddr parsed))
+         (handler (assq command *seal-commands*)))
+    (if handler
+        ((cdr handler) positional options)
+        (begin (print "Error: unknown command: " (car parsed))
+               (usage)))))
+
+;; Run main (skip program name from command-line)
+(main (cdr (command-line)))

@@ -21,6 +21,9 @@
     principal-fingerprint
     inspect-cert
     cert-status
+    iso8601->seconds
+    validity-expired?
+    cert-revoked?
     who-can
     what-can
     authority-for
@@ -37,7 +40,8 @@
   (import (except (rnrs) find)
           (only (chezscheme)
                 printf format
-                with-output-to-string)
+                with-output-to-string
+                time-second current-time)
           (cyberspace crypto-ffi)
           (cyberspace cert)
           (cyberspace sexp)
@@ -83,7 +87,55 @@
           ((string=? (substring haystack i (+ i nlen)) needle) i)
           (else (loop (+ i 1)))))))
 
+  (define (current-seconds) (time-second (current-time)))
+
   (define (string-null? s) (= 0 (string-length s)))
+
+  ;; ============================================================
+  ;; ISO 8601 / Validity
+  ;; ============================================================
+
+  (define (iso8601->seconds datestr)
+    "Parse ISO 8601 date (YYYY-MM-DDThh:mm:ssZ) to approximate Unix epoch seconds."
+    (let* ((year  (string->number (substring datestr 0 4)))
+           (month (string->number (substring datestr 5 7)))
+           (day   (string->number (substring datestr 8 10)))
+           (hour  (string->number (substring datestr 11 13)))
+           (min   (string->number (substring datestr 14 16)))
+           (sec   (string->number (substring datestr 17 19)))
+           ;; Days per month (non-leap approximation, leap years handled below)
+           (mdays '#(0 31 28 31 30 31 30 31 31 30 31 30 31))
+           ;; Years since epoch
+           (y (- year 1970))
+           ;; Leap years between 1970 and year
+           (leap-years (- (div (- year 1) 4) (div 1969 4)
+                          (- (div (- year 1) 100) (div 1969 100))
+                          (- (- (div (- year 1) 400) (div 1969 400))))))
+      (let* ((days-from-years (+ (* y 365) leap-years))
+             ;; Days from months in current year
+             (is-leap (and (= 0 (mod year 4))
+                           (or (not (= 0 (mod year 100)))
+                               (= 0 (mod year 400)))))
+             (days-from-months
+              (let loop ((m 1) (d 0))
+                (if (>= m month) d
+                    (loop (+ m 1)
+                          (+ d (vector-ref mdays m)
+                             (if (and (= m 2) is-leap) 1 0))))))
+             (total-days (+ days-from-years days-from-months (- day 1))))
+        (+ (* total-days 86400) (* hour 3600) (* min 60) sec))))
+
+  (define (validity-expired? validity)
+    "Check if validity period has expired."
+    (and validity
+         (let ((not-after (validity-not-after validity)))
+           (and not-after
+                (cond
+                 ((number? not-after)
+                  (> (current-seconds) not-after))
+                 ((and (string? not-after) (>= (string-length not-after) 19))
+                  (> (current-seconds) (iso8601->seconds not-after)))
+                 (else #f))))))
 
   (define (string-join lst sep)
     (if (null? lst) ""
@@ -271,6 +323,7 @@
         (cond
          ((not sig-valid) 'invalid-signature)
          ((cert-revoked? cert-fp revocations) 'revoked)
+         ((validity-expired? (cert-validity c)) 'expired)
          (else 'valid)))))
 
   (define (cert-revoked? cert-fingerprint revocations)
