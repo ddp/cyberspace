@@ -87,6 +87,12 @@ Chez: `(sort predicate list)`
 - `ui.sls` - User interface primitives.
 - `wormhole.sls` - Peer-to-peer tunneling.
 
+### CLI Tools (4 scripts)
+- `spki-keygen.sps` - Generate Ed25519 keypair, save to files.
+- `spki-cert.sps` - Create and sign SPKI authorization certificate.
+- `spki-show.sps` - Display certificate or key in human-readable format.
+- `spki-verify.sps` - Verify SPKI certificate delegation chain.
+
 ### Compatibility Shims (6 modules)
 - `chicken-compatibility/chicken.sls` - print, conc, alist-ref, handle-exceptions, get-opt, get-key
 - `chicken-compatibility/blob.sls` - blob->string, string->blob, blob-size, blob=?, move-memory!
@@ -194,9 +200,6 @@ Application modules (not library code):
 - `server.scm` - Server mode
 - `seal.scm` - Seal operations CLI
 
-CLI tools:
-- `spki-cert.scm`, `spki-keygen.scm`, `spki-show.scm`, `spki-verify.scm`
-
 Development utilities (low priority):
 - `deploy.scm`, `refresh-library.scm`, `refresh-repl.scm`
 - `sanity.scm`, `scrutinize.scm`, `scrutinizer.scm`
@@ -205,8 +208,9 @@ Development utilities (low priority):
 ## Stats
 
 - 45 library modules (21,383 lines)
+- 4 CLI tools (spki-keygen, spki-cert, spki-show, spki-verify)
 - 6 compatibility shims
 - 8 C/ObjC bridge source files
 - 17 test files (12 test suites pass)
-- 42 of 58 Chicken modules ported (72%)
+- 46 of 58 Chicken modules ported (79%)
 - All library-layer dependencies complete; only application shell remains
