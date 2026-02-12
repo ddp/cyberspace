@@ -1,6 +1,6 @@
 # Chez Scheme Port
 
-Proof-of-concept port of Cyberspace Scheme to Chez Scheme for true SMP threading.
+Port of Cyberspace Scheme to Chez Scheme for true SMP threading.
 
 ## Why Chez?
 
@@ -40,7 +40,7 @@ Chez: `(sort predicate list)`
 
 ## Files Ported
 
-### Core Libraries (28 modules)
+### Core Libraries (45 modules)
 - `sexp.sls` - S-expression parser/printer. Foundation for all SPKI data.
 - `crypto-ffi.sls` - libsodium FFI (Ed25519, SHA-512, BLAKE2b, X25519, SHAKE256, Shamir, Merkle). Uses Chez `foreign-procedure`.
 - `cert.sls` - SPKI certificate types, signing, verification, chain delegation. PQ/hybrid support.
@@ -69,8 +69,25 @@ Chez: `(sort predicate list)`
 - `portal.sls` - Session lifecycle: statistics, formatting, goodbye ceremony.
 - `rope.sls` - Rope data structure: O(log n) insert/delete on large texts.
 - `test.sls` - Test framework (assert-true, assert-equal, test-case).
+- `auto-enroll.sls` - Auto-enrollment with OS threads (green threads → SMP). Depends on enroll, mdns, gossip.
+- `display.sls` - Display/rendering utilities.
+- `edt.sls` - EDT editor.
+- `forge.sls` - Object forge (creation, transformation).
+- `fuse-ffi.sls` - FUSE filesystem FFI bridge.
+- `http.sls` - HTTP client/server operations.
+- `info.sls` - System and realm information display.
+- `inspector.sls` - Object inspector.
+- `mdns.sls` - Bonjour/DNS-SD multicast DNS (dns_sd FFI).
+- `metadata-ffi.sls` - File metadata FFI (extended attributes, Spotlight).
+- `osc.sls` - Open Sound Control protocol.
+- `rnbo.sls` - RNBO (Max/MSP) integration.
+- `smelter.sls` - Object smelter (decomposition, analysis).
+- `text.sls` - Text objects (gap buffer, operations, rendering).
+- `tty-ffi.sls` - Terminal FFI (raw mode, size, cursor).
+- `ui.sls` - User interface primitives.
+- `wormhole.sls` - Peer-to-peer tunneling.
 
-### Compatibility Shims
+### Compatibility Shims (6 modules)
 - `chicken-compatibility/chicken.sls` - print, conc, alist-ref, handle-exceptions, get-opt, get-key
 - `chicken-compatibility/blob.sls` - blob->string, string->blob, blob-size, blob=?, move-memory!
 - `chicken-compatibility/base64.sls` - RFC 4648 base64 encode/decode (bytevector I/O)
@@ -78,7 +95,17 @@ Chez: `(sort predicate list)`
 - `chicken-compatibility/process.sls` - process/shell execution
 - `chicken-compatibility/file.sls` - File operations
 
-### Test Suite
+### C/ObjC Bridges (8 files)
+- `crypto-bridge.c` - libsodium FFI (Ed25519, SHA-512, BLAKE2b, X25519, Shamir)
+- `tcp-bridge.c` - TCP socket operations
+- `tty-bridge.c` - Terminal raw mode, window size, cursor control
+- `metadata-bridge.c` - File metadata, extended attributes, Spotlight queries
+- `osc-bridge.c` - Open Sound Control UDP send/receive
+- `fuse-bridge.c` - FUSE filesystem operations (mount, read, write, readdir)
+- `pq-bridge.c` - Post-quantum crypto (ML-DSA, SPHINCS+ stubs)
+- `objc-bridge.m` - Objective-C FFI (NSUserDefaults, notifications, system info)
+
+### Test Suite (17 files)
 - `tests/test-sexp.sps` - S-expression round-trip (12 tests)
 - `tests/test-crypto.sps` - Ed25519 sign/verify, SHA-256, tampering detection
 - `tests/test-cert.sps` - Certificate creation, round-trip, signing, tag implication (14 tests)
@@ -93,6 +120,9 @@ Chez: `(sort predicate list)`
 - `tests/test-piece-table.sps` - Piece table: CRUD, undo/redo, collaboration (40 tests)
 - `test-capability.ss` - Capability scoring (legacy)
 - `test-keyring.ss` - Key management (27 tests)
+- `test-compat-sexp.ss` - Compatibility S-expression tests
+- `test-objc.ss` - Objective-C bridge tests
+- `test-security.ss` - Security tests
 
 ## Testing
 
@@ -145,20 +175,38 @@ Chicken's `assq` tolerates non-pair elements; Chez R6RS signals an error.
 For tagged structures like `(spki-cert (issuer ...) ...)`, use `(cdr body)`
 to skip the tag symbol before calling `assq`.
 
-## Future Work
-
-Modules requiring FFI translation:
-- `mdns.scm` - Bonjour/DNS-SD (dns_sd FFI)
-
-Threading modules needing architecture changes:
-- `auto-enroll.scm` - Green threads → OS threads (depends on enroll, mdns, gossip)
-
 ### Signal Handling
 Chez lacks `set-signal-handler!` for arbitrary signals. Only
 `keyboard-interrupt-handler` (SIGINT) is available as a parameter.
 Modules needing SIGTERM/SIGHUP handlers (portal) use no-ops; wrap via
 C FFI if full signal support is needed.
 
-Application modules (lower priority):
-- `wormhole.scm` - Peer-to-peer tunneling
+### Eval
+`(rnrs)` in Chez does not export `eval`. Import it from `(chezscheme)`:
+`(import (rnrs) (only (chezscheme) eval))`. No `except` clause needed
+since there is no overlap.
+
+## Remaining Work
+
+Application modules (not library code):
 - `repl.scm` - The main REPL (4800+ lines, last to port)
+- `cyberspace.scm` - Top-level application entry point
+- `server.scm` - Server mode
+- `seal.scm` - Seal operations CLI
+
+CLI tools:
+- `spki-cert.scm`, `spki-keygen.scm`, `spki-show.scm`, `spki-verify.scm`
+
+Development utilities (low priority):
+- `deploy.scm`, `refresh-library.scm`, `refresh-repl.scm`
+- `sanity.scm`, `scrutinize.scm`, `scrutinizer.scm`
+- `demo-cyberspace.scm`, `mpe.scm`
+
+## Stats
+
+- 45 library modules (21,383 lines)
+- 6 compatibility shims
+- 8 C/ObjC bridge source files
+- 17 test files (12 test suites pass)
+- 42 of 58 Chicken modules ported (72%)
+- All library-layer dependencies complete; only application shell remains

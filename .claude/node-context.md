@@ -1,6 +1,6 @@
 # Node Context
 
-Last updated: 2026-01-28 08:30 PST by Claude on fluffy
+Last updated: 2026-02-12 by Claude on fluffy
 
 ## Session History
 
@@ -30,16 +30,44 @@ Last updated: 2026-01-28 08:30 PST by Claude on fluffy
 - Renamed memo-0060 from collaborative-design to dissertation-notes (user's, don't touch)
 - Created this node-context.md for cross-node continuity
 
+### 2026-02 Chez Scheme Port (fluffy + starlight)
+- Library hardening: replaced placeholders (AEAD, validity-expired?, HTTP publication),
+  added epidemic gossip multi-peer broadcast, query cursors (Memo-027 Phase 1),
+  tests for auto-enroll, capability, security
+- **Chez port completed across both nodes:**
+  - fluffy: sexp, crypto-ffi, bloom, cert, pq-crypto, wordlist, script, merkle,
+    security, catalog, keyring, audit, vault (2 phases), gossip, seal CLI,
+    query, display, http, enroll, forum, lazy-chunks, piece-table, portal, rope,
+    os, objc, tcp, capability, filetype, fips, test framework, compatibility shims
+  - starlight: edt, tty-ffi, smelter, forge, info, metadata-ffi, osc, rnbo,
+    mdns, text, fuse-ffi, wormhole, inspector, auto-enroll, ui.
+    Plus 4 C bridges (tty, metadata, osc, fuse). R6RS import fixes in filetype, fips.
+- 45 library modules, 6 compatibility shims, 8 C/ObjC bridges, 17 test files
+- Tagged `chez-port-complete`
+- Memo-0039 paren balance fix (line 25 closed memo early; lines 112/120 imbalanced
+  in Security Considerations). Regenerated and published to Yoyodyne.
+- Added Duan et al. "Breaking the Sorting Barrier" (STOC 2025) to research library
+
 ## Current State
 
-- REPL: v0.4.0, 44 modules, ~71K LOC
+- REPL: v0.4.0, 44 modules, ~71K LOC (Chicken)
+- Chez port: 45 modules, 21K LOC, 42/58 Chicken modules ported (72%)
+  - All library-layer code ported; application shell (REPL, CLI tools) remains
 - Lineage: Custom fork with UTF-8 display width, first-char injection, command completion
 - Modes: novice (%) and lambda (λ) working, both in whitelist
-- Completion: Wired via `enable-command-completion`, paren-wrap toggles per mode
+- 60 memos published to Yoyodyne
 
-## In Progress
+## Remaining Chez Work
 
-- Nothing active - was testing/fixing mode switching
+Application layer (depends on all library modules being complete - they are):
+- `repl.scm` - The main REPL (4800+ lines, last to port)
+- `cyberspace.scm`, `server.scm`, `seal.scm` - Application entry points
+- `spki-cert.scm`, `spki-keygen.scm`, `spki-show.scm`, `spki-verify.scm` - CLI tools
+
+Development utilities (low priority):
+- `deploy.scm`, `refresh-library.scm`, `refresh-repl.scm`
+- `sanity.scm`, `scrutinize.scm`, `scrutinizer.scm`
+- `demo-cyberspace.scm`, `mpe.scm`
 
 ## Reserved
 
@@ -61,3 +89,8 @@ Then read any unfamiliar changed files before proceeding.
 - Dashboard/session-stats/global-search explicitly dispatched in REPL to bypass eval's interaction-environment
 - No `schemer` command - use `lambda` or `lambda-mode` only
 - lineage.so must be installed to system chicken path, not just local eggs/
+- Chez binary: `/opt/homebrew/bin/chez` on macOS arm64
+- R6RS eval not in `(rnrs)` composite — import from `(chezscheme)` directly
+- `session-stat!` pattern for os.sls (R6RS forbids exporting assigned variables)
+- Signal handlers are no-ops in Chez (only SIGINT via keyboard-interrupt-handler)
+- date(1) shell replaces Chicken's seconds->utc-time for time formatting
