@@ -40,7 +40,7 @@ Chez: `(sort predicate list)`
 
 ## Files Ported
 
-### Core Libraries (22 modules)
+### Core Libraries (28 modules)
 - `sexp.sls` - S-expression parser/printer. Foundation for all SPKI data.
 - `crypto-ffi.sls` - libsodium FFI (Ed25519, SHA-512, BLAKE2b, X25519, SHAKE256, Shamir, Merkle). Uses Chez `foreign-procedure`.
 - `cert.sls` - SPKI certificate types, signing, verification, chain delegation. PQ/hybrid support.
@@ -62,6 +62,12 @@ Chez: `(sort predicate list)`
 - `script.sls` - Script execution.
 - `os.sls` - OS introspection (sysctl, platform detection, resource monitoring).
 - `objc.sls` - Objective-C FFI bridge for macOS (NSUserDefaults, notifications).
+- `enroll.sls` - Node enrollment, system introspection, certificate management, mDNS presence.
+- `forum.sls` - Realm forum (VAX Notes style): topics, replies, sequential numbering.
+- `lazy-chunks.sls` - Lazy Merkle chunk loading for huge objects (64KB chunks, LRU cache).
+- `piece-table.sls` - Piece table for collaborative editing: insert, delete, undo/redo, OT hooks.
+- `portal.sls` - Session lifecycle: statistics, formatting, goodbye ceremony.
+- `rope.sls` - Rope data structure: O(log n) insert/delete on large texts.
 - `test.sls` - Test framework (assert-true, assert-equal, test-case).
 
 ### Compatibility Shims
@@ -82,6 +88,9 @@ Chez: `(sort predicate list)`
 - `tests/test-bloom.sps` - Bloom filter operations
 - `tests/test-gossip.sps` - Gossip protocol
 - `tests/test-query.sps` - Query cursors, sorting, pagination, aggregation (16 tests)
+- `tests/test-portal.sps` - Session lifecycle, formatting, statistics (30 tests)
+- `tests/test-rope.sps` - Rope operations: split, insert, delete, rebalance (39 tests)
+- `tests/test-piece-table.sps` - Piece table: CRUD, undo/redo, collaboration (40 tests)
 - `test-capability.ss` - Capability scoring (legacy)
 - `test-keyring.ss` - Key management (27 tests)
 
@@ -126,6 +135,16 @@ Use bytevectors directly. Never route crypto keys through `utf8->string`
 Do NOT import these again from `(chezscheme)` — causes "multiple definitions" error.
 Use `(only (chezscheme) ...)` with explicit names that aren't in `(rnrs)`.
 
+### Parameters vs. Procedures
+`current-input-port` from `(rnrs)` is a plain procedure, not a Chez parameter.
+To use it with `parameterize`, import from `(chezscheme)` instead:
+`(except (rnrs) current-input-port)` + `(only (chezscheme) ... current-input-port)`.
+
+### Tagged S-expression Alists
+Chicken's `assq` tolerates non-pair elements; Chez R6RS signals an error.
+For tagged structures like `(spki-cert (issuer ...) ...)`, use `(cdr body)`
+to skip the tag symbol before calling `assq`.
+
 ## Future Work
 
 Modules requiring FFI translation:
@@ -133,10 +152,13 @@ Modules requiring FFI translation:
 
 Threading modules needing architecture changes:
 - `auto-enroll.scm` - Green threads → OS threads (depends on enroll, mdns, gossip)
-- `enroll.scm` - Enrollment protocol (depends on TCP, threading)
+
+### Signal Handling
+Chez lacks `set-signal-handler!` for arbitrary signals. Only
+`keyboard-interrupt-handler` (SIGINT) is available as a parameter.
+Modules needing SIGTERM/SIGHUP handlers (portal) use no-ops; wrap via
+C FFI if full signal support is needed.
 
 Application modules (lower priority):
-- `display.scm` - Display utilities
-- `http.scm` - HTTP client/server
 - `wormhole.scm` - Peer-to-peer tunneling
 - `repl.scm` - The main REPL (4800+ lines, last to port)
