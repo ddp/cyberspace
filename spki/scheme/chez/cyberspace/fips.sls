@@ -22,7 +22,7 @@
     fips-status)
 
   (import (rnrs)
-          (only (chezscheme) printf format flush-output-port)
+          (only (chezscheme) printf format)
           (cyberspace crypto-ffi)
           (cyberspace chicken-compatibility blob)
           (cyberspace chicken-compatibility chicken))

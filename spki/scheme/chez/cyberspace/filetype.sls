@@ -24,7 +24,7 @@
 
   (import (rnrs)
           (only (chezscheme)
-                file-exists? open-file-input-port
+                open-file-input-port
                 with-output-to-string)
           (cyberspace chicken-compatibility blob)
           (cyberspace chicken-compatibility chicken)
@@ -37,13 +37,6 @@
   (define (string-prefix? prefix str)
     (and (>= (string-length str) (string-length prefix))
          (string=? (substring str 0 (string-length prefix)) prefix)))
-
-  (define (string-upcase str)
-    (let ((len (string-length str)))
-      (let loop ((i 0) (acc '()))
-        (if (= i len)
-            (list->string (reverse acc))
-            (loop (+ i 1) (cons (char-upcase (string-ref str i)) acc))))))
 
   (define (string-contains-ci haystack needle)
     (let ((h (string-upcase haystack))
