@@ -45,6 +45,21 @@
     realm-verbose!
     ;; Diagnostics
     join-listener-diag
+    ;; Join policy
+    set-join-policy!
+    realm-join-policy
+    ;; Membership lifecycle
+    leave-realm
+    propose-join
+    propose-disbar
+    vote-proposal
+    pending-proposals
+    ;; Revocation
+    revocation-list
+    principal-revoked?
+    ;; Interactive review
+    review-proposals
+    format-proposal
     ;; Testing support
     reset-enrollment-state!)
 
@@ -52,7 +67,8 @@
           (only (chezscheme)
                 printf format
                 fork-thread sleep make-time
-                current-time time-second)
+                current-time time-second
+                file-directory?)
           (cyberspace enroll)
           (cyberspace capability)
           (cyberspace mdns)
@@ -64,7 +80,8 @@
                 store-membership-cert!
                 store-enrollment-keypair! load-enrollment-keypair
                 store-realm-state! load-realm-state
-                realm-membership-cert cert-valid?)
+                realm-membership-cert cert-valid?
+                revoke-membership!)
           (cyberspace chicken-compatibility chicken))
 
   ;; ============================================================
@@ -74,6 +91,9 @@
   (define (current-seconds) (time-second (current-time)))
 
   (define (flush) (flush-output-port (current-output-port)))
+
+  (define (directory-exists? path)
+    (and (file-exists? path) (file-directory? path)))
 
   ;; Use remp from (rnrs lists) instead of Chicken's remove
 
@@ -104,6 +124,10 @@
 
   (define *join-in-progress* #f)
   (define *pending-proposals* '())
+  (define *join-policy* 'open)        ; open | sponsored | voted | closed
+  (define *vote-threshold* '(2 3))    ; n-of-m (for voted policy)
+  (define *revocation-list* '())      ; ((principal timestamp reason revoked-by) ...)
+  (define *proposal-ttl* 604800)      ; 7 days
 
   ;; Accessors (R6RS: can't export set! variables)
   (define (realm-verbose?) *realm-verbose*)
@@ -119,14 +143,49 @@
   ;; Realm State Persistence
   ;; ============================================================
 
+  (define *membership-state-path* ".vault/membership-state.sexp")
+
   (define (save-realm-snapshot!)
     (when (and *realm-master* *my-name* *my-role*)
       (store-realm-state! *realm-master* *my-role* *my-name* *realm-members*)
       (when (and *my-pubkey* *my-privkey*)
         (store-enrollment-keypair! *my-pubkey* *my-privkey*))
+      (save-membership-state!)
       (when *realm-verbose*
         (printf "[realm] Saved realm snapshot: ~a role=~a master=~a~n"
                 *my-name* *my-role* *realm-master*))))
+
+  (define (save-membership-state!)
+    (when (directory-exists? ".vault")
+      (when (file-exists? *membership-state-path*)
+        (delete-file *membership-state-path*))
+      (with-output-to-file *membership-state-path*
+        (lambda ()
+          (write `(membership-state
+                    (version 1)
+                    (join-policy ,*join-policy*)
+                    (vote-threshold ,*vote-threshold*)
+                    (proposals ,*pending-proposals*)
+                    (revocation-list ,*revocation-list*)
+                    (timestamp ,(current-seconds))))
+          (newline)))))
+
+  (define (load-membership-state!)
+    (when (file-exists? *membership-state-path*)
+      (guard (exn [#t (when *realm-verbose*
+                        (printf "[realm] Could not load membership state~n"))])
+        (let ((data (with-input-from-file *membership-state-path* read)))
+          (when (and (pair? data) (eq? (car data) 'membership-state))
+            (let ((fields (cdr data)))
+              (let ((policy (assq 'join-policy fields))
+                    (threshold (assq 'vote-threshold fields))
+                    (proposals (assq 'proposals fields))
+                    (revocations (assq 'revocation-list fields)))
+                (when policy (set! *join-policy* (cadr policy)))
+                (when threshold (set! *vote-threshold* (cadr threshold)))
+                (when proposals (set! *pending-proposals* (cadr proposals)))
+                (when revocations (set! *revocation-list* (cadr revocations)))
+                (expire-proposals!))))))))
 
   (define (restore-realm-state)
     (let ((state (load-realm-state))
@@ -150,13 +209,33 @@
                 (cons (cons my-name my-hw)
                       (remp (lambda (m) (eq? (car m) my-name)) *realm-members*))))
             (set! *scaling-factors* (compute-scaling-factor *realm-members*))
+            ;; Restore membership lifecycle state
+            (load-membership-state!)
             (when *realm-verbose*
               (printf "[realm] Restored: ~a role=~a master=~a members=~a~n"
                       my-name role master (length *realm-members*)))
+            ;; Show pending proposals on startup
+            (let ((pending (pending-proposals)))
+              (unless (null? pending)
+                (printf "~n*** ~a pending proposal~a awaiting your vote ***~n"
+                        (length pending)
+                        (if (= (length pending) 1) "" "s"))
+                (for-each
+                  (lambda (p)
+                    (printf "  ~a~n" (format-proposal-oneline p)))
+                  pending)
+                (printf "Use (review-proposals) to review and vote.~n~n")))
+            ;; Show revocations summary
+            (unless (null? *revocation-list*)
+              (when *realm-verbose*
+                (printf "[realm] Revocation list: ~a entries~n"
+                        (length *revocation-list*))))
             `((restored . #t)
               (name . ,my-name)
               (role . ,role)
               (master . ,master)
+              (join-policy . ,*join-policy*)
+              (pending-proposals . ,(length *pending-proposals*))
               (pubkey . ,*my-pubkey*)
               (privkey . ,*my-privkey*)))
           (begin
@@ -331,31 +410,95 @@
              (when reason
                (printf "[join-listener]   Reason: ~a~n" reason)))
 
-           (let* ((master-hw (cdr (assq *realm-master* *realm-members*)))
-                  (comparison (compare-capabilities master-hw node-hw)))
-             (if (and (eq? *my-role* 'master)
-                      (eq? comparison 'second))
-                 (handle-master-handoff node-name node-hw pubkey out)
-                 (begin
-                   (set! *realm-members*
-                     (cons (cons node-name node-hw) *realm-members*))
-                   (set! *scaling-factors* (compute-scaling-factor *realm-members*))
-                   (let ((cert (create-enrollment-cert
-                                 node-name pubkey *my-privkey*
-                                 'role: 'full)))
-                     (when *realm-verbose*
-                       (printf "[join-listener] Approved ~a, issuing certificate~n" node-name)
-                       (printf "[join-listener] Membership will be gossiped to realm~n"))
-                     (enrollment-send out
-                       `(join-accepted
-                         (certificate ,cert)
-                         (scaling ,*scaling-factors*)
-                         (master ,*realm-master*)
-                         (sponsor ,*my-name*)
-                         (sponsor-pubkey ,*my-pubkey*)
-                         (members ,(length *realm-members*))
-                         (member-list ,(map car *realm-members*))))
-                     (save-realm-snapshot!)))))))
+           (cond
+             ;; Revocation check — revoked principals cannot rejoin
+             ((principal-revoked? node-name)
+              (when *realm-verbose*
+                (printf "[join-listener] Rejected ~a: on revocation list~n" node-name))
+              (enrollment-send out
+                `(join-rejected
+                  (reason "Principal is on the revocation list"))))
+
+             ;; Closed policy — no new members
+             ((eq? *join-policy* 'closed)
+              (when *realm-verbose*
+                (printf "[join-listener] Rejected ~a: realm is closed~n" node-name))
+              (enrollment-send out
+                `(join-rejected
+                  (reason "Realm join policy is closed"))))
+
+             ;; Voted policy — queue for voting
+             ((eq? *join-policy* 'voted)
+              (let ((proposal (propose-join node-name pubkey node-hw)))
+                (when *realm-verbose*
+                  (printf "[join-listener] ~a queued for vote (policy: voted)~n" node-name))
+                (enrollment-send out
+                  `(join-pending
+                    (reason "Join requires member vote")
+                    (proposal-id ,(cadr (assq 'id (cdr proposal))))
+                    (threshold ,*vote-threshold*)))))
+
+             ;; Sponsored policy — queue but auto-approve if we are sponsor
+             ((eq? *join-policy* 'sponsored)
+              (let ((proposal (propose-join node-name pubkey node-hw)))
+                ;; propose-join under sponsored auto-approves (threshold 1/1)
+                ;; so check if it was already approved
+                (let* ((updated (find-proposal (cadr (assq 'id (cdr proposal)))))
+                       (status (and updated (cadr (assq 'status (cdr updated))))))
+                  (if (eq? status 'approved)
+                      ;; Already approved — issue cert directly
+                      (begin
+                        (set! *realm-members*
+                          (cons (cons node-name node-hw) *realm-members*))
+                        (set! *scaling-factors* (compute-scaling-factor *realm-members*))
+                        (let ((cert (create-enrollment-cert
+                                      node-name pubkey *my-privkey*
+                                      'role: 'full)))
+                          (when *realm-verbose*
+                            (printf "[join-listener] Approved ~a (sponsored by ~a)~n"
+                                    node-name *my-name*))
+                          (enrollment-send out
+                            `(join-accepted
+                              (certificate ,cert)
+                              (scaling ,*scaling-factors*)
+                              (master ,*realm-master*)
+                              (sponsor ,*my-name*)
+                              (sponsor-pubkey ,*my-pubkey*)
+                              (members ,(length *realm-members*))
+                              (member-list ,(map car *realm-members*))))
+                          (save-realm-snapshot!)))
+                      ;; Shouldn't happen under sponsored, but handle gracefully
+                      (enrollment-send out
+                        `(join-pending
+                          (reason "Join requires sponsor approval")))))))
+
+             ;; Open policy — original behavior
+             (else
+              (let* ((master-hw (cdr (assq *realm-master* *realm-members*)))
+                     (comparison (compare-capabilities master-hw node-hw)))
+                (if (and (eq? *my-role* 'master)
+                         (eq? comparison 'second))
+                    (handle-master-handoff node-name node-hw pubkey out)
+                    (begin
+                      (set! *realm-members*
+                        (cons (cons node-name node-hw) *realm-members*))
+                      (set! *scaling-factors* (compute-scaling-factor *realm-members*))
+                      (let ((cert (create-enrollment-cert
+                                    node-name pubkey *my-privkey*
+                                    'role: 'full)))
+                        (when *realm-verbose*
+                          (printf "[join-listener] Approved ~a, issuing certificate~n" node-name)
+                          (printf "[join-listener] Membership will be gossiped to realm~n"))
+                        (enrollment-send out
+                          `(join-accepted
+                            (certificate ,cert)
+                            (scaling ,*scaling-factors*)
+                            (master ,*realm-master*)
+                            (sponsor ,*my-name*)
+                            (sponsor-pubkey ,*my-pubkey*)
+                            (members ,(length *realm-members*))
+                            (member-list ,(map car *realm-members*))))
+                        (save-realm-snapshot!)))))))))
 
         ;; Invalid request
         (else
@@ -723,6 +866,9 @@
     `((master . ,*realm-master*)
       (role . ,*my-role*)
       (member-count . ,(length *realm-members*))
+      (join-policy . ,*join-policy*)
+      (pending-proposals . ,(length *pending-proposals*))
+      (revocations . ,(length *revocation-list*))
       (scaling . ,*scaling-factors*)))
 
   (define (enrollment-status)
@@ -739,6 +885,9 @@
       (my-role . ,*my-role*)
       (realm-master . ,*realm-master*)
       (member-count . ,(length *realm-members*))
+      (join-policy . ,*join-policy*)
+      (pending-proposals . ,(length *pending-proposals*))
+      (revocations . ,(length *revocation-list*))
       (verbose . ,*realm-verbose*)))
 
   ;; ============================================================
@@ -764,6 +913,420 @@
       (join-in-progress . ,*join-in-progress*)))
 
   ;; ============================================================
+  ;; Join Policy
+  ;; ============================================================
+
+  (define (realm-join-policy)
+    *join-policy*)
+
+  (define (set-join-policy! policy . opts)
+    (unless (memq policy '(open sponsored voted closed))
+      (error 'set-join-policy! "invalid policy" policy))
+    (set! *join-policy* policy)
+    (when (eq? policy 'voted)
+      (let ((threshold (get-key opts 'threshold: *vote-threshold*)))
+        (set! *vote-threshold* threshold)))
+    (save-realm-snapshot!)
+    (when *realm-verbose*
+      (printf "[realm] Join policy set to ~a~n" policy))
+    policy)
+
+  ;; ============================================================
+  ;; Proposal Queue
+  ;; ============================================================
+
+  (define (make-proposal-id type subject)
+    (let* ((data (string-append (symbol->string type) ":"
+                                (symbol->string subject) ":"
+                                (number->string (current-seconds))))
+           (hash (sha256-hash (string->utf8 data))))
+      (bytevector->hex hash)))
+
+  (define (bytevector->hex bv)
+    (let loop ((i 0) (acc '()))
+      (if (>= i (bytevector-length bv))
+          (apply string-append (reverse acc))
+          (loop (+ i 1)
+                (cons (let ((b (bytevector-u8-ref bv i)))
+                        (string-append
+                          (if (< b 16) "0" "")
+                          (number->string b 16)))
+                      acc)))))
+
+  (define (expire-proposals!)
+    (let ((now (current-seconds)))
+      (set! *pending-proposals*
+        (remp (lambda (p)
+                (let* ((fields (cdr p))
+                       (expires (cadr (assq 'expires fields))))
+                  (and (> now expires)
+                       (eq? (cadr (assq 'status fields)) 'pending))))
+              *pending-proposals*))))
+
+  (define (propose-join node-name pubkey hardware)
+    (unless (memq *join-policy* '(sponsored voted))
+      (error 'propose-join
+             "proposals only used under sponsored or voted policy"
+             *join-policy*))
+    (expire-proposals!)
+    (let* ((now (current-seconds))
+           (id (make-proposal-id 'join node-name))
+           (threshold (if (eq? *join-policy* 'voted)
+                          *vote-threshold*
+                          '(1 1)))
+           (proposal
+            `(proposal
+              (id ,id)
+              (type join)
+              (subject ,node-name)
+              (pubkey ,pubkey)
+              (hardware ,hardware)
+              (proposed-by ,*my-name*)
+              (proposed-at ,now)
+              (votes ((,*my-name* . approve)))
+              (threshold ,threshold)
+              (expires ,(+ now *proposal-ttl*))
+              (status pending))))
+      (set! *pending-proposals* (cons proposal *pending-proposals*))
+      (when *realm-verbose*
+        (printf "[realm] Proposed join for ~a (id: ~a)~n"
+                node-name (substring id 0 16)))
+      ;; Under sponsored policy with threshold (1 1), auto-approve
+      (when (eq? *join-policy* 'sponsored)
+        (check-threshold! proposal))
+      proposal))
+
+  (define (propose-disbar node-name reason . opts)
+    (let ((evidence (get-key opts 'evidence: #f)))
+      (expire-proposals!)
+      (let* ((now (current-seconds))
+             (id (make-proposal-id 'disbar node-name))
+             ;; Disbarment always requires a vote, even under open policy
+             (threshold (if (> (length *realm-members*) 1)
+                            (let ((m (length *realm-members*)))
+                              (list (max 2 (exact (ceiling (/ m 2)))) m))
+                            '(1 1)))
+             (proposal
+              `(proposal
+                (id ,id)
+                (type disbar)
+                (subject ,node-name)
+                (proposed-by ,*my-name*)
+                (proposed-at ,now)
+                (reason ,reason)
+                ,@(if evidence `((evidence ,evidence)) '())
+                (votes ((,*my-name* . disbar)))
+                (threshold ,threshold)
+                (expires ,(+ now *proposal-ttl*))
+                (status pending))))
+        (set! *pending-proposals* (cons proposal *pending-proposals*))
+        (when *realm-verbose*
+          (printf "[realm] Proposed disbarment of ~a: ~a (id: ~a)~n"
+                  node-name reason (substring id 0 16)))
+        proposal)))
+
+  (define (vote-proposal proposal-id vote)
+    (unless (memq vote '(approve reject disbar))
+      (error 'vote-proposal "invalid vote" vote))
+    (expire-proposals!)
+    (let ((proposal (find-proposal proposal-id)))
+      (unless proposal
+        (error 'vote-proposal "proposal not found" proposal-id))
+      (let* ((fields (cdr proposal))
+             (status (cadr (assq 'status fields))))
+        (unless (eq? status 'pending)
+          (error 'vote-proposal "proposal not pending" status))
+        ;; Add vote (idempotent — replaces existing vote from same member)
+        (let* ((votes (cadr (assq 'votes fields)))
+               (new-votes (cons (cons *my-name* vote)
+                                (remp (lambda (v) (eq? (car v) *my-name*))
+                                      votes)))
+               (updated (update-proposal-field proposal 'votes new-votes)))
+          (set! *pending-proposals*
+            (cons updated
+                  (remp (lambda (p)
+                          (equal? (cadr (assq 'id (cdr p))) proposal-id))
+                        *pending-proposals*)))
+          (when *realm-verbose*
+            (printf "[realm] Vote ~a on proposal ~a by ~a~n"
+                    vote (substring proposal-id 0 16) *my-name*))
+          (check-threshold! updated)
+          updated))))
+
+  (define (find-proposal id)
+    (let loop ((proposals *pending-proposals*))
+      (cond
+        ((null? proposals) #f)
+        ((equal? (cadr (assq 'id (cdr (car proposals)))) id)
+         (car proposals))
+        (else (loop (cdr proposals))))))
+
+  (define (update-proposal-field proposal field value)
+    (cons (car proposal)
+          (map (lambda (pair)
+                 (if (and (pair? pair) (eq? (car pair) field))
+                     (list field value)
+                     pair))
+               (cdr proposal))))
+
+  (define (check-threshold! proposal)
+    (let* ((fields (cdr proposal))
+           (type (cadr (assq 'type fields)))
+           (subject (cadr (assq 'subject fields)))
+           (votes (cadr (assq 'votes fields)))
+           (threshold (cadr (assq 'threshold fields)))
+           (needed (car threshold))
+           (approve-key (if (eq? type 'disbar) 'disbar 'approve))
+           (approvals (length (filter (lambda (v) (eq? (cdr v) approve-key))
+                                      votes)))
+           (rejections (length (filter (lambda (v) (eq? (cdr v) 'reject))
+                                       votes)))
+           (total (cadr threshold)))
+      (cond
+        ((>= approvals needed)
+         (let ((updated (update-proposal-field proposal 'status 'approved)))
+           (set! *pending-proposals*
+             (cons (update-proposal-field updated 'status 'approved)
+                   (remp (lambda (p)
+                           (equal? (cadr (assq 'id (cdr p)))
+                                   (cadr (assq 'id fields))))
+                         *pending-proposals*)))
+           (when *realm-verbose*
+             (printf "[realm] Proposal ~a approved (~a/~a)~n"
+                     (substring (cadr (assq 'id fields)) 0 16)
+                     approvals needed))
+           (execute-proposal! type subject fields)))
+        ((> rejections (- total needed))
+         (let ((id (cadr (assq 'id fields))))
+           (set! *pending-proposals*
+             (cons (update-proposal-field proposal 'status 'rejected)
+                   (remp (lambda (p)
+                           (equal? (cadr (assq 'id (cdr p))) id))
+                         *pending-proposals*)))
+           (when *realm-verbose*
+             (printf "[realm] Proposal ~a rejected (~a rejections)~n"
+                     (substring id 0 16) rejections)))))))
+
+  (define (execute-proposal! type subject fields)
+    (cond
+      ((eq? type 'join)
+       (let ((pubkey (cadr (assq 'pubkey fields)))
+             (proposer (cadr (assq 'proposed-by fields))))
+         (when (and (eq? *my-role* 'master) pubkey)
+           (let ((cert (create-enrollment-cert
+                         subject pubkey *my-privkey*
+                         'role: 'full)))
+             (set! *realm-members*
+               (cons (cons subject
+                           (and (assq 'hardware fields)
+                                (cadr (assq 'hardware fields))))
+                     *realm-members*))
+             (set! *scaling-factors* (compute-scaling-factor *realm-members*))
+             (save-realm-snapshot!)
+             (when *realm-verbose*
+               (printf "[realm] Enrolled ~a (sponsored by ~a)~n"
+                       subject proposer))))))
+      ((eq? type 'disbar)
+       (disbar-member! subject
+                       (cadr (assq 'reason fields))
+                       (map car (cadr (assq 'votes fields)))))))
+
+  ;; ============================================================
+  ;; Revocation List
+  ;; ============================================================
+
+  (define (revocation-list) *revocation-list*)
+
+  (define (principal-revoked? principal)
+    (let loop ((entries *revocation-list*))
+      (cond
+        ((null? entries) #f)
+        ((eq? (car (car entries)) principal) #t)
+        (else (loop (cdr entries))))))
+
+  (define (add-revocation! principal reason revoked-by)
+    (unless (principal-revoked? principal)
+      (set! *revocation-list*
+        (cons (list principal (current-seconds) reason revoked-by)
+              *revocation-list*))
+      (when *realm-verbose*
+        (printf "[realm] Added ~a to revocation list: ~a~n"
+                principal reason))))
+
+  ;; ============================================================
+  ;; Voluntary Departure
+  ;; ============================================================
+
+  (define (leave-realm)
+    (unless *my-name*
+      (error 'leave-realm "not enrolled in any realm"))
+    (let ((name *my-name*)
+          (was-master (eq? *my-role* 'master)))
+      ;; 1. Revoke local membership cert
+      (guard (exn [#t (when *realm-verbose*
+                        (printf "[leave] cert revocation skipped~n"))])
+        (revoke-membership!))
+      ;; 2. Stop join listener
+      (guard (exn [#t #f])
+        (stop-join-listener))
+      ;; 3. Unregister from Bonjour
+      (guard (exn [#t #f])
+        (bonjour-unregister))
+      ;; 4. Reset in-memory state
+      (set! *realm-master* #f)
+      (set! *realm-members* '())
+      (set! *scaling-factors* #f)
+      (set! *my-role* #f)
+      (set! *my-name* #f)
+      (set! *my-pubkey* #f)
+      (set! *my-privkey* #f)
+      (set! *pending-proposals* '())
+      (set! *join-policy* 'open)
+      (set! *revocation-list* '())
+      (printf "[realm] ~a has left the realm~n" name)
+      (when was-master
+        (printf "[realm] Master departed; remaining members must re-elect~n"))
+      `((departed . ,name)
+        (was-master . ,was-master))))
+
+  ;; ============================================================
+  ;; Disbarment
+  ;; ============================================================
+
+  (define (disbar-member! node-name reason revoked-by)
+    ;; Add to revocation list
+    (add-revocation! node-name reason revoked-by)
+    ;; Remove from member list
+    (set! *realm-members*
+      (remp (lambda (m) (eq? (car m) node-name)) *realm-members*))
+    ;; Recompute scaling
+    (when (not (null? *realm-members*))
+      (set! *scaling-factors* (compute-scaling-factor *realm-members*)))
+    (save-realm-snapshot!)
+    (printf "[realm] ~a disbarred: ~a (by ~a)~n"
+            node-name reason revoked-by)
+    ;; If disbarred node was master, trigger re-election
+    (when (eq? node-name *realm-master*)
+      (printf "[realm] Disbarred node was master; triggering re-election~n")
+      (when (not (null? *realm-members*))
+        (let-values (((winner score all-scores) (elect-master *realm-members*)))
+          (set! *realm-master* winner)
+          (when (eq? winner *my-name*)
+            (set! *my-role* 'master)
+            (printf "[realm] This node elected as new master~n"))
+          (save-realm-snapshot!))))
+    `((disbarred . ,node-name)
+      (reason . ,reason)
+      (revoked-by . ,revoked-by)))
+
+  (define (pending-proposals)
+    (expire-proposals!)
+    *pending-proposals*)
+
+  ;; ============================================================
+  ;; Interactive Proposal Review
+  ;; ============================================================
+
+  (define (format-age seconds)
+    (cond
+      ((< seconds 60) (format "~as" seconds))
+      ((< seconds 3600) (format "~am" (div seconds 60)))
+      ((< seconds 86400) (format "~ah" (div seconds 3600)))
+      (else (format "~ad" (div seconds 86400)))))
+
+  (define (format-proposal-oneline proposal)
+    (let* ((fields (cdr proposal))
+           (type (cadr (assq 'type fields)))
+           (subject (cadr (assq 'subject fields)))
+           (proposed-by (cadr (assq 'proposed-by fields)))
+           (proposed-at (cadr (assq 'proposed-at fields)))
+           (votes (cadr (assq 'votes fields)))
+           (threshold (cadr (assq 'threshold fields)))
+           (status (cadr (assq 'status fields)))
+           (age (- (current-seconds) proposed-at))
+           (approvals (length (filter (lambda (v)
+                                        (memq (cdr v) '(approve disbar)))
+                                      votes)))
+           (id (cadr (assq 'id fields))))
+      (format "~a ~a ~a (by ~a, ~a ago, ~a/~a votes) [~a]"
+              (if (eq? type 'join) "JOIN" "DISBAR")
+              subject
+              (if (eq? status 'pending) "" (format "(~a)" status))
+              proposed-by
+              (format-age age)
+              approvals (car threshold)
+              (substring id 0 (min 12 (string-length id))))))
+
+  (define (format-proposal proposal)
+    (let* ((fields (cdr proposal))
+           (type (cadr (assq 'type fields)))
+           (subject (cadr (assq 'subject fields)))
+           (id (cadr (assq 'id fields)))
+           (proposed-by (cadr (assq 'proposed-by fields)))
+           (proposed-at (cadr (assq 'proposed-at fields)))
+           (votes (cadr (assq 'votes fields)))
+           (threshold (cadr (assq 'threshold fields)))
+           (status (cadr (assq 'status fields)))
+           (expires (cadr (assq 'expires fields)))
+           (age (- (current-seconds) proposed-at))
+           (ttl (- expires (current-seconds)))
+           (reason (and (assq 'reason fields) (cadr (assq 'reason fields)))))
+      (printf "~n  Proposal: ~a~n" id)
+      (printf "  Type:     ~a~n" (if (eq? type 'join) "Join" "Disbarment"))
+      (printf "  Subject:  ~a~n" subject)
+      (printf "  Proposed: ~a (~a ago)~n" proposed-by (format-age age))
+      (when reason
+        (printf "  Reason:   ~a~n" reason))
+      (printf "  Threshold: ~a of ~a~n" (car threshold) (cadr threshold))
+      (printf "  Expires:  ~a remaining~n" (format-age (max 0 ttl)))
+      (printf "  Status:   ~a~n" status)
+      (printf "  Votes:~n")
+      (for-each
+        (lambda (v)
+          (printf "    ~a: ~a~n" (car v) (cdr v)))
+        votes)
+      (let ((already-voted (assq *my-name* votes)))
+        (if already-voted
+            (printf "  (You voted: ~a)~n" (cdr already-voted))
+            (printf "  (You have not voted)~n")))
+      proposal))
+
+  (define (review-proposals)
+    (expire-proposals!)
+    (let ((pending (filter (lambda (p)
+                             (eq? (cadr (assq 'status (cdr p))) 'pending))
+                           *pending-proposals*)))
+      (if (null? pending)
+          (begin
+            (printf "~nNo pending proposals.~n")
+            '())
+          (begin
+            (printf "~n=== Pending Proposals (~a) ===~n" (length pending))
+            (printf "Join policy: ~a~n" *join-policy*)
+            (for-each
+              (lambda (p)
+                (format-proposal p))
+              pending)
+            (printf "~nTo vote: (vote-proposal \"<id>\" 'approve)~n")
+            (printf "     or: (vote-proposal \"<id>\" 'reject)~n")
+            (printf "For disbarment: (vote-proposal \"<id>\" 'disbar)~n~n")
+            pending))))
+
+  ;; ============================================================
+  ;; Join Policy Enforcement
+  ;; ============================================================
+
+  (define (policy-allows-join? node-name pubkey)
+    (cond
+      ((principal-revoked? node-name) #f)
+      ((eq? *join-policy* 'open) #t)
+      ((eq? *join-policy* 'closed) #f)
+      ((memq *join-policy* '(sponsored voted))
+       ;; Must go through proposal queue
+       #f)
+      (else #f)))
+
+  ;; ============================================================
   ;; Testing Support
   ;; ============================================================
 
@@ -777,6 +1340,8 @@
     (set! *my-pubkey* #f)
     (set! *my-privkey* #f)
     (set! *pending-proposals* '())
+    (set! *join-policy* 'open)
+    (set! *revocation-list* '())
     'reset)
 
   ;; Register cleanup hook

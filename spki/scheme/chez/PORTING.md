@@ -111,7 +111,7 @@ Chez: `(sort predicate list)`
 - `pq-bridge.c` - Post-quantum crypto (ML-DSA, SPHINCS+ stubs)
 - `objc-bridge.m` - Objective-C FFI (NSUserDefaults, notifications, system info)
 
-### Test Suite (17 files)
+### Test Suite (19 files)
 - `tests/test-sexp.sps` - S-expression round-trip (12 tests)
 - `tests/test-crypto.sps` - Ed25519 sign/verify, SHA-256, tampering detection
 - `tests/test-cert.sps` - Certificate creation, round-trip, signing, tag implication (14 tests)
@@ -124,6 +124,8 @@ Chez: `(sort predicate list)`
 - `tests/test-portal.sps` - Session lifecycle, formatting, statistics (30 tests)
 - `tests/test-rope.sps` - Rope operations: split, insert, delete, rebalance (39 tests)
 - `tests/test-piece-table.sps` - Piece table: CRUD, undo/redo, collaboration (40 tests)
+- `tests/test-entropy.sps` - Cryptographic entropy quality (19 tests)
+- `tests/test-membership.sps` - Membership lifecycle: join policy, proposals, voting, disbarment (38 tests)
 - `test-capability.ss` - Capability scoring (legacy)
 - `test-keyring.ss` - Key management (27 tests)
 - `test-compat-sexp.ss` - Compatibility S-expression tests
@@ -211,6 +213,6 @@ Development utilities (low priority):
 - 4 CLI tools (spki-keygen, spki-cert, spki-show, spki-verify)
 - 6 compatibility shims
 - 8 C/ObjC bridge source files
-- 17 test files (12 test suites pass)
+- 19 test files (14 test suites pass)
 - 46 of 58 Chicken modules ported (79%)
 - All library-layer dependencies complete; only application shell remains

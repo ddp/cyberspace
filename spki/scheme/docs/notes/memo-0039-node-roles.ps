@@ -923,6 +923,9 @@ newline
 (section) show ( ) show (specifies) show ( ) show (the) show ( ) show (full) show ( ) show (lifecycle:) show ( ) show (enrollment,) show ( ) show (persistence,) show ( ) show (voluntary) show  newline
 (departure,) show ( ) show (and) show ( ) show (involuntary) show ( ) show (removal.) show  newline
  newline
+(Implemented) show ( ) show (in) show ( ) show (auto-enroll.sls) show ( ) show (\(1280) show ( ) show (lines,) show ( ) show (41) show ( ) show (tests) show ( ) show (in) show  newline
+(test-membership.sps\).) show  newline
+ newline
  newline
 (Join) show ( ) show (Policy) show  newline
 newpath margin ypos moveto margin 66 add ypos lineto stroke
@@ -938,21 +941,38 @@ newline
 (voted) show ( ) show (N-of-M) show ( ) show (existing) show ( ) show (members) show ( ) show (must) show ( ) show (approve) show ( ) show (Production) show ( ) show (realms,) show ( ) show (high-trust) show ( ) show (environments) show  newline
 (closed) show ( ) show (No) show ( ) show (new) show ( ) show (members) show ( ) show (accepted) show ( ) show (Frozen) show ( ) show (realms,) show ( ) show (archival) show ( ) show (configurations) show  newline
  newline
-(The) show ( ) show (policy) show ( ) show (is) show ( ) show (a) show ( ) show (realm-level) show ( ) show (setting,) show ( ) show (stored) show ( ) show (in) show ( ) show (realm) show ( ) show (state) show ( ) show (and) show ( ) show (enforced) show  newline
-(by) show ( ) show (the) show ( ) show (join) show ( ) show (listener.) show  newline
+(The) show ( ) show (policy) show ( ) show (is) show ( ) show (a) show ( ) show (realm-level) show ( ) show (setting,) show ( ) show (persisted) show ( ) show (in) show  newline
+(.vault/membership-state.sexp) show ( ) show (and) show ( ) show (enforced) show ( ) show (by) show ( ) show (the) show ( ) show (join) show ( ) show (listener's) show  newline
+(handle-join-connection.) show  newline
  newline
  newline
-(\(realm-state) show  newline
-(\(version) show ( ) show (1\)) show  newline
-(\(master) show ( ) show (fluffy\)) show  newline
-(\(join-policy) show ( ) show (sponsored\)) show ( ) show (;) show ( ) show (open) show ( ) show (|) show ( ) show (sponsored) show ( ) show (|) show ( ) show (voted) show ( ) show (|) show ( ) show (closed) show  newline
-(\(vote-threshold) show ( ) show (\(2) show ( ) show (3\)\)) show ( ) show (;) show ( ) show (2-of-3) show ( ) show (required) show ( ) show (\(voted) show ( ) show (policy) show ( ) show (only\)) show  newline
-(...\)) show  newline
+(;;) show ( ) show (REPL) show ( ) show (interface) show  newline
+(\(set-join-policy!) show ( ) show ('voted) show ( ) show ('threshold:) show ( ) show ('\(2) show ( ) show (3\)\)) show  newline
+(\(realm-join-policy\)) show ( ) show (;) show ( ) show (=>) show ( ) show (voted) show  newline
  newline
-(Open) show ( ) show (policy) show ( ) show (is) show ( ) show (the) show ( ) show (current) show ( ) show (default.) show ( ) show (The) show ( ) show (join) show ( ) show (listener) show ( ) show (accepts) show ( ) show (any) show  newline
-(well-formed) show ( ) show (join) show ( ) show (request) show ( ) show (and) show ( ) show (issues) show ( ) show (a) show ( ) show (certificate.) show ( ) show (This) show ( ) show (is) show ( ) show (correct) show ( ) show (for) show  newline
-(the) show ( ) show (current) show ( ) show (two-node) show ( ) show (development) show ( ) show (scenario) show ( ) show (but) show ( ) show (must) show ( ) show (evolve) show ( ) show (as) show ( ) show (realms) show  newline
-(grow.) show  newline
+(The) show ( ) show (join) show ( ) show (listener) show ( ) show (gates) show ( ) show (every) show ( ) show (request) show ( ) show (through) show ( ) show (a) show ( ) show (policy) show ( ) show (check.) show ( ) show (Revoked) show  newline
+(principals) show ( ) show (are) show ( ) show (rejected) show ( ) show (first,) show ( ) show (regardless) show ( ) show (of) show ( ) show (policy.) show ( ) show (Under) show ( ) show (closed,) show ( ) show (all) show  newline
+(requests) show ( ) show (are) show ( ) show (rejected.) show ( ) show (Under) show ( ) show (voted,) show ( ) show (requests) show ( ) show (enter) show ( ) show (the) show ( ) show (pending) show ( ) show (queue.) show  newline
+(Under) show ( ) show (sponsored,) show ( ) show (the) show ( ) show (sponsoring) show ( ) show (member's) show ( ) show (approval) show ( ) show (auto-satisfies) show ( ) show (the) show ( ) show (\(1) show  newline
+(1\)) show ( ) show (threshold.) show ( ) show (Under) show ( ) show (open,) show ( ) show (the) show ( ) show (original) show ( ) show (auto-approve) show ( ) show (behavior) show ( ) show (applies.) show  newline
+ newline
+ newline
+(;;) show ( ) show (Join) show ( ) show (policy) show ( ) show (enforcement) show ( ) show (\(handle-join-connection\)) show  newline
+(\(cond) show  newline
+(\(\(principal-revoked?) show ( ) show (node-name\)) show  newline
+(\(enrollment-send) show ( ) show (out) show ( ) show ('\(join-rejected) show ( ) show (...\)\)\)) show  newline
+(\(\(eq?) show ( ) show (*join-policy*) show ( ) show ('closed\)) show  newline
+(\(enrollment-send) show ( ) show (out) show ( ) show ('\(join-rejected) show ( ) show (...\)\)\)) show  newline
+(\(\(eq?) show ( ) show (*join-policy*) show ( ) show ('voted\)) show  newline
+(\(propose-join) show ( ) show (node-name) show ( ) show (pubkey) show ( ) show (hardware\)) show  newline
+(\(enrollment-send) show ( ) show (out) show ( ) show ('\(join-pending) show ( ) show (...\)\)\)) show  newline
+(\(\(eq?) show ( ) show (*join-policy*) show ( ) show ('sponsored\)) show  newline
+(\(propose-join) show ( ) show (node-name) show ( ) show (pubkey) show ( ) show (hardware\)) show  newline
+(;;) show ( ) show (auto-approves:) show ( ) show (threshold) show ( ) show (\(1) show ( ) show (1\)) show  newline
+(\(enrollment-send) show ( ) show (out) show ( ) show ('\(join-accepted) show ( ) show (...\)\)\)) show  newline
+(\(else) show ( ) show (;;) show ( ) show (open) show  newline
+(\(create-enrollment-cert) show ( ) show (...\)) show  newline
+(\(enrollment-send) show ( ) show (out) show ( ) show ('\(join-accepted) show ( ) show (...\)\)\)\)) show  newline
  newline
  newline
 (Sponsored) show ( ) show (Enrollment) show  newline
@@ -973,7 +993,10 @@ newline
 (\(signature) show ( ) show (...\)\)) show  newline
  newline
 (The) show ( ) show (sponsor) show ( ) show (field) show ( ) show (creates) show ( ) show (an) show ( ) show (accountability) show ( ) show (chain.) show ( ) show (If) show ( ) show (a) show ( ) show (sponsored) show ( ) show (node) show  newline
-(misbehaves,) show ( ) show (the) show ( ) show (sponsor's) show ( ) show (judgment) show ( ) show (is) show ( ) show (part) show ( ) show (of) show ( ) show (the) show ( ) show (audit) show ( ) show (record.) show  newline
+(misbehaves,) show ( ) show (the) show ( ) show (sponsor's) show ( ) show (judgment) show ( ) show (is) show ( ) show (part) show ( ) show (of) show ( ) show (the) show ( ) show (audit) show ( ) show (record.) show ( ) show (Under) show  newline
+(the) show ( ) show (sponsored) show ( ) show (policy,) show ( ) show (propose-join) show ( ) show (creates) show ( ) show (a) show ( ) show (proposal) show ( ) show (with) show ( ) show (threshold) show ( ) show (\(1) show  newline
+(1\),) show ( ) show (which) show ( ) show (auto-approves) show ( ) show (immediately) show ( ) show (since) show ( ) show (the) show ( ) show (proposer's) show ( ) show (vote) show ( ) show (satisfies) show  newline
+(the) show ( ) show (requirement.) show  newline
  newline
  newline
 (Voted) show ( ) show (Enrollment) show  newline
@@ -981,34 +1004,49 @@ newpath margin ypos moveto margin 96 add ypos lineto stroke
 newline
  newline
 (Under) show ( ) show (the) show ( ) show (voted) show ( ) show (policy,) show ( ) show (a) show ( ) show (join) show ( ) show (request) show ( ) show (enters) show ( ) show (a) show ( ) show (pending) show ( ) show (queue.) show ( ) show (Existing) show  newline
-(members) show ( ) show (vote) show ( ) show (to) show ( ) show (approve) show ( ) show (or) show ( ) show (reject.) show  newline
+(members) show ( ) show (vote) show ( ) show (to) show ( ) show (approve) show ( ) show (or) show ( ) show (reject.) show ( ) show (The) show ( ) show (actual) show ( ) show (proposal) show ( ) show (structure) show ( ) show (as) show  newline
+(implemented:) show  newline
  newline
  newline
-(;;) show ( ) show (Pending) show ( ) show (join) show ( ) show (request) show ( ) show (\(stored) show ( ) show (in) show ( ) show (*pending-proposals*\)) show  newline
-(\(pending-join) show  newline
-(\(name) show ( ) show (starlight\)) show  newline
-(\(pubkey) show ( ) show (#${...}\)) show  newline
+(;;) show ( ) show (Proposal) show ( ) show (structure) show ( ) show (\(as) show ( ) show (stored) show ( ) show (in) show ( ) show (*pending-proposals*\)) show  newline
+(\(proposal) show  newline
+(\(id) show ( ) show ("7368620C2C79..."\)) show ( ) show (;) show ( ) show (SHA-256) show ( ) show (of) show ( ) show (type:subject:timestamp) show  newline
+(\(type) show ( ) show (join\)) show ( ) show (;) show ( ) show (join) show ( ) show (|) show ( ) show (disbar) show  newline
+(\(subject) show ( ) show (starlight\)) show  newline
+(\(pubkey) show ( ) show (#vu8\(...\)\)) show  newline
 (\(hardware) show ( ) show (\(introspection) show ( ) show (...\)\)) show  newline
 (\(proposed-by) show ( ) show (fluffy\)) show  newline
 (\(proposed-at) show ( ) show (1770583600\)) show  newline
 (\(votes) show ( ) show (\(\(fluffy) show ( ) show (.) show ( ) show (approve\)) show  newline
 (\(luna) show ( ) show (.) show ( ) show (approve\)\)\)) show  newline
 (\(threshold) show ( ) show (\(2) show ( ) show (3\)\)) show ( ) show (;) show ( ) show (need) show ( ) show (2-of-3) show  newline
+(\(expires) show ( ) show (1771188400\)) show ( ) show (;) show ( ) show (proposed-at) show ( ) show (+) show ( ) show (604800) show ( ) show (\(7) show ( ) show (days\)) show  newline
 (\(status) show ( ) show (pending\)\)) show ( ) show (;) show ( ) show (pending) show ( ) show (|) show ( ) show (approved) show ( ) show (|) show ( ) show (rejected) show ( ) show (|) show ( ) show (expired) show  newline
  newline
-(When) show ( ) show (the) show ( ) show (threshold) show ( ) show (is) show ( ) show (met,) show ( ) show (the) show ( ) show (proposing) show ( ) show (member) show ( ) show (\(or) show ( ) show (any) show ( ) show (approver\)) show ( ) show (issues) show  newline
-(the) show ( ) show (enrollment) show ( ) show (certificate.) show ( ) show (Votes) show ( ) show (are) show ( ) show (gossiped) show ( ) show (so) show ( ) show (all) show ( ) show (members) show ( ) show (converge) show  newline
-(on) show ( ) show (the) show ( ) show (same) show ( ) show (decision.) show  newline
+(Proposal) show ( ) show (IDs) show ( ) show (are) show ( ) show (SHA-256) show ( ) show (hashes) show ( ) show (of) show ( ) show (type:subject:timestamp,) show ( ) show (providing) show  newline
+(collision-free) show ( ) show (identifiers) show ( ) show (suitable) show ( ) show (for) show ( ) show (gossip) show ( ) show (convergence.) show  newline
  newline
-(Pending) show ( ) show (proposals) show ( ) show (expire) show ( ) show (after) show ( ) show (a) show ( ) show (configurable) show ( ) show (timeout) show ( ) show (\(default:) show ( ) show (7) show ( ) show (days\).) show  newline
-(Expired) show ( ) show (proposals) show ( ) show (are) show ( ) show (garbage-collected) show ( ) show (and) show ( ) show (the) show ( ) show (joiner) show ( ) show (must) show ( ) show (re-request.) show  newline
+(When) show ( ) show (the) show ( ) show (threshold) show ( ) show (is) show ( ) show (met,) show ( ) show (check-threshold!) show ( ) show (calls) show ( ) show (execute-proposal!,) show  newline
+(which) show ( ) show (has) show ( ) show (the) show ( ) show (master) show ( ) show (issue) show ( ) show (the) show ( ) show (enrollment) show ( ) show (certificate.) show ( ) show (When) show ( ) show (enough) show  newline
+(rejections) show ( ) show (make) show ( ) show (approval) show ( ) show (impossible,) show ( ) show (the) show ( ) show (proposal) show ( ) show (is) show ( ) show (marked) show ( ) show (rejected.) show  newline
+ newline
+(Pending) show ( ) show (proposals) show ( ) show (expire) show ( ) show (after) show ( ) show (a) show ( ) show (configurable) show ( ) show (timeout) show ( ) show (\(default:) show ( ) show (7) show ( ) show (days,) show  newline
+(*proposal-ttl*\).) show ( ) show (expire-proposals!) show ( ) show (garbage-collects) show ( ) show (stale) show ( ) show (entries) show ( ) show (on) show  newline
+(every) show ( ) show (queue) show ( ) show (access.) show  newline
+ newline
+ newline
+(;;) show ( ) show (REPL) show ( ) show (interface) show  newline
+(\(propose-join) show ( ) show ('new-node) show ( ) show (pubkey) show ( ) show (hardware\)) show  newline
+(\(vote-proposal) show ( ) show ("7368620C2C79...") show ( ) show ('approve\)) show ( ) show (;) show ( ) show (or) show ( ) show ('reject) show  newline
+(\(pending-proposals\)) show ( ) show (;) show ( ) show (list) show ( ) show (all) show ( ) show (pending) show  newline
+(\(review-proposals\)) show ( ) show (;) show ( ) show (interactive) show ( ) show (display) show ( ) show (with) show ( ) show (voting) show ( ) show (instructions) show  newline
  newline
  newline
 (Enrollment) show ( ) show (Persistence) show  newline
 newpath margin ypos moveto margin 132 add ypos lineto stroke
 newline
  newline
-(After) show ( ) show (successful) show ( ) show (enrollment) show ( ) show (\(by) show ( ) show (any) show ( ) show (policy\),) show ( ) show (three) show ( ) show (artifacts) show ( ) show (are) show  newline
+(After) show ( ) show (successful) show ( ) show (enrollment) show ( ) show (\(by) show ( ) show (any) show ( ) show (policy\),) show ( ) show (four) show ( ) show (artifacts) show ( ) show (are) show  newline
 (persisted) show ( ) show (to) show ( ) show (the) show ( ) show (vault:) show  newline
  newline
  newline
@@ -1018,14 +1056,49 @@ newline
 (enrollment.pub) show ( ) show (;) show ( ) show (Ed25519) show ( ) show (public) show ( ) show (key) show ( ) show (\(plaintext\)) show  newline
 (enrollment.key) show ( ) show (;) show ( ) show (Ed25519) show ( ) show (private) show ( ) show (key) show ( ) show (\(plaintext\)) show  newline
 (realm-state.sexp) show ( ) show (;) show ( ) show (master,) show ( ) show (role,) show ( ) show (members,) show ( ) show (timestamp) show  newline
+(membership-state.sexp) show ( ) show (;) show ( ) show (join) show ( ) show (policy,) show ( ) show (proposals,) show ( ) show (revocations) show  newline
  newline
-(On) show ( ) show (restart,) show ( ) show (the) show ( ) show (system) show ( ) show (checks) show ( ) show (all) show ( ) show (three.) show ( ) show (If) show ( ) show (any) show ( ) show (is) show ( ) show (missing) show ( ) show (or) show ( ) show (invalid,) show  newline
-(the) show ( ) show (node) show ( ) show (falls) show ( ) show (back) show ( ) show (to) show ( ) show (fresh) show ( ) show (auto-enrollment.) show ( ) show (This) show ( ) show (three-point) show ( ) show (check) show  newline
-(prevents) show ( ) show (a) show ( ) show (node) show ( ) show (from) show ( ) show (operating) show ( ) show (with) show ( ) show (stale) show ( ) show (identity) show ( ) show (material.) show  newline
+(The) show ( ) show (membership-state.sexp) show ( ) show (file) show ( ) show (persists) show ( ) show (the) show ( ) show (join) show ( ) show (policy,) show ( ) show (vote) show ( ) show (threshold,) show  newline
+(pending) show ( ) show (proposals,) show ( ) show (and) show ( ) show (revocation) show ( ) show (list:) show  newline
+ newline
+ newline
+(\(membership-state) show  newline
+(\(version) show ( ) show (1\)) show  newline
+(\(join-policy) show ( ) show (voted\)) show  newline
+(\(vote-threshold) show ( ) show (\(2) show ( ) show (3\)\)) show  newline
+(\(proposals) show ( ) show (\(...\)\)) show  newline
+(\(revocation-list) show ( ) show (\(...\)\)) show  newline
+(\(timestamp) show ( ) show (1770920000\)\)) show  newline
+ newline
+(On) show ( ) show (restart,) show ( ) show (restore-realm-state) show ( ) show (calls) show ( ) show (load-membership-state!,) show ( ) show (which) show  newline
+(restores) show ( ) show (the) show ( ) show (join) show ( ) show (policy,) show ( ) show (proposals,) show ( ) show (and) show ( ) show (revocation) show ( ) show (list.) show ( ) show (Stale) show  newline
+(proposals) show ( ) show (are) show ( ) show (expired) show ( ) show (immediately) show ( ) show (on) show ( ) show (load.) show  newline
+ newline
+(The) show ( ) show (system) show ( ) show (checks) show ( ) show (three) show ( ) show (enrollment) show ( ) show (artifacts) show ( ) show (\(cert,) show ( ) show (keypair,) show  newline
+(realm-state\).) show ( ) show (If) show ( ) show (any) show ( ) show (is) show ( ) show (missing) show ( ) show (or) show ( ) show (invalid,) show ( ) show (the) show ( ) show (node) show ( ) show (falls) show ( ) show (back) show ( ) show (to) show ( ) show (fresh) show  newline
+(auto-enrollment.) show ( ) show (This) show ( ) show (three-point) show ( ) show (check) show ( ) show (prevents) show ( ) show (a) show ( ) show (node) show ( ) show (from) show ( ) show (operating) show  newline
+(with) show ( ) show (stale) show ( ) show (identity) show ( ) show (material.) show  newline
  newline
 (Hardware) show ( ) show (capabilities) show ( ) show (and) show ( ) show (scaling) show ( ) show (factors) show ( ) show (are) show ( ) show (NOT) show ( ) show (persisted.) show ( ) show (They) show ( ) show (are) show  newline
 (recomputed) show ( ) show (from) show ( ) show (fresh) show ( ) show (introspection) show ( ) show (on) show ( ) show (every) show ( ) show (startup,) show ( ) show (ensuring) show ( ) show (the) show  newline
 (node's) show ( ) show (declared) show ( ) show (capabilities) show ( ) show (always) show ( ) show (match) show ( ) show (reality.) show  newline
+ newline
+ newline
+(Startup) show ( ) show (Notification) show  newline
+newpath margin ypos moveto margin 120 add ypos lineto stroke
+newline
+ newline
+(On) show ( ) show (restore,) show ( ) show (pending) show ( ) show (proposals) show ( ) show (are) show ( ) show (displayed) show ( ) show (to) show ( ) show (the) show ( ) show (operator:) show  newline
+ newline
+ newline
+(***) show ( ) show (2) show ( ) show (pending) show ( ) show (proposals) show ( ) show (awaiting) show ( ) show (your) show ( ) show (vote) show ( ) show (***) show  newline
+(JOIN) show ( ) show (alice) show ( ) show (\(by) show ( ) show (fluffy,) show ( ) show (3h) show ( ) show (ago,) show ( ) show (1/2) show ( ) show (votes\)) show ( ) show ([32FBFF0F75F5]) show  newline
+(DISBAR) show ( ) show (eve) show ( ) show (\(by) show ( ) show (fluffy,) show ( ) show (1d) show ( ) show (ago,) show ( ) show (1/2) show ( ) show (votes\)) show ( ) show ([489142FCCD98]) show  newline
+(Use) show ( ) show (\(review-proposals\)) show ( ) show (to) show ( ) show (review) show ( ) show (and) show ( ) show (vote.) show  newline
+ newline
+(This) show ( ) show (ensures) show ( ) show (that) show ( ) show (a) show ( ) show (node) show ( ) show (returning) show ( ) show (from) show ( ) show (downtime) show ( ) show (immediately) show ( ) show (sees) show ( ) show (what) show  newline
+(decisions) show ( ) show (need) show ( ) show (its) show ( ) show (attention,) show ( ) show (rather) show ( ) show (than) show ( ) show (silently) show ( ) show (ignoring) show ( ) show (pending) show  newline
+(membership) show ( ) show (actions.) show  newline
  newline
  newline
 newpath margin ypos moveto margin 432 add ypos lineto stroke
@@ -1043,21 +1116,30 @@ newline
 newpath margin ypos moveto margin 114 add ypos lineto stroke
 newline
  newline
+(Implemented) show ( ) show (in) show ( ) show (leave-realm.) show ( ) show (Each) show ( ) show (step) show ( ) show (is) show ( ) show (wrapped) show ( ) show (in) show ( ) show (guard) show ( ) show (for) show ( ) show (crash) show  newline
+(safety:) show  newline
+ newline
  newline
 (\(define) show ( ) show (\(leave-realm\)) show  newline
-("Voluntarily) show ( ) show (depart) show ( ) show (the) show ( ) show (realm.) show ( ) show (Clean) show ( ) show (exit.") show  newline
-(;;) show ( ) show (1.) show ( ) show (Notify) show ( ) show (peers) show ( ) show (\(gossip) show ( ) show (departure\)) show  newline
-(;;) show ( ) show (2.) show ( ) show (Revoke) show ( ) show (local) show ( ) show (membership) show ( ) show (cert) show  newline
-(;;) show ( ) show (3.) show ( ) show (Delete) show ( ) show (realm-state.sexp) show  newline
-(;;) show ( ) show (4.) show ( ) show (Delete) show ( ) show (enrollment) show ( ) show (keypair) show  newline
-(;;) show ( ) show (5.) show ( ) show (Stop) show ( ) show (join) show ( ) show (listener) show  newline
-(;;) show ( ) show (6.) show ( ) show (Unregister) show ( ) show (from) show ( ) show (Bonjour) show  newline
-(;;) show ( ) show (7.) show ( ) show (Reset) show ( ) show (in-memory) show ( ) show (state) show  newline
-(;;) show ( ) show (Node) show ( ) show (returns) show ( ) show (to) show ( ) show (Wilderness) show  newline
-(...\)) show  newline
+(\(unless) show ( ) show (*my-name*) show  newline
+(\(error) show ( ) show ('leave-realm) show ( ) show ("not) show ( ) show (enrolled) show ( ) show (in) show ( ) show (any) show ( ) show (realm"\)\)) show  newline
+(\(let) show ( ) show (\(\(name) show ( ) show (*my-name*\)) show  newline
+(\(was-master) show ( ) show (\(eq?) show ( ) show (*my-role*) show ( ) show ('master\)\)\)) show  newline
+(;;) show ( ) show (1.) show ( ) show (Revoke) show ( ) show (local) show ( ) show (membership) show ( ) show (cert) show  newline
+(\(guard) show ( ) show (\(exn) show ( ) show ([#t) show ( ) show (...]\)) show ( ) show (\(revoke-membership!\)\)) show  newline
+(;;) show ( ) show (2.) show ( ) show (Stop) show ( ) show (join) show ( ) show (listener) show  newline
+(\(guard) show ( ) show (\(exn) show ( ) show ([#t) show ( ) show (#f]\)) show ( ) show (\(stop-join-listener\)\)) show  newline
+(;;) show ( ) show (3.) show ( ) show (Unregister) show ( ) show (from) show ( ) show (Bonjour) show  newline
+(\(guard) show ( ) show (\(exn) show ( ) show ([#t) show ( ) show (#f]\)) show ( ) show (\(bonjour-unregister\)\)) show  newline
+(;;) show ( ) show (4.) show ( ) show (Reset) show ( ) show (in-memory) show ( ) show (state) show  newline
+(\(set!) show ( ) show (*realm-master*) show ( ) show (#f\)) show  newline
+(\(set!) show ( ) show (*realm-members*) show ( ) show ('\(\)\)) show  newline
+(\(set!) show ( ) show (*my-role*) show ( ) show (#f\)) show ( ) show (...) show ( ) show (;) show ( ) show (all) show ( ) show (state) show ( ) show (variables) show  newline
+(`\(\(departed) show ( ) show (.) show ( ) show (,name\)) show  newline
+(\(was-master) show ( ) show (.) show ( ) show (,was-master\)\)\)\)) show  newline
  newline
-(Steps) show ( ) show (1-6) show ( ) show (are) show ( ) show (idempotent.) show ( ) show (A) show ( ) show (crashed) show ( ) show (node) show ( ) show (that) show ( ) show (restarts) show ( ) show (after) show ( ) show (partial) show  newline
-(departure) show ( ) show (will) show ( ) show (detect) show ( ) show (the) show ( ) show (missing) show ( ) show (files) show ( ) show (and) show ( ) show (fall) show ( ) show (through) show ( ) show (to) show ( ) show (fresh) show  newline
+(Each) show ( ) show (step) show ( ) show (is) show ( ) show (idempotent.) show ( ) show (A) show ( ) show (crashed) show ( ) show (node) show ( ) show (that) show ( ) show (restarts) show ( ) show (after) show ( ) show (partial) show  newline
+(departure) show ( ) show (will) show ( ) show (detect) show ( ) show (the) show ( ) show (missing) show ( ) show (cert) show ( ) show (and) show ( ) show (fall) show ( ) show (through) show ( ) show (to) show ( ) show (fresh) show  newline
 (enrollment,) show ( ) show (achieving) show ( ) show (the) show ( ) show (same) show ( ) show (end) show ( ) show (state.) show  newline
  newline
  newline
@@ -1085,9 +1167,10 @@ newline
 newpath margin ypos moveto margin 96 add ypos lineto stroke
 newline
  newline
-(If) show ( ) show (the) show ( ) show (master) show ( ) show (departs,) show ( ) show (the) show ( ) show (realm) show ( ) show (needs) show ( ) show (a) show ( ) show (new) show ( ) show (one.) show ( ) show (The) show ( ) show (remaining) show ( ) show (members) show  newline
-(hold) show ( ) show (a) show ( ) show (capability-based) show ( ) show (election) show ( ) show (\(same) show ( ) show (as) show ( ) show (initial) show ( ) show (enrollment\).) show ( ) show (The) show ( ) show (most) show  newline
-(capable) show ( ) show (remaining) show ( ) show (node) show ( ) show (becomes) show ( ) show (master.) show  newline
+(If) show ( ) show (the) show ( ) show (master) show ( ) show (departs,) show ( ) show (the) show ( ) show (realm) show ( ) show (needs) show ( ) show (a) show ( ) show (new) show ( ) show (one.) show ( ) show (The) show ( ) show (disbar-member!) show  newline
+(procedure) show ( ) show (already) show ( ) show (handles) show ( ) show (this) show ( ) show (case:) show ( ) show (when) show ( ) show (the) show ( ) show (disbarred) show ( ) show (or) show ( ) show (departed) show ( ) show (node) show  newline
+(was) show ( ) show (master,) show ( ) show (it) show ( ) show (triggers) show ( ) show (elect-master) show ( ) show (on) show ( ) show (the) show ( ) show (remaining) show ( ) show (members) show ( ) show (and) show  newline
+(assigns) show ( ) show (the) show ( ) show (winner) show ( ) show (as) show ( ) show (the) show ( ) show (new) show ( ) show (master.) show  newline
  newline
 (If) show ( ) show (no) show ( ) show (members) show ( ) show (remain,) show ( ) show (the) show ( ) show (realm) show ( ) show (ceases) show ( ) show (to) show ( ) show (exist.) show ( ) show (Its) show ( ) show (artifacts) show ( ) show (persist) show  newline
 (in) show ( ) show (vaults) show ( ) show (but) show ( ) show (no) show ( ) show (active) show ( ) show (realm) show ( ) show (operates.) show  newline
@@ -1120,50 +1203,58 @@ newline
 newpath margin ypos moveto margin 114 add ypos lineto stroke
 newline
  newline
-(Disbarment) show ( ) show (requires) show ( ) show (a) show ( ) show (vote) show ( ) show (under) show ( ) show (the) show ( ) show (realm's) show ( ) show (join) show ( ) show (policy) show ( ) show (\(even) show ( ) show (if) show ( ) show (the) show  newline
-(join) show ( ) show (policy) show ( ) show (is) show ( ) show ('open',) show ( ) show (disbarment) show ( ) show (always) show ( ) show (requires) show ( ) show (a) show ( ) show (vote\):) show  newline
+(Disbarment) show ( ) show (always) show ( ) show (requires) show ( ) show (a) show ( ) show (vote,) show ( ) show (even) show ( ) show (under) show ( ) show (open) show ( ) show (join) show ( ) show (policy.) show ( ) show (The) show  newline
+(threshold) show ( ) show (is) show ( ) show (computed) show ( ) show (as) show ( ) show (majority) show ( ) show (of) show ( ) show (current) show ( ) show (members) show ( ) show (\(minimum) show ( ) show (2\).) show  newline
+(propose-disbar) show ( ) show (creates) show ( ) show (the) show ( ) show (proposal;) show ( ) show (members) show ( ) show (vote) show ( ) show (via) show ( ) show (vote-proposal) show ( ) show (with) show  newline
+(the) show ( ) show ('disbar) show ( ) show (vote) show ( ) show (type.) show  newline
  newline
  newline
-(;;) show ( ) show (Disbarment) show ( ) show (proposal) show  newline
-(\(pending-disbar) show  newline
-(\(name) show ( ) show (compromised-node\)) show  newline
+(;;) show ( ) show (REPL) show ( ) show (interface) show  newline
+(\(propose-disbar) show ( ) show ('compromised-node) show ( ) show ("Certificate) show ( ) show (compromise") show  newline
+('evidence:) show ( ) show ("audit-hash-abc123"\)) show  newline
+(\(vote-proposal) show ( ) show ("DA95EEFC0289...") show ( ) show ('disbar\)) show  newline
+(;;) show ( ) show (Disbarment) show ( ) show (proposal) show ( ) show (\(as) show ( ) show (stored\)) show  newline
+(\(proposal) show  newline
+(\(id) show ( ) show ("DA95EEFC028B..."\)) show  newline
+(\(type) show ( ) show (disbar\)) show  newline
+(\(subject) show ( ) show (compromised-node\)) show  newline
 (\(proposed-by) show ( ) show (fluffy\)) show  newline
 (\(proposed-at) show ( ) show (1770583600\)) show  newline
 (\(reason) show ( ) show ("Certificate) show ( ) show (compromise) show ( ) show (detected"\)) show  newline
-(\(evidence) show ( ) show (\(audit-ref) show ( ) show ("hash-of-evidence"\)\)) show  newline
+(\(evidence) show ( ) show ("audit-hash-abc123"\)) show  newline
 (\(votes) show ( ) show (\(\(fluffy) show ( ) show (.) show ( ) show (disbar\)) show  newline
 (\(luna) show ( ) show (.) show ( ) show (disbar\)\)\)) show  newline
 (\(threshold) show ( ) show (\(2) show ( ) show (3\)\)) show  newline
+(\(expires) show ( ) show (1771188400\)) show  newline
 (\(status) show ( ) show (pending\)\)) show  newline
  newline
-(When) show ( ) show (the) show ( ) show (threshold) show ( ) show (is) show ( ) show (met:) show  newline
+(When) show ( ) show (the) show ( ) show (threshold) show ( ) show (is) show ( ) show (met,) show ( ) show (disbar-member!) show ( ) show (executes:) show  newline
  newline
-(*) show ( ) show (The) show ( ) show (node's) show ( ) show (membership) show ( ) show (certificate) show ( ) show (is) show ( ) show (revoked) show ( ) show (\(added) show ( ) show (to) show ( ) show (a) show ( ) show (revocation) show ( ) show (list\)) show  newline
-(*) show ( ) show (The) show ( ) show (node) show ( ) show (is) show ( ) show (removed) show ( ) show (from) show ( ) show (all) show ( ) show (member) show ( ) show (lists) show  newline
-(*) show ( ) show (The) show ( ) show (revocation) show ( ) show (is) show ( ) show (gossiped) show ( ) show (to) show ( ) show (all) show ( ) show (members) show  newline
-(*) show ( ) show (The) show ( ) show (node's) show ( ) show (Bonjour) show ( ) show (registration) show ( ) show (is) show ( ) show (ignored) show ( ) show (by) show ( ) show (members) show  newline
+(*) show ( ) show (The) show ( ) show (node) show ( ) show (is) show ( ) show (added) show ( ) show (to) show ( ) show (the) show ( ) show (revocation) show ( ) show (list) show ( ) show (\(append-only\)) show  newline
+(*) show ( ) show (The) show ( ) show (node) show ( ) show (is) show ( ) show (removed) show ( ) show (from) show ( ) show (the) show ( ) show (member) show ( ) show (list) show  newline
 (*) show ( ) show (Scaling) show ( ) show (factors) show ( ) show (are) show ( ) show (recomputed) show ( ) show (without) show ( ) show (the) show ( ) show (disbarred) show ( ) show (node) show  newline
+(*) show ( ) show (If) show ( ) show (the) show ( ) show (disbarred) show ( ) show (node) show ( ) show (was) show ( ) show (master,) show ( ) show (elect-master) show ( ) show (triggers) show ( ) show (re-election) show  newline
+(*) show ( ) show (The) show ( ) show (revocation) show ( ) show (list) show ( ) show (is) show ( ) show (persisted) show ( ) show (to) show ( ) show (.vault/membership-state.sexp) show  newline
  newline
  newline
 (Certificate) show ( ) show (Revocation) show  newline
 newpath margin ypos moveto margin 132 add ypos lineto stroke
 newline
  newline
-(Revoked) show ( ) show (certificates) show ( ) show (are) show ( ) show (stored) show ( ) show (in) show ( ) show (a) show ( ) show (revocation) show ( ) show (list) show ( ) show (that) show ( ) show (is) show ( ) show (gossiped) show  newline
-(alongside) show ( ) show (membership) show ( ) show (events:) show  newline
+(Revoked) show ( ) show (principals) show ( ) show (are) show ( ) show (stored) show ( ) show (in) show ( ) show (an) show ( ) show (in-memory) show ( ) show (list,) show ( ) show (persisted) show ( ) show (to) show  newline
+(membership-state.sexp,) show ( ) show (and) show ( ) show (checked) show ( ) show (on) show ( ) show (every) show ( ) show (join) show ( ) show (attempt:) show  newline
  newline
  newline
-(\(revocation-list) show  newline
-(\(version) show ( ) show (1\)) show  newline
-(\(entries) show  newline
-(\(\(principal) show ( ) show (ed25519:abc123...\)) show  newline
-(\(revoked-at) show ( ) show (1770583600\)) show  newline
-(\(reason) show ( ) show ("Byzantine) show ( ) show (behavior"\)) show  newline
-(\(revoked-by) show ( ) show (\(fluffy) show ( ) show (luna\)\)\)\)\)) show  newline
+(;;) show ( ) show (Revocation) show ( ) show (list) show ( ) show (entry) show ( ) show (\(as) show ( ) show (stored\)) show  newline
+(;;) show ( ) show (\(principal) show ( ) show (timestamp) show ( ) show (reason) show ( ) show (revoked-by\)) show  newline
+(\(eve) show ( ) show (1770583600) show ( ) show ("Byzantine) show ( ) show (behavior") show ( ) show (\(fluffy) show ( ) show (luna\)\)) show  newline
+(;;) show ( ) show (Query) show ( ) show (interface) show  newline
+(\(revocation-list\)) show ( ) show (;) show ( ) show (=>) show ( ) show (list) show ( ) show (of) show ( ) show (all) show ( ) show (entries) show  newline
+(\(principal-revoked?) show ( ) show ('eve\)) show ( ) show (;) show ( ) show (=>) show ( ) show (#t) show  newline
  newline
-(Any) show ( ) show (node) show ( ) show (encountering) show ( ) show (a) show ( ) show (revoked) show ( ) show (certificate) show ( ) show (rejects) show ( ) show (it,) show ( ) show (even) show ( ) show (if) show ( ) show (the) show  newline
-(certificate) show ( ) show (is) show ( ) show (otherwise) show ( ) show (valid.) show ( ) show (The) show ( ) show (revocation) show ( ) show (list) show ( ) show (is) show ( ) show (append-only) show ( ) show (and) show  newline
-(signed) show ( ) show (by) show ( ) show (the) show ( ) show (revoking) show ( ) show (quorum.) show  newline
+(Any) show ( ) show (node) show ( ) show (encountering) show ( ) show (a) show ( ) show (revoked) show ( ) show (principal) show ( ) show (in) show ( ) show (a) show ( ) show (join) show ( ) show (request) show ( ) show (rejects) show ( ) show (it) show  newline
+(immediately,) show ( ) show (before) show ( ) show (checking) show ( ) show (join) show ( ) show (policy.) show ( ) show (The) show ( ) show (revocation) show ( ) show (list) show ( ) show (is) show  newline
+(append-only) show ( ) show (and) show ( ) show (persisted) show ( ) show (across) show ( ) show (restarts.) show  newline
  newline
  newline
 (Disbarred) show ( ) show (Node) show ( ) show (Behavior) show  newline
@@ -1172,7 +1263,7 @@ newline
  newline
 (A) show ( ) show (disbarred) show ( ) show (node) show ( ) show (finds) show ( ) show (itself) show ( ) show (unable) show ( ) show (to) show ( ) show (participate:) show  newline
  newline
-(*) show ( ) show (Join) show ( ) show (requests) show ( ) show (are) show ( ) show (rejected) show ( ) show (\(pubkey) show ( ) show (is) show ( ) show (on) show ( ) show (revocation) show ( ) show (list\)) show  newline
+(*) show ( ) show (Join) show ( ) show (requests) show ( ) show (are) show ( ) show (rejected) show ( ) show (\(principal-revoked?) show ( ) show (check) show ( ) show (in) show ( ) show (handle-join-connection\)) show  newline
 (*) show ( ) show (Gossip) show ( ) show (messages) show ( ) show (from) show ( ) show (the) show ( ) show (node) show ( ) show (are) show ( ) show (dropped) show  newline
 (*) show ( ) show (The) show ( ) show (node) show ( ) show (can) show ( ) show (still) show ( ) show (operate) show ( ) show (locally) show ( ) show (but) show ( ) show (cannot) show ( ) show (federate) show  newline
  newline
@@ -1183,31 +1274,24 @@ newline
  newline
 newpath margin ypos moveto margin 432 add ypos lineto stroke
 newline
-(PENDING) show ( ) show (JOINS) show ( ) show (QUEUE) show  newline
+(PENDING) show ( ) show (PROPOSALS) show ( ) show (QUEUE) show  newline
 newpath margin ypos moveto margin 432 add ypos lineto stroke
 newline
  newline
 (The) show ( ) show (pending) show ( ) show (proposals) show ( ) show (queue) show ( ) show (\(*pending-proposals*\)) show ( ) show (tracks) show ( ) show (join) show ( ) show (and) show  newline
-(disbarment) show ( ) show (votes) show ( ) show (in) show ( ) show (progress.) show  newline
+(disbarment) show ( ) show (votes) show ( ) show (in) show ( ) show (progress.) show ( ) show (Persisted) show ( ) show (to) show ( ) show (.vault/membership-state.sexp.) show  newline
  newline
  newline
-(Queue) show ( ) show (Structure) show  newline
-newpath margin ypos moveto margin 90 add ypos lineto stroke
+(Queue) show ( ) show (State) show  newline
+newpath margin ypos moveto margin 66 add ypos lineto stroke
 newline
  newline
  newline
-(\(define) show ( ) show (*pending-proposals*) show ( ) show ('\(\)\)) show  newline
-(;;) show ( ) show (Each) show ( ) show (proposal:) show  newline
-(\(proposal) show  newline
-(\(id) show ( ) show ("hash-of-proposal"\)) show  newline
-(\(type) show ( ) show (join\)) show ( ) show (;) show ( ) show (join) show ( ) show (|) show ( ) show (disbar) show  newline
-(\(subject) show ( ) show (node-name\)) show  newline
-(\(proposed-by) show ( ) show (proposer-name\)) show  newline
-(\(proposed-at) show ( ) show (timestamp\)) show  newline
-(\(votes) show ( ) show (\(\)\)) show ( ) show (;) show ( ) show (\(\(name) show ( ) show (.) show ( ) show (vote\)) show ( ) show (...\)) show  newline
-(\(threshold) show ( ) show (\(n) show ( ) show (m\)\)) show ( ) show (;) show ( ) show (n-of-m) show ( ) show (required) show  newline
-(\(expires) show ( ) show (\(+) show ( ) show (proposed-at) show ( ) show (604800\)\)) show ( ) show (;) show ( ) show (7) show ( ) show (days) show  newline
-(\(status) show ( ) show (pending\)\)) show ( ) show (;) show ( ) show (pending) show ( ) show (|) show ( ) show (approved) show ( ) show (|) show ( ) show (rejected) show ( ) show (|) show ( ) show (expired) show  newline
+(\(define) show ( ) show (*pending-proposals*) show ( ) show ('\(\)\)) show ( ) show (;) show ( ) show (list) show ( ) show (of) show ( ) show (proposal) show ( ) show (s-expressions) show  newline
+(\(define) show ( ) show (*join-policy*) show ( ) show ('open\)) show ( ) show (;) show ( ) show (open) show ( ) show (|) show ( ) show (sponsored) show ( ) show (|) show ( ) show (voted) show ( ) show (|) show ( ) show (closed) show  newline
+(\(define) show ( ) show (*vote-threshold*) show ( ) show ('\(2) show ( ) show (3\)\)) show ( ) show (;) show ( ) show (n-of-m) show ( ) show (\(voted) show ( ) show (policy\)) show  newline
+(\(define) show ( ) show (*revocation-list*) show ( ) show ('\(\)\)) show ( ) show (;) show ( ) show (\(\(principal) show ( ) show (timestamp) show ( ) show (reason) show ( ) show (by\)) show ( ) show (...\)) show  newline
+(\(define) show ( ) show (*proposal-ttl*) show ( ) show (604800\)) show ( ) show (;) show ( ) show (7) show ( ) show (days) show ( ) show (in) show ( ) show (seconds) show  newline
  newline
  newline
 (Queue) show ( ) show (Operations) show  newline
@@ -1215,15 +1299,53 @@ newpath margin ypos moveto margin 96 add ypos lineto stroke
 newline
  newline
  newline
-(;;) show ( ) show (Propose) show ( ) show (a) show ( ) show (new) show ( ) show (member) show  newline
+(;;) show ( ) show (Propose) show ( ) show (a) show ( ) show (new) show ( ) show (member) show ( ) show (\(requires) show ( ) show (sponsored) show ( ) show (or) show ( ) show (voted) show ( ) show (policy\)) show  newline
 (\(propose-join) show ( ) show ('new-node) show ( ) show (pubkey) show ( ) show (hardware\)) show  newline
+(;;) show ( ) show (Propose) show ( ) show (disbarment) show ( ) show (\(always) show ( ) show (requires) show ( ) show (vote,) show ( ) show (regardless) show ( ) show (of) show ( ) show (policy\)) show  newline
+(\(propose-disbar) show ( ) show ('bad-node) show ( ) show ("reason") show ( ) show ('evidence:) show ( ) show ("hash"\)) show  newline
 (;;) show ( ) show (Vote) show ( ) show (on) show ( ) show (a) show ( ) show (pending) show ( ) show (proposal) show  newline
-(\(vote-proposal) show ( ) show (proposal-id) show ( ) show ('approve\)) show ( ) show (;) show ( ) show (or) show ( ) show ('reject) show  newline
+(\(vote-proposal) show ( ) show (proposal-id) show ( ) show ('approve\)) show ( ) show (;) show ( ) show (or) show ( ) show ('reject) show ( ) show (or) show ( ) show ('disbar) show  newline
 (;;) show ( ) show (List) show ( ) show (pending) show ( ) show (proposals) show  newline
-(\(pending\)) show  newline
-(;;) show ( ) show (Proposals) show ( ) show (are) show ( ) show (gossiped) show ( ) show (between) show ( ) show (members) show  newline
-(;;) show ( ) show (Votes) show ( ) show (are) show ( ) show (gossiped) show ( ) show (as) show ( ) show (they) show ( ) show (arrive) show  newline
-(;;) show ( ) show (Threshold) show ( ) show (check) show ( ) show (happens) show ( ) show (on) show ( ) show (every) show ( ) show (vote) show ( ) show (receipt) show  newline
+(\(pending-proposals\)) show  newline
+(;;) show ( ) show (Interactive) show ( ) show (review) show ( ) show (with) show ( ) show (voting) show ( ) show (instructions) show  newline
+(\(review-proposals\)) show  newline
+ newline
+(Votes) show ( ) show (are) show ( ) show (idempotent:) show ( ) show (a) show ( ) show (member) show ( ) show (can) show ( ) show (change) show ( ) show (their) show ( ) show (vote) show ( ) show (by) show ( ) show (voting) show ( ) show (again,) show  newline
+(but) show ( ) show (each) show ( ) show (member) show ( ) show (has) show ( ) show (exactly) show ( ) show (one) show ( ) show (vote) show ( ) show (per) show ( ) show (proposal.) show ( ) show (check-threshold!) show ( ) show (runs) show  newline
+(after) show ( ) show (every) show ( ) show (vote,) show ( ) show (triggering) show ( ) show (execute-proposal!) show ( ) show (when) show ( ) show (the) show ( ) show (approval) show  newline
+(threshold) show ( ) show (is) show ( ) show (met,) show ( ) show (or) show ( ) show (marking) show ( ) show (the) show ( ) show (proposal) show ( ) show (rejected) show ( ) show (when) show ( ) show (enough) show ( ) show (reject) show  newline
+(votes) show ( ) show (make) show ( ) show (approval) show ( ) show (impossible.) show  newline
+ newline
+ newline
+(Interactive) show ( ) show (Review) show  newline
+newpath margin ypos moveto margin 108 add ypos lineto stroke
+newline
+ newline
+(review-proposals) show ( ) show (displays) show ( ) show (all) show ( ) show (pending) show ( ) show (proposals) show ( ) show (with) show ( ) show (full) show ( ) show (context) show ( ) show (and) show  newline
+(voting) show ( ) show (instructions.) show ( ) show (On) show ( ) show (startup,) show ( ) show (restore-realm-state) show ( ) show (shows) show ( ) show (a) show ( ) show (summary) show ( ) show (of) show  newline
+(pending) show ( ) show (proposals:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Full) show ( ) show (interactive) show ( ) show (review) show  newline
+(>) show ( ) show (\(review-proposals\)) show  newline
+(===) show ( ) show (Pending) show ( ) show (Proposals) show ( ) show (\(2\)) show ( ) show (===) show  newline
+(Join) show ( ) show (policy:) show ( ) show (voted) show  newline
+(Proposal:) show ( ) show (7368620C2C79...) show  newline
+(Type:) show ( ) show (Join) show  newline
+(Subject:) show ( ) show (starlight) show  newline
+(Proposed:) show ( ) show (fluffy) show ( ) show (\(3h) show ( ) show (ago\)) show  newline
+(Threshold:) show ( ) show (2) show ( ) show (of) show ( ) show (3) show  newline
+(Expires:) show ( ) show (6d) show ( ) show (remaining) show  newline
+(Status:) show ( ) show (pending) show  newline
+(Votes:) show  newline
+(fluffy:) show ( ) show (approve) show  newline
+(\(You) show ( ) show (have) show ( ) show (not) show ( ) show (voted\)) show  newline
+(To) show ( ) show (vote:) show ( ) show (\(vote-proposal) show ( ) show ("7368620C2C79...") show ( ) show ('approve\)) show  newline
+(or:) show ( ) show (\(vote-proposal) show ( ) show ("7368620C2C79...") show ( ) show ('reject\)) show  newline
+ newline
+(format-proposal) show ( ) show (displays) show ( ) show (a) show ( ) show (single) show ( ) show (proposal) show ( ) show (in) show ( ) show (detail.) show  newline
+(format-proposal-oneline) show ( ) show (produces) show ( ) show (the) show ( ) show (compact) show ( ) show (summary) show ( ) show (used) show ( ) show (in) show ( ) show (startup) show  newline
+(notifications.) show  newline
  newline
  newline
 (Consistency) show  newline
@@ -1246,39 +1368,42 @@ newline
 newpath margin ypos moveto margin 432 add ypos lineto stroke
 newline
  newline
-(Membership) show ( ) show (votes) show ( ) show (use) show ( ) show (the) show ( ) show (quorum) show ( ) show (protocol) show ( ) show (defined) show ( ) show (in) show ( ) show (Memo-038.) show ( ) show (The) show  newline
-(specific) show ( ) show (application) show ( ) show (to) show ( ) show (membership) show ( ) show (decisions:) show  newline
+(Membership) show ( ) show (votes) show ( ) show (use) show ( ) show (threshold-based) show ( ) show (approval.) show ( ) show (The) show ( ) show (specific) show ( ) show (application) show  newline
+(to) show ( ) show (membership) show ( ) show (decisions:) show  newline
  newline
  newline
-(Simple) show ( ) show (Majority) show  newline
+(Threshold) show ( ) show (Configuration) show  newline
+newpath margin ypos moveto margin 138 add ypos lineto stroke
+newline
+ newline
+(The) show ( ) show (vote) show ( ) show (threshold) show ( ) show (is) show ( ) show (a) show ( ) show (pair) show ( ) show (\(n) show ( ) show (m\)) show ( ) show (where) show ( ) show (n) show ( ) show (approvals) show ( ) show (out) show ( ) show (of) show ( ) show (m) show ( ) show (members) show  newline
+(are) show ( ) show (required.) show ( ) show (Configured) show ( ) show (via) show ( ) show (set-join-policy!:) show  newline
+ newline
+ newline
+(;;) show ( ) show (Set) show ( ) show (voted) show ( ) show (policy) show ( ) show (with) show ( ) show (2-of-3) show ( ) show (threshold) show  newline
+(\(set-join-policy!) show ( ) show ('voted) show ( ) show ('threshold:) show ( ) show ('\(2) show ( ) show (3\)\)) show  newline
+(;;) show ( ) show (For) show ( ) show (disbarment,) show ( ) show (threshold) show ( ) show (is) show ( ) show (computed) show ( ) show (automatically:) show  newline
+(;;) show ( ) show (max\(2,) show ( ) show (ceiling\(member-count) show ( ) show (/) show ( ) show (2\)\)) show ( ) show (of) show ( ) show (member-count) show  newline
+(;;) show ( ) show (This) show ( ) show (ensures) show ( ) show (disbarment) show ( ) show (always) show ( ) show (requires) show ( ) show (a) show ( ) show (meaningful) show ( ) show (quorum.) show  newline
+ newline
+(The) show ( ) show (threshold) show ( ) show (is) show ( ) show (a) show ( ) show (realm-level) show ( ) show (setting,) show ( ) show (persisted) show ( ) show (in) show  newline
+(membership-state.sexp.) show ( ) show (Changing) show ( ) show (the) show ( ) show (threshold) show ( ) show (requires) show ( ) show (calling) show  newline
+(set-join-policy!) show ( ) show (again.) show  newline
+ newline
+ newline
+(Vote) show ( ) show (Processing) show  newline
 newpath margin ypos moveto margin 90 add ypos lineto stroke
 newline
  newline
-(For) show ( ) show (small) show ( ) show (realms) show ( ) show (\(2-5) show ( ) show (members\),) show ( ) show (a) show ( ) show (simple) show ( ) show (majority) show ( ) show (suffices.) show ( ) show (Votes) show ( ) show (are) show  newline
-(open) show ( ) show (\(not) show ( ) show (encrypted\)) show ( ) show (since) show ( ) show (the) show ( ) show (social) show ( ) show (cost) show ( ) show (of) show ( ) show (disagreement) show ( ) show (is) show ( ) show (low) show ( ) show (in) show  newline
-(small) show ( ) show (groups.) show  newline
+(check-threshold!) show ( ) show (runs) show ( ) show (after) show ( ) show (every) show ( ) show (vote) show ( ) show (and) show ( ) show (determines) show ( ) show (the) show ( ) show (outcome:) show  newline
  newline
+(*) show ( ) show (Approved:) show ( ) show (approval) show ( ) show (count) show ( ) show (>=) show ( ) show (n) show ( ) show (\(triggers) show ( ) show (execute-proposal!\)) show  newline
+(*) show ( ) show (Rejected:) show ( ) show (rejection) show ( ) show (count) show ( ) show (>) show ( ) show (\(m) show ( ) show (-) show ( ) show (n\)) show ( ) show (\(makes) show ( ) show (approval) show ( ) show (impossible\)) show  newline
+(*) show ( ) show (Pending:) show ( ) show (neither) show ( ) show (condition) show ( ) show (met,) show ( ) show (awaiting) show ( ) show (more) show ( ) show (votes) show  newline
  newline
-(\(vote-threshold) show  newline
-(\(policy) show ( ) show (majority\)) show  newline
-(\(minimum) show ( ) show (2\)\)) show ( ) show (;) show ( ) show (at) show ( ) show (least) show ( ) show (2) show ( ) show (votes) show ( ) show (regardless) show ( ) show (of) show ( ) show (realm) show ( ) show (size) show  newline
- newline
- newline
-(N-of-M) show ( ) show (Threshold) show  newline
-newpath margin ypos moveto margin 96 add ypos lineto stroke
-newline
- newline
-(For) show ( ) show (larger) show ( ) show (realms,) show ( ) show (an) show ( ) show (explicit) show ( ) show (threshold) show ( ) show (prevents) show ( ) show (single) show ( ) show (members) show ( ) show (from) show  newline
-(controlling) show ( ) show (admission:) show  newline
- newline
- newline
-(\(vote-threshold) show  newline
-(\(policy) show ( ) show (threshold\)) show  newline
-(\(n) show ( ) show (3\)) show  newline
-(\(m) show ( ) show (5\)\)) show ( ) show (;) show ( ) show (3) show ( ) show (of) show ( ) show (5) show ( ) show (members) show ( ) show (must) show ( ) show (approve) show  newline
- newline
-(The) show ( ) show (threshold) show ( ) show (is) show ( ) show (a) show ( ) show (realm-level) show ( ) show (setting.) show ( ) show (Changing) show ( ) show (the) show ( ) show (threshold) show ( ) show (itself) show  newline
-(requires) show ( ) show (a) show ( ) show (vote) show ( ) show (at) show ( ) show (the) show ( ) show (current) show ( ) show (threshold.) show  newline
+(For) show ( ) show (join) show ( ) show (proposals,) show ( ) show (the) show ( ) show (vote) show ( ) show (types) show ( ) show (are) show ( ) show ('approve) show ( ) show (and) show ( ) show ('reject.) show ( ) show (For) show  newline
+(disbarment) show ( ) show (proposals,) show ( ) show (the) show ( ) show (vote) show ( ) show (type) show ( ) show (is) show ( ) show ('disbar) show ( ) show (\(functionally) show ( ) show (equivalent) show  newline
+(to) show ( ) show (approve\).) show  newline
  newline
  newline
 (Private) show ( ) show (Ballot) show  newline
@@ -1286,11 +1411,12 @@ newpath margin ypos moveto margin 84 add ypos lineto stroke
 newline
  newline
 (For) show ( ) show (sensitive) show ( ) show (decisions) show ( ) show (\(especially) show ( ) show (disbarment\),) show ( ) show (the) show ( ) show (homomorphic) show ( ) show (voting) show  newline
-(protocol) show ( ) show (from) show ( ) show (Memo-038) show ( ) show (applies.) show ( ) show (Individual) show ( ) show (votes) show ( ) show (are) show ( ) show (encrypted;) show ( ) show (only) show ( ) show (the) show  newline
-(tally) show ( ) show (is) show ( ) show (revealed.) show  newline
+(protocol) show ( ) show (from) show ( ) show (Memo-038) show ( ) show (could) show ( ) show (apply.) show ( ) show (Individual) show ( ) show (votes) show ( ) show (would) show ( ) show (be) show ( ) show (encrypted;) show  newline
+(only) show ( ) show (the) show ( ) show (tally) show ( ) show (revealed.) show  newline
  newline
-(Private) show ( ) show (ballot) show ( ) show (is) show ( ) show (RECOMMENDED) show ( ) show (for) show ( ) show (disbarment) show ( ) show (and) show ( ) show (OPTIONAL) show ( ) show (for) show ( ) show (join) show  newline
-(votes.) show ( ) show (The) show ( ) show (realm's) show ( ) show (join) show ( ) show (policy) show ( ) show (configuration) show ( ) show (specifies) show ( ) show (which.) show  newline
+(Private) show ( ) show (ballot) show ( ) show (is) show ( ) show (not) show ( ) show (yet) show ( ) show (implemented.) show ( ) show (The) show ( ) show (current) show ( ) show (implementation) show ( ) show (uses) show  newline
+(open) show ( ) show (voting) show ( ) show (where) show ( ) show (all) show ( ) show (members) show ( ) show (can) show ( ) show (see) show ( ) show (each) show ( ) show (other's) show ( ) show (votes.) show ( ) show (This) show ( ) show (is) show  newline
+(acceptable) show ( ) show (for) show ( ) show (small) show ( ) show (realms) show ( ) show (where) show ( ) show (social) show ( ) show (transparency) show ( ) show (is) show ( ) show (appropriate.) show  newline
  newline
  newline
 newpath margin ypos moveto margin 432 add ypos lineto stroke
@@ -1313,6 +1439,7 @@ newline
 newpath margin ypos moveto margin 432 add ypos lineto stroke
 newline
  newline
+(*) show ( ) show (2026-02-09:) show ( ) show (Reflect) show ( ) show (implementation) show ( ) show (in) show ( ) show (memo) show ( ) show (\(actual) show ( ) show (code,) show ( ) show (persistence,) show ( ) show (interactive) show ( ) show (review\)) show  newline
 (*) show ( ) show (2026-02-09:) show ( ) show (Membership) show ( ) show (lifecycle) show ( ) show (\(enrollment,) show ( ) show (departure,) show ( ) show (disbarment,) show ( ) show (voting\)) show  newline
 (*) show ( ) show (2026-01-07:) show ( ) show (Initial) show ( ) show (draft) show ( ) show (\(roles) show ( ) show (and) show ( ) show (capabilities\)) show  newline
  newline

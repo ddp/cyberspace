@@ -121,6 +121,7 @@
   (section
     "Membership Lifecycle"
     (p "Roles define what a node can do; membership defines who belongs. This section specifies the full lifecycle: enrollment, persistence, voluntary departure, and involuntary removal.")
+    (p "Implemented in auto-enroll.sls (1280 lines, 41 tests in test-membership.sps).")
     (subsection
       "Join Policy"
       (p "A realm's join policy determines how new members are admitted. Four policies, from most to least permissive:")
@@ -130,33 +131,45 @@
         (row "sponsored " "Existing member vouches for joiner " "Default for small realms (2-10 nodes) ")
         (row "voted " "N-of-M existing members must approve " "Production realms, high-trust environments ")
         (row "closed " "No new members accepted " "Frozen realms, archival configurations "))
-      (p "The policy is a realm-level setting, stored in realm state and enforced by the join listener.")
-      (code scheme "(realm-state\n  (version 1)\n  (master fluffy)\n  (join-policy sponsored)    ; open | sponsored | voted | closed\n  (vote-threshold (2 3))     ; 2-of-3 required (voted policy only)\n  ...)")
-      (p "Open policy is the current default. The join listener accepts any well-formed join request and issues a certificate. This is correct for the current two-node development scenario but must evolve as realms grow."))
+      (p "The policy is a realm-level setting, persisted in .vault/membership-state.sexp and enforced by the join listener's handle-join-connection.")
+      (code scheme ";; REPL interface\n(set-join-policy! 'voted 'threshold: '(2 3))\n(realm-join-policy)  ; => voted")
+      (p "The join listener gates every request through a policy check. Revoked principals are rejected first, regardless of policy. Under closed, all requests are rejected. Under voted, requests enter the pending queue. Under sponsored, the sponsoring member's approval auto-satisfies the (1 1) threshold. Under open, the original auto-approve behavior applies.")
+      (code scheme ";; Join policy enforcement (handle-join-connection)\n(cond\n  ((principal-revoked? node-name)\n   (enrollment-send out '(join-rejected ...)))\n  ((eq? *join-policy* 'closed)\n   (enrollment-send out '(join-rejected ...)))\n  ((eq? *join-policy* 'voted)\n   (propose-join node-name pubkey hardware)\n   (enrollment-send out '(join-pending ...)))\n  ((eq? *join-policy* 'sponsored)\n   (propose-join node-name pubkey hardware)\n   ;; auto-approves: threshold (1 1)\n   (enrollment-send out '(join-accepted ...)))\n  (else ;; open\n   (create-enrollment-cert ...)\n   (enrollment-send out '(join-accepted ...))))"))
     (subsection
       "Sponsored Enrollment"
       (p "Under the sponsored policy, the sponsoring member's identity is recorded in the enrollment certificate:")
       (code scheme "(signed-enrollment-cert\n  (spki-cert\n    (issuer (principal ed25519:...))\n    (subject (name new-node) (principal ed25519:...))\n    (role full)\n    (sponsor fluffy)             ; who vouched\n    (validity (not-before ...) (not-after ...))))\n  (signature ...))")
-      (p "The sponsor field creates an accountability chain. If a sponsored node misbehaves, the sponsor's judgment is part of the audit record."))
+      (p "The sponsor field creates an accountability chain. If a sponsored node misbehaves, the sponsor's judgment is part of the audit record. Under the sponsored policy, propose-join creates a proposal with threshold (1 1), which auto-approves immediately since the proposer's vote satisfies the requirement."))
     (subsection
       "Voted Enrollment"
-      (p "Under the voted policy, a join request enters a pending queue. Existing members vote to approve or reject.")
-      (code scheme ";; Pending join request (stored in *pending-proposals*)\n(pending-join\n  (name starlight)\n  (pubkey #${...})\n  (hardware (introspection ...))\n  (proposed-by fluffy)\n  (proposed-at 1770583600)\n  (votes ((fluffy . approve)\n          (luna . approve)))\n  (threshold (2 3))              ; need 2-of-3\n  (status pending))              ; pending | approved | rejected | expired")
-      (p "When the threshold is met, the proposing member (or any approver) issues the enrollment certificate. Votes are gossiped so all members converge on the same decision.")
-      (p "Pending proposals expire after a configurable timeout (default: 7 days). Expired proposals are garbage-collected and the joiner must re-request."))
+      (p "Under the voted policy, a join request enters a pending queue. Existing members vote to approve or reject. The actual proposal structure as implemented:")
+      (code scheme ";; Proposal structure (as stored in *pending-proposals*)\n(proposal\n  (id \"7368620C2C79...\")       ; SHA-256 of type:subject:timestamp\n  (type join)                    ; join | disbar\n  (subject starlight)\n  (pubkey #vu8(...))\n  (hardware (introspection ...))\n  (proposed-by fluffy)\n  (proposed-at 1770583600)\n  (votes ((fluffy . approve)\n          (luna . approve)))\n  (threshold (2 3))              ; need 2-of-3\n  (expires 1771188400)           ; proposed-at + 604800 (7 days)\n  (status pending))              ; pending | approved | rejected | expired")
+      (p "Proposal IDs are SHA-256 hashes of type:subject:timestamp, providing collision-free identifiers suitable for gossip convergence.")
+      (p "When the threshold is met, check-threshold! calls execute-proposal!, which has the master issue the enrollment certificate. When enough rejections make approval impossible, the proposal is marked rejected.")
+      (p "Pending proposals expire after a configurable timeout (default: 7 days, *proposal-ttl*). expire-proposals! garbage-collects stale entries on every queue access.")
+      (code scheme ";; REPL interface\n(propose-join 'new-node pubkey hardware)\n(vote-proposal \"7368620C2C79...\" 'approve)  ; or 'reject\n(pending-proposals)  ; list all pending\n(review-proposals)   ; interactive display with voting instructions"))
     (subsection
       "Enrollment Persistence"
-      (p "After successful enrollment (by any policy), three artifacts are persisted to the vault:")
-      (code ".vault/\n  certs/membership.sexp           ; signed enrollment certificate\n  keystore/\n    enrollment.pub                ; Ed25519 public key (plaintext)\n    enrollment.key                ; Ed25519 private key (plaintext)\n  realm-state.sexp                ; master, role, members, timestamp")
-      (p "On restart, the system checks all three. If any is missing or invalid, the node falls back to fresh auto-enrollment. This three-point check prevents a node from operating with stale identity material.")
-      (p "Hardware capabilities and scaling factors are NOT persisted. They are recomputed from fresh introspection on every startup, ensuring the node's declared capabilities always match reality.")))
+      (p "After successful enrollment (by any policy), four artifacts are persisted to the vault:")
+      (code ".vault/\n  certs/membership.sexp           ; signed enrollment certificate\n  keystore/\n    enrollment.pub                ; Ed25519 public key (plaintext)\n    enrollment.key                ; Ed25519 private key (plaintext)\n  realm-state.sexp                ; master, role, members, timestamp\n  membership-state.sexp           ; join policy, proposals, revocations")
+      (p "The membership-state.sexp file persists the join policy, vote threshold, pending proposals, and revocation list:")
+      (code scheme "(membership-state\n  (version 1)\n  (join-policy voted)\n  (vote-threshold (2 3))\n  (proposals (...))\n  (revocation-list (...))\n  (timestamp 1770920000))")
+      (p "On restart, restore-realm-state calls load-membership-state!, which restores the join policy, proposals, and revocation list. Stale proposals are expired immediately on load.")
+      (p "The system checks three enrollment artifacts (cert, keypair, realm-state). If any is missing or invalid, the node falls back to fresh auto-enrollment. This three-point check prevents a node from operating with stale identity material.")
+      (p "Hardware capabilities and scaling factors are NOT persisted. They are recomputed from fresh introspection on every startup, ensuring the node's declared capabilities always match reality."))
+    (subsection
+      "Startup Notification"
+      (p "On restore, pending proposals are displayed to the operator:")
+      (code "*** 2 pending proposals awaiting your vote ***\n  JOIN alice (by fluffy, 3h ago, 1/2 votes) [32FBFF0F75F5]\n  DISBAR eve  (by fluffy, 1d ago, 1/2 votes) [489142FCCD98]\nUse (review-proposals) to review and vote.")
+      (p "This ensures that a node returning from downtime immediately sees what decisions need its attention, rather than silently ignoring pending membership actions.")))
   (section
     "Leaving a Realm"
     (p "A node may voluntarily depart a realm. Departure is clean: the node revokes its own membership, notifies peers, and returns to the Wilderness.")
     (subsection
       "Voluntary Departure"
-      (code scheme "(define (leave-realm)\n  \"Voluntarily depart the realm. Clean exit.\"\n  ;; 1. Notify peers (gossip departure)\n  ;; 2. Revoke local membership cert\n  ;; 3. Delete realm-state.sexp\n  ;; 4. Delete enrollment keypair\n  ;; 5. Stop join listener\n  ;; 6. Unregister from Bonjour\n  ;; 7. Reset in-memory state\n  ;; Node returns to Wilderness\n  ...)")
-      (p "Steps 1-6 are idempotent. A crashed node that restarts after partial departure will detect the missing files and fall through to fresh enrollment, achieving the same end state."))
+      (p "Implemented in leave-realm. Each step is wrapped in guard for crash safety:")
+      (code scheme "(define (leave-realm)\n  (unless *my-name*\n    (error 'leave-realm \"not enrolled in any realm\"))\n  (let ((name *my-name*)\n        (was-master (eq? *my-role* 'master)))\n    ;; 1. Revoke local membership cert\n    (guard (exn [#t ...]) (revoke-membership!))\n    ;; 2. Stop join listener\n    (guard (exn [#t #f]) (stop-join-listener))\n    ;; 3. Unregister from Bonjour\n    (guard (exn [#t #f]) (bonjour-unregister))\n    ;; 4. Reset in-memory state\n    (set! *realm-master* #f)\n    (set! *realm-members* '())\n    (set! *my-role* #f) ...             ; all state variables\n    `((departed . ,name)\n      (was-master . ,was-master))))")
+      (p "Each step is idempotent. A crashed node that restarts after partial departure will detect the missing cert and fall through to fresh enrollment, achieving the same end state."))
     (subsection
       "Member List Update"
       (p "When a node departs, the remaining members must update their member lists. The departure is gossiped as a membership event:")
@@ -164,7 +177,7 @@
       (p "On receiving a departure event, each member removes the node from its local member list and recomputes scaling factors. If the departing node was master, the remaining members trigger a new election."))
     (subsection
       "Master Departure"
-      (p "If the master departs, the realm needs a new one. The remaining members hold a capability-based election (same as initial enrollment). The most capable remaining node becomes master.")
+      (p "If the master departs, the realm needs a new one. The disbar-member! procedure already handles this case: when the disbarred or departed node was master, it triggers elect-master on the remaining members and assigns the winner as the new master.")
       (p "If no members remain, the realm ceases to exist. Its artifacts persist in vaults but no active realm operates.")))
   (section
     "Disbarment"
@@ -179,57 +192,67 @@
       (p "Disbarment is a serious action. The bar is high because false positives destroy trust in the system."))
     (subsection
       "Disbarment Protocol"
-      (p "Disbarment requires a vote under the realm's join policy (even if the join policy is 'open', disbarment always requires a vote):")
-      (code scheme ";; Disbarment proposal\n(pending-disbar\n  (name compromised-node)\n  (proposed-by fluffy)\n  (proposed-at 1770583600)\n  (reason \"Certificate compromise detected\")\n  (evidence (audit-ref \"hash-of-evidence\"))\n  (votes ((fluffy . disbar)\n          (luna . disbar)))\n  (threshold (2 3))\n  (status pending))")
-      (p "When the threshold is met:")
+      (p "Disbarment always requires a vote, even under open join policy. The threshold is computed as majority of current members (minimum 2). propose-disbar creates the proposal; members vote via vote-proposal with the 'disbar vote type.")
+      (code scheme ";; REPL interface\n(propose-disbar 'compromised-node \"Certificate compromise\"\n                'evidence: \"audit-hash-abc123\")\n(vote-proposal \"DA95EEFC0289...\" 'disbar)\n\n;; Disbarment proposal (as stored)\n(proposal\n  (id \"DA95EEFC028B...\")\n  (type disbar)\n  (subject compromised-node)\n  (proposed-by fluffy)\n  (proposed-at 1770583600)\n  (reason \"Certificate compromise detected\")\n  (evidence \"audit-hash-abc123\")\n  (votes ((fluffy . disbar)\n          (luna . disbar)))\n  (threshold (2 3))\n  (expires 1771188400)\n  (status pending))")
+      (p "When the threshold is met, disbar-member! executes:")
       (list
-        (item "The node's membership certificate is revoked (added to a revocation list)")
-        (item "The node is removed from all member lists")
-        (item "The revocation is gossiped to all members")
-        (item "The node's Bonjour registration is ignored by members")
-        (item "Scaling factors are recomputed without the disbarred node")))
+        (item "The node is added to the revocation list (append-only)")
+        (item "The node is removed from the member list")
+        (item "Scaling factors are recomputed without the disbarred node")
+        (item "If the disbarred node was master, elect-master triggers re-election")
+        (item "The revocation list is persisted to .vault/membership-state.sexp")))
     (subsection
       "Certificate Revocation"
-      (p "Revoked certificates are stored in a revocation list that is gossiped alongside membership events:")
-      (code scheme "(revocation-list\n  (version 1)\n  (entries\n    ((principal ed25519:abc123...)\n     (revoked-at 1770583600)\n     (reason \"Byzantine behavior\")\n     (revoked-by (fluffy luna)))))")
-      (p "Any node encountering a revoked certificate rejects it, even if the certificate is otherwise valid. The revocation list is append-only and signed by the revoking quorum."))
+      (p "Revoked principals are stored in an in-memory list, persisted to membership-state.sexp, and checked on every join attempt:")
+      (code scheme ";; Revocation list entry (as stored)\n;; (principal timestamp reason revoked-by)\n(eve 1770583600 \"Byzantine behavior\" (fluffy luna))\n\n;; Query interface\n(revocation-list)             ; => list of all entries\n(principal-revoked? 'eve)     ; => #t")
+      (p "Any node encountering a revoked principal in a join request rejects it immediately, before checking join policy. The revocation list is append-only and persisted across restarts."))
     (subsection
       "Disbarred Node Behavior"
       (p "A disbarred node finds itself unable to participate:")
       (list
-        (item "Join requests are rejected (pubkey is on revocation list)")
+        (item "Join requests are rejected (principal-revoked? check in handle-join-connection)")
         (item "Gossip messages from the node are dropped")
         (item "The node can still operate locally but cannot federate"))
       (p "The node effectively returns to the Wilderness but with a tainted identity. It must generate new keys to re-enroll, and even then, the voted policy provides a gate.")))
   (section
-    "Pending Joins Queue"
-    (p "The pending proposals queue (*pending-proposals*) tracks join and disbarment votes in progress.")
+    "Pending Proposals Queue"
+    (p "The pending proposals queue (*pending-proposals*) tracks join and disbarment votes in progress. Persisted to .vault/membership-state.sexp.")
     (subsection
-      "Queue Structure"
-      (code scheme "(define *pending-proposals* '())\n\n;; Each proposal:\n(proposal\n  (id \"hash-of-proposal\")\n  (type join)                    ; join | disbar\n  (subject node-name)\n  (proposed-by proposer-name)\n  (proposed-at timestamp)\n  (votes ())                     ; ((name . vote) ...)\n  (threshold (n m))              ; n-of-m required\n  (expires (+ proposed-at 604800))  ; 7 days\n  (status pending))              ; pending | approved | rejected | expired"))
+      "Queue State"
+      (code scheme "(define *pending-proposals* '())      ; list of proposal s-expressions\n(define *join-policy* 'open)          ; open | sponsored | voted | closed\n(define *vote-threshold* '(2 3))      ; n-of-m (voted policy)\n(define *revocation-list* '())        ; ((principal timestamp reason by) ...)\n(define *proposal-ttl* 604800)        ; 7 days in seconds"))
     (subsection
       "Queue Operations"
-      (code scheme ";; Propose a new member\n(propose-join 'new-node pubkey hardware)\n\n;; Vote on a pending proposal\n(vote-proposal proposal-id 'approve)  ; or 'reject\n\n;; List pending proposals\n(pending)\n\n;; Proposals are gossiped between members\n;; Votes are gossiped as they arrive\n;; Threshold check happens on every vote receipt"))
+      (code scheme ";; Propose a new member (requires sponsored or voted policy)\n(propose-join 'new-node pubkey hardware)\n\n;; Propose disbarment (always requires vote, regardless of policy)\n(propose-disbar 'bad-node \"reason\" 'evidence: \"hash\")\n\n;; Vote on a pending proposal\n(vote-proposal proposal-id 'approve)  ; or 'reject or 'disbar\n\n;; List pending proposals\n(pending-proposals)\n\n;; Interactive review with voting instructions\n(review-proposals)")
+      (p "Votes are idempotent: a member can change their vote by voting again, but each member has exactly one vote per proposal. check-threshold! runs after every vote, triggering execute-proposal! when the approval threshold is met, or marking the proposal rejected when enough reject votes make approval impossible."))
+    (subsection
+      "Interactive Review"
+      (p "review-proposals displays all pending proposals with full context and voting instructions. On startup, restore-realm-state shows a summary of pending proposals:")
+      (code scheme ";; Full interactive review\n> (review-proposals)\n\n=== Pending Proposals (2) ===\nJoin policy: voted\n\n  Proposal: 7368620C2C79...\n  Type:     Join\n  Subject:  starlight\n  Proposed: fluffy (3h ago)\n  Threshold: 2 of 3\n  Expires:  6d remaining\n  Status:   pending\n  Votes:\n    fluffy: approve\n  (You have not voted)\n\nTo vote: (vote-proposal \"7368620C2C79...\" 'approve)\n     or: (vote-proposal \"7368620C2C79...\" 'reject)")
+      (p "format-proposal displays a single proposal in detail. format-proposal-oneline produces the compact summary used in startup notifications."))
     (subsection
       "Consistency"
       (p "Proposals and votes are gossiped, so all members eventually see the same state. Because votes are idempotent (a member can only vote once per proposal), convergence is guaranteed regardless of message ordering.")
       (p "In the event of a network partition, each partition may independently reach a threshold if enough members are present. When the partition heals, the gossiped results converge. If conflicting decisions were made (one partition approved, another rejected), the earlier timestamp wins.")))
   (section
     "Voting Protocol"
-    (p "Membership votes use the quorum protocol defined in Memo-038. The specific application to membership decisions:")
+    (p "Membership votes use threshold-based approval. The specific application to membership decisions:")
     (subsection
-      "Simple Majority"
-      (p "For small realms (2-5 members), a simple majority suffices. Votes are open (not encrypted) since the social cost of disagreement is low in small groups.")
-      (code scheme "(vote-threshold\n  (policy majority)\n  (minimum 2))                   ; at least 2 votes regardless of realm size"))
+      "Threshold Configuration"
+      (p "The vote threshold is a pair (n m) where n approvals out of m members are required. Configured via set-join-policy!:")
+      (code scheme ";; Set voted policy with 2-of-3 threshold\n(set-join-policy! 'voted 'threshold: '(2 3))\n\n;; For disbarment, threshold is computed automatically:\n;; max(2, ceiling(member-count / 2)) of member-count\n;; This ensures disbarment always requires a meaningful quorum.")
+      (p "The threshold is a realm-level setting, persisted in membership-state.sexp. Changing the threshold requires calling set-join-policy! again."))
     (subsection
-      "N-of-M Threshold"
-      (p "For larger realms, an explicit threshold prevents single members from controlling admission:")
-      (code scheme "(vote-threshold\n  (policy threshold)\n  (n 3)\n  (m 5))                         ; 3 of 5 members must approve")
-      (p "The threshold is a realm-level setting. Changing the threshold itself requires a vote at the current threshold."))
+      "Vote Processing"
+      (p "check-threshold! runs after every vote and determines the outcome:")
+      (list
+        (item "Approved: approval count >= n (triggers execute-proposal!)")
+        (item "Rejected: rejection count > (m - n) (makes approval impossible)")
+        (item "Pending: neither condition met, awaiting more votes"))
+      (p "For join proposals, the vote types are 'approve and 'reject. For disbarment proposals, the vote type is 'disbar (functionally equivalent to approve)."))
     (subsection
       "Private Ballot"
-      (p "For sensitive decisions (especially disbarment), the homomorphic voting protocol from Memo-038 applies. Individual votes are encrypted; only the tally is revealed.")
-      (p "Private ballot is RECOMMENDED for disbarment and OPTIONAL for join votes. The realm's join policy configuration specifies which.")))
+      (p "For sensitive decisions (especially disbarment), the homomorphic voting protocol from Memo-038 could apply. Individual votes would be encrypted; only the tally revealed.")
+      (p "Private ballot is not yet implemented. The current implementation uses open voting where all members can see each other's votes. This is acceptable for small realms where social transparency is appropriate.")))
   (section
     "References"
     (list
@@ -242,6 +265,7 @@
   (section
     "Changelog"
     (list
+      (item "2026-02-09: Reflect implementation in memo (actual code, persistence, interactive review)")
       (item "2026-02-09: Membership lifecycle (enrollment, departure, disbarment, voting)")
       (item "2026-01-07: Initial draft (roles and capabilities)"))))
 

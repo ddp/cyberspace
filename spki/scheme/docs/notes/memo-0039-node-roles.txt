@@ -392,6 +392,9 @@ Roles define what a node can do; membership defines who belongs. This
 section specifies the full lifecycle: enrollment, persistence, voluntary
 departure, and involuntary removal.
 
+Implemented in auto-enroll.sls (1280 lines, 41 tests in
+test-membership.sps).
+
 
 Join Policy
 -----------
@@ -406,21 +409,38 @@ policies, from most to least permissive:
   voted       N-of-M existing members must approve      Production realms, high-trust environments   
   closed      No new members accepted                   Frozen realms, archival configurations       
 
-The policy is a realm-level setting, stored in realm state and enforced
-by the join listener.
+The policy is a realm-level setting, persisted in
+.vault/membership-state.sexp and enforced by the join listener's
+handle-join-connection.
 
 
-    (realm-state
-      (version 1)
-      (master fluffy)
-      (join-policy sponsored)    ; open | sponsored | voted | closed
-      (vote-threshold (2 3))     ; 2-of-3 required (voted policy only)
-      ...)
+    ;; REPL interface
+    (set-join-policy! 'voted 'threshold: '(2 3))
+    (realm-join-policy)  ; => voted
 
-Open policy is the current default. The join listener accepts any
-well-formed join request and issues a certificate. This is correct for
-the current two-node development scenario but must evolve as realms
-grow.
+The join listener gates every request through a policy check. Revoked
+principals are rejected first, regardless of policy. Under closed, all
+requests are rejected. Under voted, requests enter the pending queue.
+Under sponsored, the sponsoring member's approval auto-satisfies the (1
+1) threshold. Under open, the original auto-approve behavior applies.
+
+
+    ;; Join policy enforcement (handle-join-connection)
+    (cond
+      ((principal-revoked? node-name)
+       (enrollment-send out '(join-rejected ...)))
+      ((eq? *join-policy* 'closed)
+       (enrollment-send out '(join-rejected ...)))
+      ((eq? *join-policy* 'voted)
+       (propose-join node-name pubkey hardware)
+       (enrollment-send out '(join-pending ...)))
+      ((eq? *join-policy* 'sponsored)
+       (propose-join node-name pubkey hardware)
+       ;; auto-approves: threshold (1 1)
+       (enrollment-send out '(join-accepted ...)))
+      (else ;; open
+       (create-enrollment-cert ...)
+       (enrollment-send out '(join-accepted ...))))
 
 
 Sponsored Enrollment
@@ -440,40 +460,58 @@ in the enrollment certificate:
       (signature ...))
 
 The sponsor field creates an accountability chain. If a sponsored node
-misbehaves, the sponsor's judgment is part of the audit record.
+misbehaves, the sponsor's judgment is part of the audit record. Under
+the sponsored policy, propose-join creates a proposal with threshold (1
+1), which auto-approves immediately since the proposer's vote satisfies
+the requirement.
 
 
 Voted Enrollment
 ----------------
 
 Under the voted policy, a join request enters a pending queue. Existing
-members vote to approve or reject.
+members vote to approve or reject. The actual proposal structure as
+implemented:
 
 
-    ;; Pending join request (stored in *pending-proposals*)
-    (pending-join
-      (name starlight)
-      (pubkey #${...})
+    ;; Proposal structure (as stored in *pending-proposals*)
+    (proposal
+      (id "7368620C2C79...")       ; SHA-256 of type:subject:timestamp
+      (type join)                    ; join | disbar
+      (subject starlight)
+      (pubkey #vu8(...))
       (hardware (introspection ...))
       (proposed-by fluffy)
       (proposed-at 1770583600)
       (votes ((fluffy . approve)
               (luna . approve)))
       (threshold (2 3))              ; need 2-of-3
+      (expires 1771188400)           ; proposed-at + 604800 (7 days)
       (status pending))              ; pending | approved | rejected | expired
 
-When the threshold is met, the proposing member (or any approver) issues
-the enrollment certificate. Votes are gossiped so all members converge
-on the same decision.
+Proposal IDs are SHA-256 hashes of type:subject:timestamp, providing
+collision-free identifiers suitable for gossip convergence.
 
-Pending proposals expire after a configurable timeout (default: 7 days).
-Expired proposals are garbage-collected and the joiner must re-request.
+When the threshold is met, check-threshold! calls execute-proposal!,
+which has the master issue the enrollment certificate. When enough
+rejections make approval impossible, the proposal is marked rejected.
+
+Pending proposals expire after a configurable timeout (default: 7 days,
+*proposal-ttl*). expire-proposals! garbage-collects stale entries on
+every queue access.
+
+
+    ;; REPL interface
+    (propose-join 'new-node pubkey hardware)
+    (vote-proposal "7368620C2C79..." 'approve)  ; or 'reject
+    (pending-proposals)  ; list all pending
+    (review-proposals)   ; interactive display with voting instructions
 
 
 Enrollment Persistence
 ----------------------
 
-After successful enrollment (by any policy), three artifacts are
+After successful enrollment (by any policy), four artifacts are
 persisted to the vault:
 
 
@@ -483,14 +521,48 @@ persisted to the vault:
         enrollment.pub                ; Ed25519 public key (plaintext)
         enrollment.key                ; Ed25519 private key (plaintext)
       realm-state.sexp                ; master, role, members, timestamp
+      membership-state.sexp           ; join policy, proposals, revocations
 
-On restart, the system checks all three. If any is missing or invalid,
-the node falls back to fresh auto-enrollment. This three-point check
-prevents a node from operating with stale identity material.
+The membership-state.sexp file persists the join policy, vote threshold,
+pending proposals, and revocation list:
+
+
+    (membership-state
+      (version 1)
+      (join-policy voted)
+      (vote-threshold (2 3))
+      (proposals (...))
+      (revocation-list (...))
+      (timestamp 1770920000))
+
+On restart, restore-realm-state calls load-membership-state!, which
+restores the join policy, proposals, and revocation list. Stale
+proposals are expired immediately on load.
+
+The system checks three enrollment artifacts (cert, keypair,
+realm-state). If any is missing or invalid, the node falls back to fresh
+auto-enrollment. This three-point check prevents a node from operating
+with stale identity material.
 
 Hardware capabilities and scaling factors are NOT persisted. They are
 recomputed from fresh introspection on every startup, ensuring the
 node's declared capabilities always match reality.
+
+
+Startup Notification
+--------------------
+
+On restore, pending proposals are displayed to the operator:
+
+
+    *** 2 pending proposals awaiting your vote ***
+      JOIN alice (by fluffy, 3h ago, 1/2 votes) [32FBFF0F75F5]
+      DISBAR eve  (by fluffy, 1d ago, 1/2 votes) [489142FCCD98]
+    Use (review-proposals) to review and vote.
+
+This ensures that a node returning from downtime immediately sees what
+decisions need its attention, rather than silently ignoring pending
+membership actions.
 
 
 ------------------------------------------------------------------------
@@ -505,21 +577,30 @@ Wilderness.
 Voluntary Departure
 -------------------
 
+Implemented in leave-realm. Each step is wrapped in guard for crash
+safety:
+
 
     (define (leave-realm)
-      "Voluntarily depart the realm. Clean exit."
-      ;; 1. Notify peers (gossip departure)
-      ;; 2. Revoke local membership cert
-      ;; 3. Delete realm-state.sexp
-      ;; 4. Delete enrollment keypair
-      ;; 5. Stop join listener
-      ;; 6. Unregister from Bonjour
-      ;; 7. Reset in-memory state
-      ;; Node returns to Wilderness
-      ...)
+      (unless *my-name*
+        (error 'leave-realm "not enrolled in any realm"))
+      (let ((name *my-name*)
+            (was-master (eq? *my-role* 'master)))
+        ;; 1. Revoke local membership cert
+        (guard (exn [#t ...]) (revoke-membership!))
+        ;; 2. Stop join listener
+        (guard (exn [#t #f]) (stop-join-listener))
+        ;; 3. Unregister from Bonjour
+        (guard (exn [#t #f]) (bonjour-unregister))
+        ;; 4. Reset in-memory state
+        (set! *realm-master* #f)
+        (set! *realm-members* '())
+        (set! *my-role* #f) ...             ; all state variables
+        `((departed . ,name)
+          (was-master . ,was-master))))
 
-Steps 1-6 are idempotent. A crashed node that restarts after partial
-departure will detect the missing files and fall through to fresh
+Each step is idempotent. A crashed node that restarts after partial
+departure will detect the missing cert and fall through to fresh
 enrollment, achieving the same end state.
 
 
@@ -545,9 +626,10 @@ was master, the remaining members trigger a new election.
 Master Departure
 ----------------
 
-If the master departs, the realm needs a new one. The remaining members
-hold a capability-based election (same as initial enrollment). The most
-capable remaining node becomes master.
+If the master departs, the realm needs a new one. The disbar-member!
+procedure already handles this case: when the disbarred or departed node
+was master, it triggers elect-master on the remaining members and
+assigns the winner as the new master.
 
 If no members remain, the realm ceases to exist. Its artifacts persist
 in vaults but no active realm operates.
@@ -576,49 +658,57 @@ destroy trust in the system.
 Disbarment Protocol
 -------------------
 
-Disbarment requires a vote under the realm's join policy (even if the
-join policy is 'open', disbarment always requires a vote):
+Disbarment always requires a vote, even under open join policy. The
+threshold is computed as majority of current members (minimum 2).
+propose-disbar creates the proposal; members vote via vote-proposal with
+the 'disbar vote type.
 
 
-    ;; Disbarment proposal
-    (pending-disbar
-      (name compromised-node)
+    ;; REPL interface
+    (propose-disbar 'compromised-node "Certificate compromise"
+                    'evidence: "audit-hash-abc123")
+    (vote-proposal "DA95EEFC0289..." 'disbar)
+    ;; Disbarment proposal (as stored)
+    (proposal
+      (id "DA95EEFC028B...")
+      (type disbar)
+      (subject compromised-node)
       (proposed-by fluffy)
       (proposed-at 1770583600)
       (reason "Certificate compromise detected")
-      (evidence (audit-ref "hash-of-evidence"))
+      (evidence "audit-hash-abc123")
       (votes ((fluffy . disbar)
               (luna . disbar)))
       (threshold (2 3))
+      (expires 1771188400)
       (status pending))
 
-When the threshold is met:
+When the threshold is met, disbar-member! executes:
 
-  * The node's membership certificate is revoked (added to a revocation list)
-  * The node is removed from all member lists
-  * The revocation is gossiped to all members
-  * The node's Bonjour registration is ignored by members
+  * The node is added to the revocation list (append-only)
+  * The node is removed from the member list
   * Scaling factors are recomputed without the disbarred node
+  * If the disbarred node was master, elect-master triggers re-election
+  * The revocation list is persisted to .vault/membership-state.sexp
 
 
 Certificate Revocation
 ----------------------
 
-Revoked certificates are stored in a revocation list that is gossiped
-alongside membership events:
+Revoked principals are stored in an in-memory list, persisted to
+membership-state.sexp, and checked on every join attempt:
 
 
-    (revocation-list
-      (version 1)
-      (entries
-        ((principal ed25519:abc123...)
-         (revoked-at 1770583600)
-         (reason "Byzantine behavior")
-         (revoked-by (fluffy luna)))))
+    ;; Revocation list entry (as stored)
+    ;; (principal timestamp reason revoked-by)
+    (eve 1770583600 "Byzantine behavior" (fluffy luna))
+    ;; Query interface
+    (revocation-list)             ; => list of all entries
+    (principal-revoked? 'eve)     ; => #t
 
-Any node encountering a revoked certificate rejects it, even if the
-certificate is otherwise valid. The revocation list is append-only and
-signed by the revoking quorum.
+Any node encountering a revoked principal in a join request rejects it
+immediately, before checking join policy. The revocation list is
+append-only and persisted across restarts.
 
 
 Disbarred Node Behavior
@@ -626,7 +716,7 @@ Disbarred Node Behavior
 
 A disbarred node finds itself unable to participate:
 
-  * Join requests are rejected (pubkey is on revocation list)
+  * Join requests are rejected (principal-revoked? check in handle-join-connection)
   * Gossip messages from the node are dropped
   * The node can still operate locally but cannot federate
 
@@ -636,44 +726,74 @@ voted policy provides a gate.
 
 
 ------------------------------------------------------------------------
-PENDING JOINS QUEUE
+PENDING PROPOSALS QUEUE
 ------------------------------------------------------------------------
 
 The pending proposals queue (*pending-proposals*) tracks join and
-disbarment votes in progress.
+disbarment votes in progress. Persisted to .vault/membership-state.sexp.
 
 
-Queue Structure
----------------
+Queue State
+-----------
 
 
-    (define *pending-proposals* '())
-    ;; Each proposal:
-    (proposal
-      (id "hash-of-proposal")
-      (type join)                    ; join | disbar
-      (subject node-name)
-      (proposed-by proposer-name)
-      (proposed-at timestamp)
-      (votes ())                     ; ((name . vote) ...)
-      (threshold (n m))              ; n-of-m required
-      (expires (+ proposed-at 604800))  ; 7 days
-      (status pending))              ; pending | approved | rejected | expired
+    (define *pending-proposals* '())      ; list of proposal s-expressions
+    (define *join-policy* 'open)          ; open | sponsored | voted | closed
+    (define *vote-threshold* '(2 3))      ; n-of-m (voted policy)
+    (define *revocation-list* '())        ; ((principal timestamp reason by) ...)
+    (define *proposal-ttl* 604800)        ; 7 days in seconds
 
 
 Queue Operations
 ----------------
 
 
-    ;; Propose a new member
+    ;; Propose a new member (requires sponsored or voted policy)
     (propose-join 'new-node pubkey hardware)
+    ;; Propose disbarment (always requires vote, regardless of policy)
+    (propose-disbar 'bad-node "reason" 'evidence: "hash")
     ;; Vote on a pending proposal
-    (vote-proposal proposal-id 'approve)  ; or 'reject
+    (vote-proposal proposal-id 'approve)  ; or 'reject or 'disbar
     ;; List pending proposals
-    (pending)
-    ;; Proposals are gossiped between members
-    ;; Votes are gossiped as they arrive
-    ;; Threshold check happens on every vote receipt
+    (pending-proposals)
+    ;; Interactive review with voting instructions
+    (review-proposals)
+
+Votes are idempotent: a member can change their vote by voting again,
+but each member has exactly one vote per proposal. check-threshold! runs
+after every vote, triggering execute-proposal! when the approval
+threshold is met, or marking the proposal rejected when enough reject
+votes make approval impossible.
+
+
+Interactive Review
+------------------
+
+review-proposals displays all pending proposals with full context and
+voting instructions. On startup, restore-realm-state shows a summary of
+pending proposals:
+
+
+    ;; Full interactive review
+    > (review-proposals)
+    === Pending Proposals (2) ===
+    Join policy: voted
+      Proposal: 7368620C2C79...
+      Type:     Join
+      Subject:  starlight
+      Proposed: fluffy (3h ago)
+      Threshold: 2 of 3
+      Expires:  6d remaining
+      Status:   pending
+      Votes:
+        fluffy: approve
+      (You have not voted)
+    To vote: (vote-proposal "7368620C2C79..." 'approve)
+         or: (vote-proposal "7368620C2C79..." 'reject)
+
+format-proposal displays a single proposal in detail.
+format-proposal-oneline produces the compact summary used in startup
+notifications.
 
 
 Consistency
@@ -693,48 +813,52 @@ heals, the gossiped results converge. If conflicting decisions were made
 VOTING PROTOCOL
 ------------------------------------------------------------------------
 
-Membership votes use the quorum protocol defined in Memo-038. The
-specific application to membership decisions:
+Membership votes use threshold-based approval. The specific application
+to membership decisions:
 
 
-Simple Majority
+Threshold Configuration
+-----------------------
+
+The vote threshold is a pair (n m) where n approvals out of m members
+are required. Configured via set-join-policy!:
+
+
+    ;; Set voted policy with 2-of-3 threshold
+    (set-join-policy! 'voted 'threshold: '(2 3))
+    ;; For disbarment, threshold is computed automatically:
+    ;; max(2, ceiling(member-count / 2)) of member-count
+    ;; This ensures disbarment always requires a meaningful quorum.
+
+The threshold is a realm-level setting, persisted in
+membership-state.sexp. Changing the threshold requires calling
+set-join-policy! again.
+
+
+Vote Processing
 ---------------
 
-For small realms (2-5 members), a simple majority suffices. Votes are
-open (not encrypted) since the social cost of disagreement is low in
-small groups.
+check-threshold! runs after every vote and determines the outcome:
 
+  * Approved: approval count >= n (triggers execute-proposal!)
+  * Rejected: rejection count > (m - n) (makes approval impossible)
+  * Pending: neither condition met, awaiting more votes
 
-    (vote-threshold
-      (policy majority)
-      (minimum 2))                   ; at least 2 votes regardless of realm size
-
-
-N-of-M Threshold
-----------------
-
-For larger realms, an explicit threshold prevents single members from
-controlling admission:
-
-
-    (vote-threshold
-      (policy threshold)
-      (n 3)
-      (m 5))                         ; 3 of 5 members must approve
-
-The threshold is a realm-level setting. Changing the threshold itself
-requires a vote at the current threshold.
+For join proposals, the vote types are 'approve and 'reject. For
+disbarment proposals, the vote type is 'disbar (functionally equivalent
+to approve).
 
 
 Private Ballot
 --------------
 
 For sensitive decisions (especially disbarment), the homomorphic voting
-protocol from Memo-038 applies. Individual votes are encrypted; only the
-tally is revealed.
+protocol from Memo-038 could apply. Individual votes would be encrypted;
+only the tally revealed.
 
-Private ballot is RECOMMENDED for disbarment and OPTIONAL for join
-votes. The realm's join policy configuration specifies which.
+Private ballot is not yet implemented. The current implementation uses
+open voting where all members can see each other's votes. This is
+acceptable for small realms where social transparency is appropriate.
 
 
 ------------------------------------------------------------------------
@@ -753,6 +877,7 @@ REFERENCES
 CHANGELOG
 ------------------------------------------------------------------------
 
+  * 2026-02-09: Reflect implementation in memo (actual code, persistence, interactive review)
   * 2026-02-09: Membership lifecycle (enrollment, departure, disbarment, voting)
   * 2026-01-07: Initial draft (roles and capabilities)
 
