@@ -664,32 +664,59 @@ didFinishNavigation:(WKNavigation *)navigation {
 - (void)startSchemeBackend {
     NSBundle *bundle = [NSBundle mainBundle];
     NSString *resourcePath = bundle.resourcePath;
-
-    // Look for compiled server first, then script
-    NSString *serverBinary = [resourcePath stringByAppendingPathComponent:@"cyberspace-server"];
-    NSString *serverScript = [resourcePath stringByAppendingPathComponent:@"cyberspace-server.scm"];
     NSString *schemeDir = @"/Users/ddp/cyberspace/spki/scheme";
+    NSString *chezDir = [schemeDir stringByAppendingPathComponent:@"chez"];
 
     NSString *executable = nil;
     NSArray *arguments = nil;
+    NSString *workingDir = schemeDir;
 
-    if ([[NSFileManager defaultManager] fileExistsAtPath:serverBinary]) {
-        // Use compiled binary
+    // 1. Compiled binary (Chicken)
+    NSString *serverBinary = [resourcePath stringByAppendingPathComponent:@"cyberspace-server"];
+    // 2. Chez script in bundle
+    NSString *chezScript = [resourcePath stringByAppendingPathComponent:@"cyberspace-server.sps"];
+    // 3. Chicken script in bundle
+    NSString *chickenScript = [resourcePath stringByAppendingPathComponent:@"cyberspace-server.scm"];
+
+    NSFileManager *fm = [NSFileManager defaultManager];
+
+    if ([fm fileExistsAtPath:serverBinary]) {
+        // Use compiled Chicken binary
         executable = serverBinary;
         arguments = @[[NSString stringWithFormat:@"%d", self.backendPort]];
-    } else if ([[NSFileManager defaultManager] fileExistsAtPath:serverScript]) {
-        // Use bundled script with csi
+    } else if ([fm fileExistsAtPath:chezScript]) {
+        // Use bundled Chez script
+        executable = @"/opt/homebrew/bin/chez";
+        arguments = @[@"--libdirs", resourcePath, @"--script", chezScript,
+                      [NSString stringWithFormat:@"%d", self.backendPort]];
+        workingDir = resourcePath;
+    } else if ([fm fileExistsAtPath:chickenScript]) {
+        // Use bundled Chicken script
         executable = @"/opt/homebrew/bin/csi";
-        arguments = @[@"-s", serverScript, [NSString stringWithFormat:@"%d", self.backendPort]];
-    } else {
-        // Development mode - check for server.scm or cyberspace-server.scm
+        arguments = @[@"-s", chickenScript,
+                      [NSString stringWithFormat:@"%d", self.backendPort]];
+    } else if ([fm fileExistsAtPath:
+                [chezDir stringByAppendingPathComponent:@"cyberspace/server.sls"]]) {
+        // Development mode: Chez source tree
+        NSString *devScript = [chezDir stringByAppendingPathComponent:@"app/cyberspace-server.sps"];
+        if ([fm fileExistsAtPath:devScript]) {
+            executable = @"/opt/homebrew/bin/chez";
+            arguments = @[@"--libdirs", chezDir, @"--script", devScript,
+                          [NSString stringWithFormat:@"%d", self.backendPort]];
+            workingDir = chezDir;
+        }
+    }
+
+    if (!executable) {
+        // Fallback: Chicken development mode
         NSString *devScript = [schemeDir stringByAppendingPathComponent:@"cyberspace-server.scm"];
-        if (![[NSFileManager defaultManager] fileExistsAtPath:devScript]) {
+        if (![fm fileExistsAtPath:devScript]) {
             devScript = [schemeDir stringByAppendingPathComponent:@"server.scm"];
         }
-        if ([[NSFileManager defaultManager] fileExistsAtPath:devScript]) {
+        if ([fm fileExistsAtPath:devScript]) {
             executable = @"/opt/homebrew/bin/csi";
-            arguments = @[@"-s", devScript, [NSString stringWithFormat:@"%d", self.backendPort]];
+            arguments = @[@"-s", devScript,
+                          [NSString stringWithFormat:@"%d", self.backendPort]];
         }
     }
 
@@ -703,11 +730,15 @@ didFinishNavigation:(WKNavigation *)navigation {
     self.schemeBackend = [[NSTask alloc] init];
     self.schemeBackend.launchPath = executable;
     self.schemeBackend.arguments = arguments;
-    self.schemeBackend.currentDirectoryPath = schemeDir;
+    self.schemeBackend.currentDirectoryPath = workingDir;
 
     // Set environment so REPL knows it's running in the app
     NSMutableDictionary *env = [[[NSProcessInfo processInfo] environment] mutableCopy];
     env[@"CYBERSPACE_APP"] = @"1";
+    // Chez needs CHEZSCHEMELIBDIRS for bundled libraries
+    if ([executable hasSuffix:@"chez"]) {
+        env[@"CHEZSCHEMELIBDIRS"] = [workingDir stringByAppendingString:@":"];
+    }
     self.schemeBackend.environment = env;
 
     // Capture output for logging

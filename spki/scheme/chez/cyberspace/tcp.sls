@@ -13,6 +13,7 @@
     tcp-connect       ; (host port) → (values input-port output-port)
     tcp-listen        ; (port) → listener
     tcp-accept        ; (listener) → (values input-port output-port)
+    tcp-accept-binary ; (listener) → (values binary-input-port binary-output-port)
     tcp-close         ; (listener) → void
     tcp-available?)   ; → #t if bridge loaded
 
@@ -98,12 +99,26 @@
         (error 'tcp-listen "Listen failed" port))
       fd))
 
+  (define (fd->binary-ports fd)
+    "Convert a file descriptor into separate binary input and output ports."
+    (let ((fd2 (%tcp-fd-dup fd)))
+      (values
+       (open-fd-input-port fd (buffer-mode block))
+       (open-fd-output-port fd2 (buffer-mode line)))))
+
   (define (tcp-accept listener)
     "Accept connection on listener, return (values input-port output-port)."
     (let ((fd (%tcp-accept listener)))
       (when (< fd 0)
         (error 'tcp-accept "Accept failed"))
       (fd->ports fd)))
+
+  (define (tcp-accept-binary listener)
+    "Accept connection on listener, return binary ports (no transcoding)."
+    (let ((fd (%tcp-accept listener)))
+      (when (< fd 0)
+        (error 'tcp-accept-binary "Accept failed"))
+      (fd->binary-ports fd)))
 
   (define (tcp-close listener)
     "Close a listener socket."

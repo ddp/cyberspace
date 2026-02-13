@@ -46,10 +46,26 @@ elif [ ! -f "$RESOURCES/Cyberspace.icns" ]; then
     echo "  Note: No app icon (Cyberspace.icns) - using default"
 fi
 
-# Copy and compile Scheme server
+# Copy Scheme server — prefer Chez, fall back to Chicken
 SCHEME_DIR="$SCRIPT_DIR/../.."
-if [ -f "$SCHEME_DIR/server.scm" ]; then
-    echo "  Copying server script..."
+CHEZ_DIR="$SCHEME_DIR/chez"
+
+if [ -f "$CHEZ_DIR/app/cyberspace-server.sps" ]; then
+    echo "  Bundling Chez backend..."
+    cp "$CHEZ_DIR/app/cyberspace-server.sps" "$RESOURCES/"
+
+    # Copy Chez libraries
+    mkdir -p "$RESOURCES/cyberspace/chicken-compatibility"
+    cp "$CHEZ_DIR"/cyberspace/*.sls "$RESOURCES/cyberspace/"
+    cp "$CHEZ_DIR"/cyberspace/chicken-compatibility/*.sls "$RESOURCES/cyberspace/chicken-compatibility/"
+
+    # Copy C bridge dylibs
+    for lib in libcrypto-bridge.dylib libtcp-bridge.dylib; do
+        [ -f "$CHEZ_DIR/$lib" ] && cp "$CHEZ_DIR/$lib" "$RESOURCES/"
+    done
+
+elif [ -f "$SCHEME_DIR/server.scm" ]; then
+    echo "  Bundling Chicken backend..."
     cp "$SCHEME_DIR/server.scm" "$RESOURCES/cyberspace-server.scm"
 
     # Try to compile if csc is available

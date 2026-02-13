@@ -106,18 +106,44 @@
       (if pair (cdr pair) "application/octet-stream")))
 
   ;; ============================================================
+  ;; Binary Port Text I/O
+  ;; ============================================================
+  ;; Server uses binary ports throughout. These helpers read/write
+  ;; text over binary ports so WebSocket can use raw bytes.
+
+  (define (bin-get-line in)
+    "Read a line from binary port, return string (without \\n). Strips \\r."
+    (let loop ((acc '()))
+      (let ((b (get-u8 in)))
+        (cond
+          ((eof-object? b)
+           (if (null? acc) b (utf8->string (u8-list->bytevector (reverse acc)))))
+          ((= b 10)  ; \n
+           (utf8->string (u8-list->bytevector (reverse acc))))
+          ((= b 13)  ; \r — skip, will be followed by \n
+           (loop acc))
+          (else (loop (cons b acc)))))))
+
+  (define (bin-put-string out str)
+    "Write a string to a binary port as UTF-8."
+    (put-bytevector out (string->utf8 str)))
+
+  (define (bin-flush out)
+    (flush-output-port out))
+
+  ;; ============================================================
   ;; HTTP Response Helpers
   ;; ============================================================
 
   (define (http-response out status headers body)
-    (put-string out (format #f "HTTP/1.1 ~a\r\n" status))
+    (bin-put-string out (format #f "HTTP/1.1 ~a\r\n" status))
     (for-each (lambda (h)
-                (put-string out (format #f "~a: ~a\r\n" (car h) (cdr h))))
+                (bin-put-string out (format #f "~a: ~a\r\n" (car h) (cdr h))))
               headers)
-    (put-string out "\r\n")
+    (bin-put-string out "\r\n")
     (when body
-      (put-string out body))
-    (flush-output-port out))
+      (bin-put-string out body))
+    (bin-flush out))
 
   (define (http-ok out content-type body)
     (http-response out "200 OK"
@@ -154,20 +180,13 @@
 
   (define (parse-headers in)
     (let loop ((headers '()))
-      (let ((line (get-line in)))
-        (if (or (eof-object? line)
-                (string=? line "")
-                (string=? line "\r"))
+      (let ((line (bin-get-line in)))
+        (if (or (eof-object? line) (string=? line ""))
             (reverse headers)
-            ;; Strip trailing \r
-            (let* ((clean (if (and (> (string-length line) 0)
-                                   (char=? (string-ref line (- (string-length line) 1)) #\return))
-                              (substring line 0 (- (string-length line) 1))
-                              line))
-                   (colon (string-contains clean ":")))
+            (let ((colon (string-contains line ":")))
               (if colon
-                  (loop (cons (cons (string-downcase (string-trim-both (substring clean 0 colon)))
-                                    (string-trim-both (substring clean (+ colon 1) (string-length clean))))
+                  (loop (cons (cons (string-downcase (string-trim-both (substring line 0 colon)))
+                                    (string-trim-both (substring line (+ colon 1) (string-length line))))
                               headers))
                   (loop headers)))))))
 
@@ -181,7 +200,7 @@
     (let ((combined (string-append key *ws-magic*)))
       (let-values (((to-stdin from-stdout from-stderr pid)
                     (open-process-ports
-                      "printf '%s' | openssl sha1 -binary | openssl base64"
+                      "openssl dgst -sha1 -binary | openssl base64"
                       (buffer-mode block)
                       (make-transcoder (utf-8-codec)))))
         (put-string to-stdin combined)
@@ -189,27 +208,28 @@
         (let ((result (get-line from-stdout)))
           (close-port from-stdout)
           (close-port from-stderr)
-          (if (eof-object? result) "" result)))))
+          (if (eof-object? result) "" (string-trim-both result))))))
 
   (define (handle-websocket in out headers)
     (printf "[ws] Upgrading connection~%")
     (let* ((key-pair (assoc "sec-websocket-key" headers))
            (key (if key-pair (cdr key-pair) "")))
       (let ((accept (ws-accept-key key)))
-        (put-string out "HTTP/1.1 101 Switching Protocols\r\n")
-        (put-string out "Upgrade: websocket\r\n")
-        (put-string out "Connection: Upgrade\r\n")
-        (put-string out (format #f "Sec-WebSocket-Accept: ~a\r\n" accept))
-        (put-string out "\r\n")
-        (flush-output-port out)
+        (bin-put-string out "HTTP/1.1 101 Switching Protocols\r\n")
+        (bin-put-string out "Upgrade: websocket\r\n")
+        (bin-put-string out "Connection: Upgrade\r\n")
+        (bin-put-string out (format #f "Sec-WebSocket-Accept: ~a\r\n" accept))
+        (bin-put-string out "\r\n")
+        (bin-flush out)
         (ws-loop in out))))
 
   (define (ws-loop in out)
     (guard (exn
-            [#t (printf "[ws] Loop error: ~a~%" (condition-message exn))])
+            [#t (printf "[ws] Loop error: ~a~%"
+                        (if (message-condition? exn) (condition-message exn) exn))])
       (let loop ()
         (let ((b1 (get-u8 in)))
-          (when (and (not (eof-object? b1)))
+          (when (not (eof-object? b1))
             (let* ((opcode (bitwise-and b1 #x0f))
                    (b2 (get-u8 in))
                    (masked (bitwise-and b2 #x80))
@@ -217,65 +237,66 @@
               (let ((payload-len
                      (cond
                        ((= len 126)
-                        (+ (bitwise-arithmetic-shift-left (get-u8 in) 8) (get-u8 in)))
+                        (+ (bitwise-arithmetic-shift-left (get-u8 in) 8)
+                           (get-u8 in)))
                        ((= len 127)
                         (let ploop ((i 8) (n 0))
                           (if (zero? i) n
                               (ploop (- i 1)
-                                     (+ (bitwise-arithmetic-shift-left n 8) (get-u8 in))))))
+                                     (+ (bitwise-arithmetic-shift-left n 8)
+                                        (get-u8 in))))))
                        (else len))))
 
                 (let ((mask-key
                        (if (> masked 0)
-                           (list (get-u8 in) (get-u8 in) (get-u8 in) (get-u8 in))
+                           (get-bytevector-n in 4)
                            #f)))
 
-                  (let* ((payload-bv (get-bytevector-n in payload-len))
-                         (payload (if (bytevector? payload-bv)
-                                      (utf8->string payload-bv)
-                                      ""))
-                         (unmasked
-                          (if mask-key
-                              (list->string
-                                (let uloop ((i 0) (chars (string->list payload)))
-                                  (if (null? chars) '()
-                                      (cons (integer->char
-                                              (bitwise-xor (char->integer (car chars))
-                                                           (list-ref mask-key (mod i 4))))
-                                            (uloop (+ i 1) (cdr chars))))))
-                              payload)))
+                  (let* ((raw (if (zero? payload-len)
+                                  (make-bytevector 0)
+                                  (get-bytevector-n in payload-len)))
+                         (payload-bv (if (bytevector? raw) raw (make-bytevector 0)))
+                         (unmasked-bv
+                          (if (and mask-key (bytevector? mask-key))
+                              (let ((ubv (make-bytevector (bytevector-length payload-bv))))
+                                (do ((i 0 (+ i 1)))
+                                    ((>= i (bytevector-length payload-bv)) ubv)
+                                  (bytevector-u8-set! ubv i
+                                    (bitwise-xor (bytevector-u8-ref payload-bv i)
+                                                 (bytevector-u8-ref mask-key (mod i 4))))))
+                              payload-bv))
+                         (text (utf8->string unmasked-bv)))
 
                     (case opcode
                       ((1)  ; Text frame
-                       (ws-handle-message unmasked out)
+                       (ws-handle-message text out)
                        (loop))
                       ((8)  ; Close
                        (ws-send-close out))
                       ((9)  ; Ping
-                       (ws-send-pong out unmasked)
+                       (ws-send-pong out text)
                        (loop))
                       (else (loop))))))))))))
 
   (define (ws-send-frame out opcode payload)
-    ;; WebSocket frame: write header bytes as characters (ports are transcoded)
-    ;; then write payload string directly
-    (let ((len (string-length payload)))
-      (put-char out (integer->char (bitwise-ior #x80 opcode)))
+    (let* ((payload-bv (string->utf8 payload))
+           (len (bytevector-length payload-bv)))
+      (put-u8 out (bitwise-ior #x80 opcode))
       (cond
         ((< len 126)
-         (put-char out (integer->char len)))
+         (put-u8 out len))
         ((< len 65536)
-         (put-char out (integer->char 126))
-         (put-char out (integer->char (bitwise-arithmetic-shift-right len 8)))
-         (put-char out (integer->char (bitwise-and len #xff))))
+         (put-u8 out 126)
+         (put-u8 out (bitwise-arithmetic-shift-right len 8))
+         (put-u8 out (bitwise-and len #xff)))
         (else
-         (put-char out (integer->char 127))
+         (put-u8 out 127)
          (do ((i 7 (- i 1)))
              ((< i 0))
-           (put-char out (integer->char
-                           (bitwise-and (bitwise-arithmetic-shift-right len (* 8 i)) #xff))))))
-      (put-string out payload)
-      (flush-output-port out)))
+           (put-u8 out
+             (bitwise-and (bitwise-arithmetic-shift-right len (* 8 i)) #xff)))))
+      (put-bytevector out payload-bv)
+      (bin-flush out)))
 
   (define (ws-send-text out msg)
     (guard (exn [#t (printf "[ws] Send failed~%") #f])
@@ -384,15 +405,10 @@
   ;; ============================================================
 
   (define (handle-request in out)
-    (let ((request-line (get-line in)))
+    (let ((request-line (bin-get-line in)))
       (if (or (not request-line) (eof-object? request-line))
           #f
-          ;; Strip \r
-          (let ((clean (if (and (> (string-length request-line) 0)
-                                (char=? (string-ref request-line
-                                          (- (string-length request-line) 1)) #\return))
-                           (substring request-line 0 (- (string-length request-line) 1))
-                           request-line)))
+          (let ((clean request-line))
             (let-values (((method path) (parse-request-line clean)))
               (let ((headers (parse-headers in)))
                 (printf "[http] ~a ~a~%" method path)
@@ -443,22 +459,108 @@
                    (http-not-found out)))))))))
 
   ;; ============================================================
-  ;; Embedded UI (index.html) — abbreviated for boot
+  ;; Embedded UI (index.html) — REPL terminal
   ;; ============================================================
 
   (define (index-html)
     (string-append
-      "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
-      "<title>Cyberspace</title>"
-      "<style>"
-      "body{font-family:monospace;background:#000;color:#0f0;margin:20px}"
-      "h1{font-size:18px}pre{white-space:pre-wrap}"
-      "</style></head><body>"
-      "<h1>CYBERSPACE</h1>"
-      "<p>Library of Cyberspace v0.9.12</p>"
-      "<p>WebSocket REPL at /ws</p>"
-      "<p>API: /api/info, /api/vault, /api/keys, /api/peers</p>"
-      "</body></html>"))
+"<!DOCTYPE html><html><head><meta charset='UTF-8'>
+<title>Cyberspace</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'SF Mono',Monaco,'Fira Code',monospace;
+     background:#0a0a0a;color:#33ff33;height:100vh;display:flex;flex-direction:column}
+#output{flex:1;overflow-y:auto;padding:12px 16px;white-space:pre-wrap;word-wrap:break-word;
+        font-size:13px;line-height:1.5}
+#output .banner{color:#66ff66}
+#output .dim{color:#1a8f1a}
+#output .error{color:#ff3333}
+#output .result{color:#33ff33}
+#output .echo{color:#1a8f1a}
+#input-line{display:flex;align-items:center;padding:4px 16px 12px;border-top:1px solid #1a3a1a}
+#prompt{color:#66ff66;margin-right:8px;font-size:13px;user-select:none}
+#input{flex:1;background:transparent;border:none;outline:none;color:#33ff33;
+       font-family:inherit;font-size:13px;caret-color:#33ff33}
+#status{position:fixed;top:8px;right:16px;font-size:11px;color:#1a8f1a}
+#status.connected{color:#33ff33}
+#status.disconnected{color:#ff3333}
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:#0a0a0a}
+::-webkit-scrollbar-thumb{background:#1a3a1a;border-radius:4px}
+</style></head><body>
+<div id='output'></div>
+<form id='input-line' action='javascript:void(0)'><span id='prompt'>&gt;</span><input id='input' autofocus spellcheck='false' autocomplete='off'></form>
+<div id='status'>disconnected</div>
+<script>
+var ws,output=document.getElementById('output'),input=document.getElementById('input'),
+    status=document.getElementById('status'),history=[],histIdx=-1;
+
+function emit(text,cls){
+  var el=document.createElement('div');
+  if(cls)el.className=cls;
+  el.textContent=text;
+  output.appendChild(el);
+  output.scrollTop=output.scrollHeight;
+}
+
+function banner(){
+  emit('CYBERSPACE','banner');
+  emit('Library of Cyberspace v0.9.12','dim');
+  emit('','dim');
+}
+
+function connect(){
+  var loc=window.location;
+  ws=new WebSocket('ws://'+loc.hostname+':'+loc.port+'/ws');
+  ws.onopen=function(){status.textContent='connected';status.className='connected';
+    emit('Connected to REPL','dim');};
+  ws.onclose=function(){status.textContent='disconnected';status.className='disconnected';
+    emit('Disconnected','error');setTimeout(connect,3000);};
+  ws.onerror=function(){};
+  ws.onmessage=function(e){
+    try{
+      var msg=JSON.parse(e.data);
+      if(msg.type==='result')emit(msg.value,'result');
+      else if(msg.type==='error')emit(msg.value||msg.data,'error');
+      else if(msg.type==='echo')emit(msg.data,'echo');
+      else emit(e.data,'dim');
+    }catch(x){emit(e.data,'dim');}
+  };
+}
+
+function sendExpr(){
+  var expr=input.value.trim();
+  if(!expr)return;
+  history.push(expr);histIdx=history.length;
+  emit('> '+expr,'dim');
+  if(ws&&ws.readyState===1)
+    ws.send(JSON.stringify({type:'eval',expression:expr}));
+  else emit('Not connected','error');
+  input.value='';
+}
+document.getElementById('input-line').addEventListener('submit',function(e){
+  e.preventDefault();sendExpr();
+});
+input.addEventListener('keydown',function(e){
+  if(e.key==='Enter'||e.keyCode===13){e.preventDefault();sendExpr();}
+  else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    if(histIdx>0){histIdx--;input.value=history[histIdx];}
+  }else if(e.key==='ArrowDown'){
+    e.preventDefault();
+    if(histIdx<history.length-1){histIdx++;input.value=history[histIdx];}
+    else{histIdx=history.length;input.value='';}
+  }else if(e.key==='l'&&e.ctrlKey){
+    e.preventDefault();output.innerHTML='';
+  }
+});
+input.addEventListener('keypress',function(e){
+  if(e.key==='Enter'||e.keyCode===13||e.which===13){e.preventDefault();sendExpr();}
+});
+
+document.addEventListener('click',function(){input.focus();});
+banner();connect();
+</script></body></html>"))
 
   ;; ============================================================
   ;; Server Main Loop
@@ -480,7 +582,7 @@
         (flush-output-port (current-output-port))
 
         (let loop ()
-          (let-values (((in out) (tcp-accept listener)))
+          (let-values (((in out) (tcp-accept-binary listener)))
             (fork-thread
               (lambda ()
                 (guard (exn
