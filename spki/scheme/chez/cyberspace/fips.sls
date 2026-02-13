@@ -19,6 +19,10 @@
     fips-poker-test
     fips-runs-test
     fips-long-run-test
+    fips-chi-squared-test
+    fips-nonzero-test
+    fips-random-u32-test
+    test-entropy
     fips-status)
 
   (import (rnrs)
@@ -204,6 +208,65 @@
                    (new-bit-idx (if (= bit-idx 7) 0 (+ bit-idx 1))))
               (loop new-byte-idx new-bit-idx bit new-run)))))))
 
+  ;;; ============================================================
+  ;;; Entropy Quality Tests (from test-entropy.sps)
+  ;;; ============================================================
+
+  ;; Chi-squared byte distribution test.
+  ;; 25,600 bytes = 100 expected per byte value bucket.
+  ;; Chi-squared critical values at p=0.001, df=255:
+  ;;   Upper: 310 (biased if exceeded)
+  ;;   Lower: 198 (suspiciously uniform if below)
+  (define (fips-chi-squared-test)
+    (let ((counts (make-vector 256 0))
+          (buf (random-bytes 25600))
+          (n 25600))
+      (do ((i 0 (+ i 1))) ((>= i n))
+        (let ((b (bytevector-u8-ref buf i)))
+          (vector-set! counts b (+ 1 (vector-ref counts b)))))
+      (let* ((expected (/ n 256))
+             (chi-sq (let loop ((i 0) (sum 0.0))
+                       (if (>= i 256)
+                           sum
+                           (let ((obs (vector-ref counts i)))
+                             (loop (+ i 1)
+                                   (+ sum (/ (* (- obs expected) (- obs expected))
+                                             expected))))))))
+        (and (< chi-sq 310.0)
+             (> chi-sq 198.0)))))
+
+  ;; Non-zero test: 100 random 32-byte samples must not be all zeros.
+  ;; Catches stuck RNG, zero-fill, or uninitialized buffer bugs.
+  (define (fips-nonzero-test)
+    (let loop ((i 0))
+      (if (>= i 100)
+          #t
+          (let* ((buf (random-bytes 32))
+                 (all-zero? (let inner ((j 0))
+                              (cond
+                                ((>= j 32) #t)
+                                ((not (= 0 (bytevector-u8-ref buf j))) #f)
+                                (else (inner (+ j 1)))))))
+            (if all-zero?
+                #f
+                (loop (+ i 1)))))))
+
+  ;; random-u32 range test: 1000 samples must span the 32-bit range.
+  ;; Catches truncation to 16-bit or other narrowing bugs.
+  (define (fips-random-u32-test)
+    (let loop ((i 0) (lo (greatest-fixnum)) (hi 0))
+      (if (>= i 1000)
+          (and (< lo (expt 2 30))
+               (> hi (expt 2 30)))
+          (let ((v (random-u32)))
+            (loop (+ i 1) (min lo v) (max hi v))))))
+
+  ;; Combined entropy test — runs all entropy quality checks
+  (define (test-entropy)
+    (and (fips-chi-squared-test)
+         (fips-nonzero-test)
+         (fips-random-u32-test)))
+
   (define (test-randomness)
     (let* ((sample (random-bytes *fips-sample-bytes*))
            (bytes (blob->u8vector sample)))
@@ -226,7 +289,8 @@
           (tests `((sha256 . ,test-sha256)
                    (sha512 . ,test-sha512)
                    (ed25519 . ,test-ed25519)
-                   (randomness . ,test-randomness)))
+                   (randomness . ,test-randomness)
+                   (entropy . ,test-entropy)))
           (failed '()))
       (for-each
         (lambda (test)
