@@ -166,7 +166,7 @@
     ;; Phase 2: Natural language query (Memo-038)
     ask)
 
-  (import (rnrs)
+  (import (except (rnrs) with-output-to-file)
           (only (chezscheme)
                 format printf with-output-to-string
                 file-directory? directory-list mkdir
@@ -193,7 +193,9 @@
                 hash-table-ref/default hash-table-keys
                 hash-table-delete! hash-table-exists?)
           (only (cyberspace chicken-compatibility process)
-                with-input-from-pipe read-line))
+                with-input-from-pipe read-line)
+          (rename (only (chezscheme) with-output-to-file)
+                  (with-output-to-file %chez-with-output-to-file)))
 
   ;;; ============================================================================
   ;;; Inlined Helpers
@@ -201,6 +203,11 @@
   ;;;
   ;;; SRFI-1, SRFI-13, pathname, I/O, and time helpers inlined at top
   ;;; following the pattern established by keyring.sls and audit.sls.
+
+  ;; R6RS with-output-to-file errors on existing files.
+  ;; Chez's version accepts a mode argument; always replace.
+  (define (with-output-to-file path proc)
+    (%chez-with-output-to-file path proc 'replace))
 
   ;; -- SRFI-1 list utilities --
 
