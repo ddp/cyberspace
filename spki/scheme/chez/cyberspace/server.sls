@@ -25,7 +25,11 @@
                 fork-thread sleep
                 system open-process-ports
                 make-time current-time time-second
-                void sort)
+                void sort
+                eval interaction-environment
+                open-input-string read
+                call-with-string-output-port
+                pretty-print display-condition)
           (cyberspace tcp)
           (cyberspace chicken-compatibility blob)
           (cyberspace chicken-compatibility chicken))
@@ -313,6 +317,37 @@
   ;; WebSocket Message Handling
   ;; ============================================================
 
+  (define (eval-to-string expr-str)
+    "Read and evaluate expr-str in the interaction environment.
+     Returns (values result-string error?)"
+    (guard (exn
+            [#t (values
+                  (call-with-string-output-port
+                    (lambda (p) (display-condition exn p)))
+                  #t)])
+      (let* ((port (open-input-string expr-str))
+             (datum (read port))
+             (result (eval datum (interaction-environment)))
+             (result-str (if (eq? result (void))
+                             ""
+                             (call-with-string-output-port
+                               (lambda (p) (pretty-print result p))))))
+        (values (string-trim-both result-str) #f))))
+
+  (define (json-escape str)
+    "Escape a string for embedding in a JSON string value."
+    (let loop ((i 0) (acc '()))
+      (if (>= i (string-length str))
+          (list->string (reverse acc))
+          (let ((c (string-ref str i)))
+            (cond
+              ((char=? c #\") (loop (+ i 1) (append '(#\" #\\) acc)))
+              ((char=? c #\\) (loop (+ i 1) (append '(#\\ #\\) acc)))
+              ((char=? c #\newline) (loop (+ i 1) (append '(#\n #\\) acc)))
+              ((char=? c #\return) (loop (+ i 1) (append '(#\r #\\) acc)))
+              ((char=? c #\tab) (loop (+ i 1) (append '(#\t #\\) acc)))
+              (else (loop (+ i 1) (cons c acc))))))))
+
   (define (ws-handle-message msg out)
     (printf "[ws] Received: ~a~%" msg)
     (let* ((type (extract-json-field "type" msg))
@@ -321,19 +356,32 @@
         ((equal? type "eval")
          (let ((expr (extract-json-field "expression" msg)))
            (when expr
-             (ws-send-text out
-               (format #f "{\"type\":\"result\",\"value\":\"eval not yet connected\"}")))))
+             (let-values (((result error?) (eval-to-string expr)))
+               (ws-send-text out
+                 (format #f "{\"type\":\"~a\",\"value\":\"~a\"}"
+                   (if error? "error" "result")
+                   (json-escape result)))))))
         (else
          (ws-send-text out (format #f "{\"type\":\"echo\",\"data\":~s}" msg))))))
 
   (define (extract-json-field field json-str)
-    (let ((pattern (format #f "\"~a\":\"" field)))
-      (let ((start (string-contains json-str pattern)))
+    "Extract a string value for a JSON field. Handles optional space after colon."
+    (let ((key (format #f "\"~a\":" field)))
+      (let ((start (string-contains json-str key)))
         (if start
-            (let* ((val-start (+ start (string-length pattern)))
-                   (rest (substring json-str val-start (string-length json-str)))
-                   (end (find-json-string-end rest)))
-              (if end (substring rest 0 end) #f))
+            (let* ((after-colon (+ start (string-length key)))
+                   ;; Skip optional whitespace
+                   (pos (let skip ((i after-colon))
+                          (if (and (< i (string-length json-str))
+                                   (char-whitespace? (string-ref json-str i)))
+                              (skip (+ i 1)) i))))
+              (if (and (< pos (string-length json-str))
+                       (char=? (string-ref json-str pos) #\"))
+                  (let* ((val-start (+ pos 1))
+                         (rest (substring json-str val-start (string-length json-str)))
+                         (end (find-json-string-end rest)))
+                    (if end (substring rest 0 end) #f))
+                  #f))
             #f))))
 
   (define (find-json-string-end str)
