@@ -479,8 +479,10 @@ body{font-family:'SF Mono',Monaco,'Fira Code',monospace;
 #output .echo{color:#1a8f1a}
 #input-line{display:flex;align-items:center;padding:4px 16px 12px;border-top:1px solid #1a3a1a}
 #prompt{color:#66ff66;margin-right:8px;font-size:13px;user-select:none}
-#input{flex:1;background:transparent;border:none;outline:none;color:#33ff33;
-       font-family:inherit;font-size:13px;caret-color:#33ff33}
+#buf{color:#33ff33;font-size:13px}
+#cursor{display:inline-block;width:8px;height:15px;background:#33ff33;
+        animation:blink 1s step-end infinite;vertical-align:text-bottom}
+@keyframes blink{50%{opacity:0}}
 #status{position:fixed;top:8px;right:16px;font-size:11px;color:#1a8f1a}
 #status.connected{color:#33ff33}
 #status.disconnected{color:#ff3333}
@@ -489,11 +491,13 @@ body{font-family:'SF Mono',Monaco,'Fira Code',monospace;
 ::-webkit-scrollbar-thumb{background:#1a3a1a;border-radius:4px}
 </style></head><body>
 <div id='output'></div>
-<form id='input-line' action='javascript:void(0)'><span id='prompt'>&gt;</span><input id='input' autofocus spellcheck='false' autocomplete='off'></form>
+<div id='input-line'><span id='prompt'>&gt;</span><span id='buf'></span><span id='cursor'>&nbsp;</span></div>
 <div id='status'>disconnected</div>
 <script>
-var ws,output=document.getElementById('output'),input=document.getElementById('input'),
-    status=document.getElementById('status'),history=[],histIdx=-1;
+var ws,output=document.getElementById('output'),
+    bufEl=document.getElementById('buf'),cursorEl=document.getElementById('cursor'),
+    status=document.getElementById('status'),
+    buf='',cmdHistory=[],histIdx=-1;
 
 function emit(text,cls){
   var el=document.createElement('div');
@@ -502,6 +506,7 @@ function emit(text,cls){
   output.appendChild(el);
   output.scrollTop=output.scrollHeight;
 }
+function updateBuf(){bufEl.textContent=buf;}
 
 function banner(){
   emit('CYBERSPACE','banner');
@@ -529,36 +534,29 @@ function connect(){
 }
 
 function sendExpr(){
-  var expr=input.value.trim();
+  var expr=buf.trim();
   if(!expr)return;
-  history.push(expr);histIdx=history.length;
+  cmdHistory.push(expr);histIdx=cmdHistory.length;
   emit('> '+expr,'dim');
   if(ws&&ws.readyState===1)
     ws.send(JSON.stringify({type:'eval',expression:expr}));
   else emit('Not connected','error');
-  input.value='';
+  buf='';updateBuf();
 }
-document.getElementById('input-line').addEventListener('submit',function(e){
-  e.preventDefault();sendExpr();
-});
-input.addEventListener('keydown',function(e){
-  if(e.key==='Enter'||e.keyCode===13){e.preventDefault();sendExpr();}
-  else if(e.key==='ArrowUp'){
-    e.preventDefault();
-    if(histIdx>0){histIdx--;input.value=history[histIdx];}
-  }else if(e.key==='ArrowDown'){
-    e.preventDefault();
-    if(histIdx<history.length-1){histIdx++;input.value=history[histIdx];}
-    else{histIdx=history.length;input.value='';}
-  }else if(e.key==='l'&&e.ctrlKey){
-    e.preventDefault();output.innerHTML='';
-  }
-});
-input.addEventListener('keypress',function(e){
-  if(e.key==='Enter'||e.keyCode===13||e.which===13){e.preventDefault();sendExpr();}
-});
 
-document.addEventListener('click',function(){input.focus();});
+function handleNativeKey(chars,keyCode,ctrl,shift){
+  if(keyCode===36){sendExpr();return;}
+  if(keyCode===51){buf=buf.slice(0,-1);updateBuf();return;}
+  if(keyCode===126){if(histIdx>0){histIdx--;buf=cmdHistory[histIdx];updateBuf();}return;}
+  if(keyCode===125){
+    if(histIdx<cmdHistory.length-1){histIdx++;buf=cmdHistory[histIdx];updateBuf();}
+    else{histIdx=cmdHistory.length;buf='';updateBuf();}return;}
+  if(ctrl&&chars==='l'){output.innerHTML='';return;}
+  if(ctrl&&chars==='u'){buf='';updateBuf();return;}
+  if(ctrl)return;
+  if(chars.length===1&&chars.charCodeAt(0)>=32){buf+=chars;updateBuf();}
+}
+
 banner();connect();
 </script></body></html>"))
 

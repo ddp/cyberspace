@@ -35,11 +35,55 @@
 @end
 
 // ============================================================================
+// CyberWebView subclass — overrides keyDown: to forward all keystrokes
+// to JavaScript before WKWebView's text input system can swallow them.
+// ============================================================================
+
+@interface CyberWKWebView : WKWebView
+@end
+
+@implementation CyberWKWebView
+
+- (BOOL)acceptsFirstResponder { return YES; }
+- (BOOL)becomeFirstResponder { return YES; }
+
+- (void)keyDown:(NSEvent *)event {
+    NSEventModifierFlags flags = event.modifierFlags;
+    BOOL cmd = (flags & NSEventModifierFlagCommand) != 0;
+
+    // Let Cmd shortcuts pass through to system (Cmd+Q, Cmd+C, etc.)
+    if (cmd) {
+        [super keyDown:event];
+        return;
+    }
+
+    BOOL ctrl = (flags & NSEventModifierFlagControl) != 0;
+    BOOL shift = (flags & NSEventModifierFlagShift) != 0;
+    unsigned short keyCode = event.keyCode;
+    NSString *chars = event.characters ?: @"";
+
+    // Escape for JS string literal
+    chars = [chars stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"];
+    chars = [chars stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"];
+    chars = [chars stringByReplacingOccurrencesOfString:@"\n" withString:@"\\n"];
+    chars = [chars stringByReplacingOccurrencesOfString:@"\r" withString:@"\\r"];
+    chars = [chars stringByReplacingOccurrencesOfString:@"\t" withString:@"\\t"];
+
+    NSString *js = [NSString stringWithFormat:
+        @"if(typeof handleNativeKey==='function')handleNativeKey('%@',%d,%@,%@)",
+        chars, keyCode,
+        ctrl ? @"true" : @"false",
+        shift ? @"true" : @"false"];
+    [self evaluateJavaScript:js completionHandler:nil];
+}
+
+@end
+
 // WKWebViewAdapter - WebKit implementation of CyberWebView
 // ============================================================================
 
 @interface WKWebViewAdapter : NSObject <CyberWebView, WKScriptMessageHandler, WKNavigationDelegate>
-@property (nonatomic, strong) WKWebView *webView;
+@property (nonatomic, strong) CyberWKWebView *webView;
 @property (nonatomic, copy) void (^messageHandler)(NSDictionary *);
 @end
 
@@ -58,7 +102,7 @@
         // Enable developer extras (right-click inspect)
         [config.preferences setValue:@YES forKey:@"developerExtrasEnabled"];
 
-        _webView = [[WKWebView alloc] initWithFrame:NSZeroRect configuration:config];
+        _webView = [[CyberWKWebView alloc] initWithFrame:NSZeroRect configuration:config];
         _webView.navigationDelegate = self;
 
         // Allow file:// URLs to load local resources
@@ -659,6 +703,7 @@ didFinishNavigation:(WKNavigation *)navigation {
 
     // Set up menu
     [self setupMenu];
+
 }
 
 - (void)startSchemeBackend {
