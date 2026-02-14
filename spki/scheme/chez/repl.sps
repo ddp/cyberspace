@@ -2390,6 +2390,71 @@ The Ten Commandments of Lambda
       (with-output-to-file hw-file
         (lambda () (write manifest) (newline))))))
 
+;;; ============================================================
+;;; SICP Metrics Analysis
+;;; ============================================================
+
+(define *cyberspace-modules*
+  '("crypto-ffi" "sexp" "capability" "fips" "audit" "wordlist"
+    "bloom" "catalog" "keyring" "cert" "enroll" "gossip" "security"
+    "vault" "auto-enroll" "inspector" "display" "filetype" "forum"
+    "http" "info" "mpe" "pencil" "repl" "scrutinizer" "server"
+    "os" "portal" "ui"))
+
+(define (analyze-source src-file)
+  "Analyze source file for SICP metrics (LOC, lambdas, LOC/lambda ratio)"
+  (if (not (file-exists? src-file))
+      '((loc . 0) (lambdas . 0) (loc/lambda . 0))
+      (call-with-input-file src-file
+        (lambda (port)
+          (let loop ((loc 0) (lambdas 0))
+            (let ((line (get-line port)))
+              (if (eof-object? line)
+                  (let ((ratio (if (> lambdas 0) (div loc lambdas) 0)))
+                    `((loc . ,loc) (lambdas . ,lambdas) (loc/lambda . ,ratio)))
+                  (let* ((trimmed (string-trim-both line))
+                         (is-blank (string=? trimmed ""))
+                         (is-comment (and (> (string-length trimmed) 0)
+                                          (char=? (string-ref trimmed 0) #\;)))
+                         (has-define (string-contains trimmed "(define "))
+                         (has-lambda (string-contains trimmed "(lambda ")))
+                    (loop (if (or is-blank is-comment) loc (+ loc 1))
+                          (+ lambdas
+                             (if has-define 1 0)
+                             (if has-lambda 1 0)))))))))))
+
+(define (sicp)
+  "Analyze SICP metrics for all Cyberspace modules (live analysis)"
+  (printf "~%SICP Metrics - Cyberspace Chez~%~%")
+  (let loop ((modules *cyberspace-modules*)
+             (total-loc 0)
+             (total-lambdas 0)
+             (count 0))
+    (if (null? modules)
+        (begin
+          (printf "~%  ─────────────────────────────────~%")
+          (printf "  Σ ~a LOC · ~a λ · ~a LOC/λ~%~%"
+                  total-loc total-lambdas
+                  (if (> total-lambdas 0) (div total-loc total-lambdas) 0))
+          (printf "  ~a modules~%~%" count)
+          (values total-loc total-lambdas count))
+        (let* ((mod (car modules))
+               (src (string-append "cyberspace/" mod ".sls"))
+               (metrics (analyze-source src))
+               (loc (cdr (assq 'loc metrics)))
+               (lambdas (cdr (assq 'lambdas metrics)))
+               (ratio (cdr (assq 'loc/lambda metrics))))
+          (when (> loc 0)
+            (let ((mod-padded (string-append mod (make-string (max 0 (- 15 (string-length mod))) #\space))))
+              (printf "  ~a: ~a LOC · ~a λ · ~a LOC/λ~%"
+                      mod-padded loc lambdas ratio)))
+          (loop (cdr modules)
+                (+ total-loc loc)
+                (+ total-lambdas lambdas)
+                (if (> loc 0) (+ count 1) count))))))
+
+;;; ============================================================
+
 ;; Initialize session statistics
 (session-stat-init!)
 ;; Install signal handlers
