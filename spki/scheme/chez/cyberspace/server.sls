@@ -109,7 +109,7 @@
   ;; Binary Port Text I/O
   ;; ============================================================
   ;; Server uses binary ports throughout. These helpers read/write
-  ;; text over binary ports so WebSocket can use raw bytes.
+  ;; text over binary ports for uniform I/O handling.
 
   (define (bin-get-line in)
     "Read a line from binary port, return string (without \\n). Strips \\r."
