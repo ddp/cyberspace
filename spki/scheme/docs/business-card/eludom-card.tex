@@ -1,0 +1,90 @@
+% eludom-card.tex - Business card in the style of Digital Equipment Corporation
+% Build: xelatex eludom-card.tex
+%
+% ELUDOM - a BLISS reference (MODULE spelled backward, like BLISS's ELUDOM keyword)
+% Using authentic DEC-era fonts: Futura (logo), Helvetica (body)
+
+\documentclass[12pt]{article}
+
+% Business card: 3.5" x 2"
+\usepackage[paperwidth=3.5in, paperheight=2in, margin=0pt]{geometry}
+\usepackage{fontspec}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{qrcode}
+\usepackage{hyperref}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+% DEC blue (corporate identity, circa 1980s-1990s)
+\definecolor{decblue}{HTML}{003C71}
+
+% Typography: DEC used geometric sans-serifs
+% Logo: Futura (closest to actual DEC logo aesthetic)
+% Name: Gill Sans Medium (used in DEC corporate materials)
+% Body: Helvetica Neue Light (clean, minimal)
+\setmainfont{Helvetica Neue}[
+  UprightFont = * Light,
+]
+\newfontfamily\logofont{Futura}[
+  UprightFont = * Medium,
+]
+\newfontfamily\namefont{Gill Sans}[
+  UprightFont = * SemiBold,
+]
+\newfontfamily\titlefont{Optima}[
+  UprightFont = * Regular,
+]
+
+\begin{document}
+\begin{tikzpicture}[remember picture, overlay]
+  \node[anchor=south west, inner sep=0pt] at (current page.south west) {
+    \begin{tikzpicture}
+
+      % === Logo: e l u d o m ===
+      % DEC logo style: lowercase, generous letter-spacing, Futura geometric
+      \node[anchor=north west, decblue]
+        at (0.25in, 1.75in)
+        {\fontsize{18}{18}\selectfont\logofont%
+         e\kern11pt l\kern11pt u\kern11pt d\kern11pt o\kern11pt m};
+
+      % === Blue rule (DEC signature) ===
+      \fill[decblue] (0.25in, 1.32in) rectangle (2.25in, 1.305in);
+
+      % === Name (Gill Sans - DEC corporate font) ===
+      \node[anchor=north west, black]
+        at (0.25in, 1.22in)
+        {\fontsize{10.5}{13}\selectfont\namefont Derrell Piper};
+
+      % === Title (Optima - elegant humanist sans) ===
+      \node[anchor=north west, black!60]
+        at (0.25in, 1.00in)
+        {\fontsize{7.5}{9}\selectfont\titlefont Minister of Cryptography};
+
+      % === Contact details (Helvetica Neue - clean body text) ===
+      \node[anchor=north west, black, text width=2in, font=\fontsize{7}{9.5}\selectfont]
+        at (0.25in, 0.76in)
+        {ddp@eludom.net\\
+         ddp@electric-loft.org\\
+         derrell@mit.edu\\
+         +1\kern2pt 415-910-4705};
+
+      % === QR code (lower right, safe margin) ===
+      \node[anchor=south east]
+        at (3.18in, 0.18in)
+        {\qrcode[height=0.55in]{BEGIN:VCARD
+VERSION:3.0
+N:Piper;Derrell
+FN:Derrell Piper
+TITLE:Minister of Cryptography
+EMAIL:ddp@eludom.net
+EMAIL:ddp@electric-loft.org
+EMAIL:derrell@mit.edu
+TEL;TYPE=CELL:+14159104705
+END:VCARD}};
+
+    \end{tikzpicture}
+  };
+\end{tikzpicture}
+\end{document}

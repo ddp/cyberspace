@@ -1,0 +1,32 @@
+#!/bin/bash
+# Cyberspace - Minimal Server (Headless)
+# No GUI - access via browser at http://localhost:7780
+#
+# Copyright (c) 2026 Yoyodyne. See LICENSE.
+
+set -e
+
+PORT="${PORT:-7780}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Try to find the Chez server
+if [ -f "/usr/local/share/cyberspace/cyberspace-server.sps" ]; then
+    SERVER="/usr/local/share/cyberspace/cyberspace-server.sps"
+    LIBDIRS="/usr/local/share/cyberspace"
+elif [ -f "/usr/share/cyberspace/cyberspace-server.sps" ]; then
+    SERVER="/usr/share/cyberspace/cyberspace-server.sps"
+    LIBDIRS="/usr/share/cyberspace"
+elif [ -f "../../chez/application/cyberspace-server.sps" ]; then
+    SERVER="../../chez/application/cyberspace-server.sps"
+    LIBDIRS="$(cd ../../chez && pwd)"
+else
+    echo "Error: Could not find cyberspace-server.sps"
+    exit 1
+fi
+
+echo "Cyberspace Server (Headless)"
+echo "  Port: $PORT"
+echo "  Access: http://localhost:$PORT"
+echo ""
+
+exec chez --libdirs "$LIBDIRS" --script "$SERVER" "$PORT"
