@@ -1,6 +1,9 @@
 #!/bin/bash
-# Build Cyberspace.app for macOS
-# Library of Cyberspace - Native GUI Shell
+# Build Cyberspace.app for macOS (Chicken Scheme backend)
+# Library of Cyberspace - Native PTY Shell
+#
+# Creates the entire .app bundle from scratch.
+# App connects to Chicken REPL (cs) via PTY.
 #
 # Copyright (c) 2026 Yoyodyne. See LICENSE.
 
@@ -13,7 +16,7 @@ CONTENTS="$APP_BUNDLE/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 
-echo "Building $APP_NAME.app..."
+echo "Building $APP_NAME.app (Chicken, PTY)..."
 
 # Create directory structure
 mkdir -p "$MACOS"
@@ -26,10 +29,37 @@ clang -fobjc-arc \
     -o "$MACOS/$APP_NAME" \
     "$SCRIPT_DIR/main.m"
 
-# Copy Info.plist (already in place from directory structure)
-if [ ! -f "$CONTENTS/Info.plist" ]; then
-    echo "  Warning: Info.plist not found"
-fi
+# Create Info.plist
+cat > "$CONTENTS/Info.plist" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>Cyberspace</string>
+    <key>CFBundleIdentifier</key>
+    <string>net.eludom.cyberspace</string>
+    <key>CFBundleName</key>
+    <string>Cyberspace</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>CYCK</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.9.12</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.14</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>CFBundleIconFile</key>
+    <string>Cyberspace</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+</dict>
+</plist>
+EOF
 
 # Create PkgInfo
 echo -n "APPLCYCK" > "$CONTENTS/PkgInfo"
@@ -38,12 +68,9 @@ echo -n "APPLCYCK" > "$CONTENTS/PkgInfo"
 if [ -f "$SCRIPT_DIR/Cyberspace.icns" ]; then
     cp "$SCRIPT_DIR/Cyberspace.icns" "$RESOURCES/"
     echo "  Copied app icon"
-elif [ ! -f "$RESOURCES/Cyberspace.icns" ]; then
+else
     echo "  Note: No app icon (Cyberspace.icns) - using default"
 fi
-
-# Note: App uses PTY connection to Chicken REPL (cs), no bundled server needed
-echo "  Native PTY app - no server bundling needed"
 
 # Sign for local development (ad-hoc with entitlements)
 echo "  Signing (ad-hoc with entitlements)..."
@@ -54,6 +81,3 @@ else
 fi
 
 echo "Done. Run with: open $APP_BUNDLE"
-echo ""
-echo "Or from command line:"
-echo "  $MACOS/$APP_NAME"
