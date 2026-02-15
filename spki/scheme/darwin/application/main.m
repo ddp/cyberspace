@@ -1,662 +1,97 @@
 /*
- * Cyberspace.app - Native macOS Shell
+ * Cyberspace.app - Native macOS Terminal
  * Library of Cyberspace
  *
- * A tribute to the Macintosh: leveraging the platform's unique capabilities.
- * Architecture: Swappable WebView (WKWebView now, CEF option later)
+ * Native terminal emulator using PTY connection to Chez Scheme REPL.
+ * No WebView, no HTTP, no WebSocket - just Unix pipes and terminal I/O.
  *
- * macOS Integrations:
- * - Keychain Access: Secure key storage with biometric unlock
- * - Kerberos: Enterprise SSO authentication
- * - Notification Center: User alerts and updates
- * - AppleScript/JXA: Automation and scripting bridge
- * - Services Menu: System-wide text processing
- * - Continuity: Handoff support (planned)
- * - Spotlight: Content indexing (planned)
+ * Architecture: NSTextView → PTY → Chez REPL process
  */
 
 #import <Cocoa/Cocoa.h>
-#import <WebKit/WebKit.h>
-#import <Security/Security.h>
-#import <GSS/GSS.h>
-#import <UserNotifications/UserNotifications.h>
 
 // ============================================================================
-// CyberWebView Protocol - Abstraction for swappable WebView implementations
+// ANSITextView - NSTextView with ANSI escape sequence support
 // ============================================================================
 
-@protocol CyberWebView <NSObject>
-- (void)loadURL:(NSURL *)url;
-- (void)evaluateJavaScript:(NSString *)js
-         completionHandler:(void (^)(id result, NSError *error))handler;
-- (void)setMessageHandler:(void (^)(NSDictionary *message))handler;
-- (void)postMessage:(NSDictionary *)message;
-- (NSView *)view;
+@interface ANSITextView : NSTextView
+@property (nonatomic, weak) id inputHandler;
+- (void)appendString:(NSString *)string;
+- (void)appendANSI:(NSString *)ansiString;
 @end
 
-// ============================================================================
-// CyberWebView subclass — overrides keyDown: to forward all keystrokes
-// to JavaScript before WKWebView's text input system can swallow them.
-// ============================================================================
+@implementation ANSITextView
 
-@interface CyberWKWebView : WKWebView
-@end
-
-@implementation CyberWKWebView
-
-- (BOOL)acceptsFirstResponder { return YES; }
-- (BOOL)becomeFirstResponder { return YES; }
-
-- (void)keyDown:(NSEvent *)event {
-    NSEventModifierFlags flags = event.modifierFlags;
-    BOOL cmd = (flags & NSEventModifierFlagCommand) != 0;
-
-    // Let Cmd shortcuts pass through to system (Cmd+Q, Cmd+C, etc.)
-    if (cmd) {
-        [super keyDown:event];
-        return;
-    }
-
-    BOOL ctrl = (flags & NSEventModifierFlagControl) != 0;
-    BOOL shift = (flags & NSEventModifierFlagShift) != 0;
-    unsigned short keyCode = event.keyCode;
-    NSString *chars = event.characters ?: @"";
-
-    // Escape for JS string literal
-    chars = [chars stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"];
-    chars = [chars stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"];
-    chars = [chars stringByReplacingOccurrencesOfString:@"\n" withString:@"\\n"];
-    chars = [chars stringByReplacingOccurrencesOfString:@"\r" withString:@"\\r"];
-    chars = [chars stringByReplacingOccurrencesOfString:@"\t" withString:@"\\t"];
-
-    NSString *js = [NSString stringWithFormat:
-        @"if(typeof handleNativeKey==='function')handleNativeKey('%@',%d,%@,%@)",
-        chars, keyCode,
-        ctrl ? @"true" : @"false",
-        shift ? @"true" : @"false"];
-    [self evaluateJavaScript:js completionHandler:nil];
-}
-
-@end
-
-// WKWebViewAdapter - WebKit implementation of CyberWebView
-// ============================================================================
-
-@interface WKWebViewAdapter : NSObject <CyberWebView, WKScriptMessageHandler, WKNavigationDelegate>
-@property (nonatomic, strong) CyberWKWebView *webView;
-@property (nonatomic, copy) void (^messageHandler)(NSDictionary *);
-@end
-
-@implementation WKWebViewAdapter
-
-- (instancetype)init {
-    self = [super init];
+- (instancetype)initWithFrame:(NSRect)frame {
+    self = [super initWithFrame:frame];
     if (self) {
-        WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
-        WKUserContentController *userContent = [[WKUserContentController alloc] init];
-
-        // Register message handler for JS -> native communication
-        [userContent addScriptMessageHandler:self name:@"cyberspace"];
-        config.userContentController = userContent;
-
-        // Enable developer extras (right-click inspect)
-        [config.preferences setValue:@YES forKey:@"developerExtrasEnabled"];
-
-        _webView = [[CyberWKWebView alloc] initWithFrame:NSZeroRect configuration:config];
-        _webView.navigationDelegate = self;
-
-        // Allow file:// URLs to load local resources
-        [_webView.configuration.preferences setValue:@YES
-                                              forKey:@"allowFileAccessFromFileURLs"];
+        self.editable = NO;
+        self.selectable = YES;
+        self.font = [NSFont fontWithName:@"SF Mono" size:13.0];
+        self.backgroundColor = [NSColor colorWithRed:0.04 green:0.04 blue:0.04 alpha:1.0];
+        self.textColor = [NSColor colorWithRed:0.2 green:1.0 blue:0.2 alpha:1.0];
+        self.insertionPointColor = [NSColor colorWithRed:0.2 green:1.0 blue:0.2 alpha:1.0];
+        [self setRichText:YES];
+        [self setUsesFontPanel:NO];
     }
     return self;
 }
 
-- (void)loadURL:(NSURL *)url {
-    NSURLRequest *request = [NSURLRequest requestWithURL:url];
-    [self.webView loadRequest:request];
+- (void)appendString:(NSString *)string {
+    NSAttributedString *attrStr = [[NSAttributedString alloc]
+        initWithString:string
+        attributes:@{
+            NSFontAttributeName: self.font,
+            NSForegroundColorAttributeName: self.textColor
+        }];
+
+    [[self textStorage] appendAttributedString:attrStr];
+    [self scrollToEndOfDocument:nil];
 }
 
-- (void)evaluateJavaScript:(NSString *)js
-         completionHandler:(void (^)(id, NSError *))handler {
-    [self.webView evaluateJavaScript:js completionHandler:handler];
+- (void)appendANSI:(NSString *)ansiString {
+    // Simple ANSI parsing - just strip escape codes for now
+    // TODO: Implement full ANSI color support
+    NSString *stripped = [ansiString stringByReplacingOccurrencesOfString:@"\x1b\\[[0-9;]*m"
+                                                               withString:@""
+                                                                  options:NSRegularExpressionSearch
+                                                                    range:NSMakeRange(0, ansiString.length)];
+    [self appendString:stripped];
 }
 
-- (void)setMessageHandler:(void (^)(NSDictionary *))handler {
-    _messageHandler = handler;
-}
-
-- (void)postMessage:(NSDictionary *)message {
-    NSError *error;
-    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:message
-                                                       options:0
-                                                         error:&error];
-    if (jsonData) {
-        NSString *jsonString = [[NSString alloc] initWithData:jsonData
-                                                     encoding:NSUTF8StringEncoding];
-        NSString *js = [NSString stringWithFormat:
-                        @"window.dispatchEvent(new CustomEvent('cyberspace', {detail: %@}));",
-                        jsonString];
-        [self evaluateJavaScript:js completionHandler:nil];
+- (void)keyDown:(NSEvent *)event {
+    if ([self.inputHandler respondsToSelector:@selector(handleKeyDown:)]) {
+        [self.inputHandler performSelector:@selector(handleKeyDown:) withObject:event];
+    } else {
+        [super keyDown:event];
     }
-}
-
-- (NSView *)view {
-    return self.webView;
-}
-
-// WKScriptMessageHandler - receive messages from JavaScript
-- (void)userContentController:(WKUserContentController *)userContentController
-      didReceiveScriptMessage:(WKScriptMessage *)message {
-    if ([message.name isEqualToString:@"cyberspace"] && self.messageHandler) {
-        if ([message.body isKindOfClass:[NSDictionary class]]) {
-            self.messageHandler(message.body);
-        }
-    }
-}
-
-// WKNavigationDelegate
-- (void)webView:(WKWebView *)webView
-didFailNavigation:(WKNavigation *)navigation
-      withError:(NSError *)error {
-    NSLog(@"[Cyberspace] Navigation failed: %@", error.localizedDescription);
-}
-
-- (void)webView:(WKWebView *)webView
-didFinishNavigation:(WKNavigation *)navigation {
-    NSLog(@"[Cyberspace] Page loaded");
-    // Focus the webview and terminal after a brief delay to ensure JS is ready
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)),
-                   dispatch_get_main_queue(), ^{
-        [webView becomeFirstResponder];
-        [webView evaluateJavaScript:@"if(term){term.focus();term.scrollToBottom();}" completionHandler:nil];
-    });
 }
 
 @end
 
 // ============================================================================
-// PreferencesManager - User preferences with NSUserDefaults
+// AppDelegate - Main Application
 // ============================================================================
 
-@interface PreferencesManager : NSObject
-+ (void)saveWindowFrame:(NSRect)frame;
-+ (NSRect)windowFrame;
-+ (void)setFontName:(NSString *)name size:(CGFloat)size;
-+ (NSString *)fontName;
-+ (CGFloat)fontSize;
-+ (void)setTheme:(NSString *)theme;
-+ (NSString *)theme;
-+ (NSDictionary *)allPreferences;
-@end
-
-@implementation PreferencesManager
-
-+ (void)initialize {
-    // Register defaults
-    [[NSUserDefaults standardUserDefaults] registerDefaults:@{
-        @"windowX": @100,
-        @"windowY": @100,
-        @"windowWidth": @1200,
-        @"windowHeight": @800,
-        @"fontName": @"SF Mono",
-        @"fontSize": @13,
-        @"theme": @"dark"
-    }];
-}
-
-+ (void)saveWindowFrame:(NSRect)frame {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    [defaults setDouble:frame.origin.x forKey:@"windowX"];
-    [defaults setDouble:frame.origin.y forKey:@"windowY"];
-    [defaults setDouble:frame.size.width forKey:@"windowWidth"];
-    [defaults setDouble:frame.size.height forKey:@"windowHeight"];
-    [defaults synchronize];
-}
-
-+ (NSRect)windowFrame {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    return NSMakeRect(
-        [defaults doubleForKey:@"windowX"],
-        [defaults doubleForKey:@"windowY"],
-        [defaults doubleForKey:@"windowWidth"],
-        [defaults doubleForKey:@"windowHeight"]
-    );
-}
-
-+ (void)setFontName:(NSString *)name size:(CGFloat)size {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    [defaults setObject:name forKey:@"fontName"];
-    [defaults setDouble:size forKey:@"fontSize"];
-    [defaults synchronize];
-}
-
-+ (NSString *)fontName {
-    return [[NSUserDefaults standardUserDefaults] stringForKey:@"fontName"];
-}
-
-+ (CGFloat)fontSize {
-    return [[NSUserDefaults standardUserDefaults] doubleForKey:@"fontSize"];
-}
-
-+ (void)setTheme:(NSString *)theme {
-    [[NSUserDefaults standardUserDefaults] setObject:theme forKey:@"theme"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-}
-
-+ (NSString *)theme {
-    return [[NSUserDefaults standardUserDefaults] stringForKey:@"theme"];
-}
-
-+ (NSDictionary *)allPreferences {
-    return @{
-        @"fontName": [self fontName],
-        @"fontSize": @([self fontSize]),
-        @"theme": [self theme]
-    };
-}
-
-@end
-
-// ============================================================================
-// KeychainManager - Secure key storage via macOS Keychain
-// ============================================================================
-
-@interface KeychainManager : NSObject
-+ (BOOL)storeKey:(NSData *)keyData forIdentifier:(NSString *)identifier;
-+ (NSData *)retrieveKeyForIdentifier:(NSString *)identifier;
-+ (BOOL)deleteKeyForIdentifier:(NSString *)identifier;
-+ (NSArray<NSString *> *)listKeyIdentifiers;
-@end
-
-@implementation KeychainManager
-
-+ (BOOL)storeKey:(NSData *)keyData forIdentifier:(NSString *)identifier {
-    // Delete any existing key first
-    [self deleteKeyForIdentifier:identifier];
-
-    NSString *service = @"com.yoyodyne.cyberspace.keys";
-    NSDictionary *query = @{
-        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
-        (__bridge id)kSecAttrService: service,
-        (__bridge id)kSecAttrAccount: identifier,
-        (__bridge id)kSecValueData: keyData,
-        (__bridge id)kSecAttrAccessible: (__bridge id)kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-    };
-
-    OSStatus status = SecItemAdd((__bridge CFDictionaryRef)query, NULL);
-    if (status != errSecSuccess) {
-        NSLog(@"[Keychain] Failed to store key '%@': %d", identifier, (int)status);
-        return NO;
-    }
-    NSLog(@"[Keychain] Stored key '%@'", identifier);
-    return YES;
-}
-
-+ (NSData *)retrieveKeyForIdentifier:(NSString *)identifier {
-    NSString *service = @"com.yoyodyne.cyberspace.keys";
-    NSDictionary *query = @{
-        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
-        (__bridge id)kSecAttrService: service,
-        (__bridge id)kSecAttrAccount: identifier,
-        (__bridge id)kSecReturnData: @YES,
-        (__bridge id)kSecMatchLimit: (__bridge id)kSecMatchLimitOne
-    };
-
-    CFTypeRef result = NULL;
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
-
-    if (status == errSecSuccess && result != NULL) {
-        NSData *data = (__bridge_transfer NSData *)result;
-        NSLog(@"[Keychain] Retrieved key '%@'", identifier);
-        return data;
-    }
-
-    if (status != errSecItemNotFound) {
-        NSLog(@"[Keychain] Failed to retrieve key '%@': %d", identifier, (int)status);
-    }
-    return nil;
-}
-
-+ (BOOL)deleteKeyForIdentifier:(NSString *)identifier {
-    NSString *service = @"com.yoyodyne.cyberspace.keys";
-    NSDictionary *query = @{
-        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
-        (__bridge id)kSecAttrService: service,
-        (__bridge id)kSecAttrAccount: identifier
-    };
-
-    OSStatus status = SecItemDelete((__bridge CFDictionaryRef)query);
-    return (status == errSecSuccess || status == errSecItemNotFound);
-}
-
-+ (NSArray<NSString *> *)listKeyIdentifiers {
-    NSString *service = @"com.yoyodyne.cyberspace.keys";
-    NSDictionary *query = @{
-        (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
-        (__bridge id)kSecAttrService: service,
-        (__bridge id)kSecReturnAttributes: @YES,
-        (__bridge id)kSecMatchLimit: (__bridge id)kSecMatchLimitAll
-    };
-
-    CFTypeRef result = NULL;
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
-
-    if (status == errSecSuccess && result != NULL) {
-        NSArray *items = (__bridge_transfer NSArray *)result;
-        NSMutableArray *identifiers = [NSMutableArray array];
-        for (NSDictionary *item in items) {
-            NSString *account = item[(__bridge id)kSecAttrAccount];
-            if (account) {
-                [identifiers addObject:account];
-            }
-        }
-        return identifiers;
-    }
-
-    return @[];
-}
-
-@end
-
-// ============================================================================
-// KerberosManager - Enterprise SSO via GSS-API
-// ============================================================================
-
-@interface KerberosManager : NSObject
-+ (NSString *)currentPrincipal;
-+ (BOOL)hasValidCredential;
-+ (NSDictionary *)credentialInfo;
-@end
-
-@implementation KerberosManager
-
-+ (NSString *)currentPrincipal {
-    gss_cred_id_t cred = GSS_C_NO_CREDENTIAL;
-    gss_name_t name = GSS_C_NO_NAME;
-    OM_uint32 minor, major;
-
-    // Acquire default credentials
-    major = gss_acquire_cred(&minor, GSS_C_NO_NAME, GSS_C_INDEFINITE,
-                             GSS_C_NO_OID_SET, GSS_C_INITIATE, &cred, NULL, NULL);
-
-    if (major != GSS_S_COMPLETE) {
-        return nil;
-    }
-
-    // Get the principal name
-    major = gss_inquire_cred(&minor, cred, &name, NULL, NULL, NULL);
-    gss_release_cred(&minor, &cred);
-
-    if (major != GSS_S_COMPLETE || name == GSS_C_NO_NAME) {
-        return nil;
-    }
-
-    // Convert to string
-    gss_buffer_desc buffer = GSS_C_EMPTY_BUFFER;
-    major = gss_display_name(&minor, name, &buffer, NULL);
-    gss_release_name(&minor, &name);
-
-    if (major != GSS_S_COMPLETE) {
-        return nil;
-    }
-
-    NSString *principal = [[NSString alloc] initWithBytes:buffer.value
-                                                   length:buffer.length
-                                                 encoding:NSUTF8StringEncoding];
-    gss_release_buffer(&minor, &buffer);
-
-    NSLog(@"[Kerberos] Current principal: %@", principal);
-    return principal;
-}
-
-+ (BOOL)hasValidCredential {
-    return [self currentPrincipal] != nil;
-}
-
-+ (NSDictionary *)credentialInfo {
-    NSString *principal = [self currentPrincipal];
-    if (!principal) {
-        return @{@"authenticated": @NO};
-    }
-
-    return @{
-        @"authenticated": @YES,
-        @"principal": principal,
-        @"mechanism": @"Kerberos"
-    };
-}
-
-@end
-
-// ============================================================================
-// NotificationManager - macOS Notification Center
-// ============================================================================
-
-@interface NotificationManager : NSObject <UNUserNotificationCenterDelegate>
-+ (void)requestAuthorization;
-+ (void)sendNotification:(NSString *)title body:(NSString *)body identifier:(NSString *)identifier;
-@end
-
-@implementation NotificationManager
-
-+ (void)requestAuthorization {
-    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
-    center.delegate = (id<UNUserNotificationCenterDelegate>)self;
-    [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionSound)
-                          completionHandler:^(BOOL granted, NSError *error) {
-        if (granted) {
-            NSLog(@"[Notifications] Authorization granted");
-        } else if (error) {
-            NSLog(@"[Notifications] Authorization error: %@", error.localizedDescription);
-        }
-    }];
-}
-
-+ (void)sendNotification:(NSString *)title body:(NSString *)body identifier:(NSString *)identifier {
-    UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
-    content.title = title;
-    content.body = body;
-    content.sound = [UNNotificationSound defaultSound];
-
-    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:identifier ?: [[NSUUID UUID] UUIDString]
-                                                                          content:content
-                                                                          trigger:nil];
-
-    [[UNUserNotificationCenter currentNotificationCenter] addNotificationRequest:request
-                                                           withCompletionHandler:^(NSError *error) {
-        if (error) {
-            NSLog(@"[Notifications] Failed to send: %@", error.localizedDescription);
-        }
-    }];
-}
-
-@end
-
-// ============================================================================
-// AppleScriptManager - JXA/AppleScript Bridge
-// ============================================================================
-
-@interface AppleScriptManager : NSObject
-+ (NSDictionary *)executeScript:(NSString *)script language:(NSString *)language;
-+ (NSDictionary *)executeScriptFile:(NSString *)path;
-@end
-
-@implementation AppleScriptManager
-
-+ (NSDictionary *)executeScript:(NSString *)script language:(NSString *)language {
-    @try {
-        NSAppleScript *appleScript = [[NSAppleScript alloc] initWithSource:script];
-        NSDictionary *errorInfo = nil;
-        NSAppleEventDescriptor *result = [appleScript executeAndReturnError:&errorInfo];
-
-        if (errorInfo) {
-            return @{
-                @"success": @NO,
-                @"error": errorInfo[NSAppleScriptErrorMessage] ?: @"Unknown error"
-            };
-        }
-
-        return @{
-            @"success": @YES,
-            @"result": [result stringValue] ?: @""
-        };
-    } @catch (NSException *e) {
-        return @{@"success": @NO, @"error": e.reason ?: @"Exception"};
-    }
-}
-
-+ (NSDictionary *)executeScriptFile:(NSString *)path {
-    NSURL *url = [NSURL fileURLWithPath:path];
-    NSDictionary *errorInfo = nil;
-    NSAppleScript *appleScript = [[NSAppleScript alloc] initWithContentsOfURL:url error:&errorInfo];
-
-    if (errorInfo) {
-        return @{
-            @"success": @NO,
-            @"error": errorInfo[NSAppleScriptErrorMessage] ?: @"Failed to load script"
-        };
-    }
-
-    NSAppleEventDescriptor *result = [appleScript executeAndReturnError:&errorInfo];
-
-    if (errorInfo) {
-        return @{
-            @"success": @NO,
-            @"error": errorInfo[NSAppleScriptErrorMessage] ?: @"Execution error"
-        };
-    }
-
-    return @{
-        @"success": @YES,
-        @"result": [result stringValue] ?: @""
-    };
-}
-
-@end
-
-// ============================================================================
-// BonjourService - mDNS/Bonjour Publishing
-// ============================================================================
-
-@interface BonjourService : NSObject <NSNetServiceDelegate>
-@property (nonatomic, strong) NSNetService *service;
-+ (instancetype)sharedService;
-- (void)publishWithPort:(int)port;
-- (void)stop;
-@end
-
-@implementation BonjourService
-
-+ (instancetype)sharedService {
-    static BonjourService *shared = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        shared = [[BonjourService alloc] init];
-    });
-    return shared;
-}
-
-- (void)publishWithPort:(int)port {
-    [self stop];
-
-    // Publish as _cyberspace._tcp with name "cyberspace"
-    self.service = [[NSNetService alloc] initWithDomain:@""
-                                                   type:@"_cyberspace._tcp."
-                                                   name:@"cyberspace"
-                                                   port:port];
-    self.service.delegate = self;
-    [self.service publish];
-    NSLog(@"[Bonjour] Publishing cyberspace on port %d", port);
-}
-
-- (void)stop {
-    if (self.service) {
-        [self.service stop];
-        self.service = nil;
-    }
-}
-
-- (void)netServiceDidPublish:(NSNetService *)sender {
-    NSLog(@"[Bonjour] Published: %@.%@%@", sender.name, sender.type, sender.domain);
-}
-
-- (void)netService:(NSNetService *)sender didNotPublish:(NSDictionary *)errorDict {
-    NSLog(@"[Bonjour] Failed to publish: %@", errorDict);
-}
-
-@end
-
-// ============================================================================
-// ServicesProvider - macOS Services Menu
-// ============================================================================
-
-@interface ServicesProvider : NSObject
-- (void)evaluateInCyberspace:(NSPasteboard *)pboard userData:(NSString *)userData error:(NSString **)error;
-- (void)storeInVault:(NSPasteboard *)pboard userData:(NSString *)userData error:(NSString **)error;
-@end
-
-@implementation ServicesProvider
-
-- (void)evaluateInCyberspace:(NSPasteboard *)pboard userData:(NSString *)userData error:(NSString **)error {
-    NSString *text = [pboard stringForType:NSPasteboardTypeString];
-    if (!text) {
-        *error = @"No text selected";
-        return;
-    }
-
-    NSLog(@"[Services] Evaluate: %@", text);
-    // TODO: Send to REPL via WebSocket
-    [NotificationManager sendNotification:@"Cyberspace"
-                                     body:[NSString stringWithFormat:@"Evaluating: %@", text]
-                               identifier:@"service-eval"];
-}
-
-- (void)storeInVault:(NSPasteboard *)pboard userData:(NSString *)userData error:(NSString **)error {
-    NSString *text = [pboard stringForType:NSPasteboardTypeString];
-    if (!text) {
-        *error = @"No text selected";
-        return;
-    }
-
-    NSLog(@"[Services] Store in vault: %lu bytes", (unsigned long)text.length);
-    [NotificationManager sendNotification:@"Cyberspace"
-                                     body:@"Added to vault"
-                               identifier:@"service-store"];
-}
-
-@end
-
-// ============================================================================
-// AppDelegate
-// ============================================================================
-
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate>
 @property (nonatomic, strong) NSWindow *window;
-@property (nonatomic, strong) id<CyberWebView> webView;
-@property (nonatomic, strong) NSTask *schemeBackend;
-@property (nonatomic, assign) int backendPort;
-@property (nonatomic, strong) ServicesProvider *servicesProvider;
+@property (nonatomic, strong) ANSITextView *terminalView;
+@property (nonatomic, strong) NSScrollView *scrollView;
+@property (nonatomic, assign) int masterFD;
+@property (nonatomic, assign) pid_t childPID;
+@property (nonatomic, strong) NSFileHandle *masterHandle;
+@property (nonatomic, strong) NSFileHandle *inputHandle;
+@property (nonatomic, strong) NSMutableString *inputBuffer;
+@property (nonatomic, strong) NSTask *replTask;
 @end
 
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-    // Find an available port
-    self.backendPort = 7780;
+    self.inputBuffer = [NSMutableString string];
 
-    // Initialize macOS integrations
-    [NotificationManager requestAuthorization];
-
-    // Register services provider
-    self.servicesProvider = [[ServicesProvider alloc] init];
-    [NSApp setServicesProvider:self.servicesProvider];
-
-    // Publish via Bonjour/mDNS
-    [[BonjourService sharedService] publishWithPort:self.backendPort];
-
-    // Restore window frame from preferences
-    NSRect frame = [PreferencesManager windowFrame];
+    // Create window
+    NSRect frame = NSMakeRect(100, 100, 1000, 700);
     NSWindowStyleMask style = NSWindowStyleMaskTitled |
                               NSWindowStyleMaskClosable |
                               NSWindowStyleMaskMiniaturizable |
@@ -666,256 +101,247 @@ didFinishNavigation:(WKNavigation *)navigation {
                                               styleMask:style
                                                 backing:NSBackingStoreBuffered
                                                   defer:NO];
-
     self.window.title = @"Cyberspace";
     self.window.delegate = self;
-    self.window.minSize = NSMakeSize(800, 600);
-    // Frame persistence handled by PreferencesManager in windowDidResize/Move
+    self.window.minSize = NSMakeSize(600, 400);
 
-    // Create WebView adapter (swappable)
-    self.webView = [[WKWebViewAdapter alloc] init];
+    // Create terminal view
+    self.scrollView = [[NSScrollView alloc] initWithFrame:self.window.contentView.bounds];
+    self.scrollView.hasVerticalScroller = YES;
+    self.scrollView.autohidesScrollers = YES;
+    self.scrollView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 
-    // Set up message handler
-    __weak AppDelegate *weakSelf = self;
-    [self.webView setMessageHandler:^(NSDictionary *message) {
-        [weakSelf handleWebMessage:message];
-    }];
+    NSSize contentSize = [self.scrollView contentSize];
+    self.terminalView = [[ANSITextView alloc] initWithFrame:NSMakeRect(0, 0, contentSize.width, contentSize.height)];
+    self.terminalView.minSize = NSMakeSize(0, contentSize.height);
+    self.terminalView.maxSize = NSMakeSize(FLT_MAX, FLT_MAX);
+    self.terminalView.verticallyResizable = YES;
+    self.terminalView.horizontallyResizable = NO;
+    self.terminalView.autoresizingMask = NSViewWidthSizable;
+    self.terminalView.textContainer.containerSize = NSMakeSize(contentSize.width, FLT_MAX);
+    self.terminalView.textContainer.widthTracksTextView = YES;
+    self.terminalView.delegate = self;
 
-    // Add WebView to window
-    NSView *webViewNS = [self.webView view];
-    webViewNS.frame = self.window.contentView.bounds;
-    webViewNS.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    [self.window.contentView addSubview:webViewNS];
+    self.scrollView.documentView = self.terminalView;
+    [self.window.contentView addSubview:self.scrollView];
 
-    // Start the Scheme backend server
-    [self startSchemeBackend];
+    // Connect input handler
+    self.terminalView.inputHandler = self;
 
-    // Give server a moment to start, then load UI
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
-                   dispatch_get_main_queue(), ^{
-        NSURL *url = [NSURL URLWithString:
-                      [NSString stringWithFormat:@"http://127.0.0.1:%d/", self.backendPort]];
-        [self.webView loadURL:url];
-    });
-
-    // Show window
-    [self.window makeKeyAndOrderFront:nil];
-
-    // Set up menu
+    // Set up menu (programmatic, no NIB)
     [self setupMenu];
 
+    // Activate and show window
+    [NSApp activateIgnoringOtherApps:YES];
+    [self.window makeKeyAndOrderFront:nil];
+    [self.window makeFirstResponder:self.terminalView];
+
+    // Add test message to verify UI works
+    [self.terminalView appendString:@"═══════════════════════════════════════════════\n"];
+    [self.terminalView appendString:@"  Cyberspace - Native macOS Terminal\n"];
+    [self.terminalView appendString:@"═══════════════════════════════════════════════\n\n"];
+
+    // Test NSTask with simple command first
+    [self testNSTask];
+
+    // Start REPL
+    [self startREPL];
 }
 
-- (void)startSchemeBackend {
-    NSBundle *bundle = [NSBundle mainBundle];
-    NSString *resourcePath = bundle.resourcePath;
-    NSString *schemeDir = @"/Users/ddp/cyberspace/spki/scheme";
-    NSString *chezDir = [schemeDir stringByAppendingPathComponent:@"chez"];
+- (void)testNSTask {
+    [self.terminalView appendString:@"Testing NSTask with /bin/ls...\n"];
 
-    NSString *executable = nil;
-    NSArray *arguments = nil;
-    NSString *workingDir = schemeDir;
+    NSTask *testTask = [[NSTask alloc] init];
+    [testTask setLaunchPath:@"/bin/ls"];
+    [testTask setArguments:@[@"-la", @"/Users/ddp/cyberspace/spki/scheme"]];
 
-    // 1. Compiled binary (Chicken)
-    NSString *serverBinary = [resourcePath stringByAppendingPathComponent:@"cyberspace-server"];
-    // 2. Chez script in bundle
-    NSString *chezScript = [resourcePath stringByAppendingPathComponent:@"cyberspace-server.sps"];
-    // 3. Chicken script in bundle
-    NSString *chickenScript = [resourcePath stringByAppendingPathComponent:@"cyberspace-server.scm"];
+    NSPipe *outputPipe = [NSPipe pipe];
+    [testTask setStandardOutput:outputPipe];
 
+    @try {
+        [testTask launch];
+        [testTask waitUntilExit];
+
+        NSData *data = [[outputPipe fileHandleForReading] readDataToEndOfFile];
+        NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+
+        [self.terminalView appendString:@"✓ NSTask works! Output:\n"];
+        [self.terminalView appendString:[output substringToIndex:MIN(200, output.length)]];
+        [self.terminalView appendString:@"\n\n"];
+    } @catch (NSException *e) {
+        [self.terminalView appendString:[NSString stringWithFormat:@"✗ NSTask failed: %@\n\n", e.reason]];
+    }
+}
+
+- (void)startREPL {
+    NSString *csScript = @"/Users/ddp/cyberspace/spki/scheme/cs";
     NSFileManager *fm = [NSFileManager defaultManager];
 
-    if ([fm fileExistsAtPath:serverBinary]) {
-        // Use compiled Chicken binary
-        executable = serverBinary;
-        arguments = @[[NSString stringWithFormat:@"%d", self.backendPort]];
-    } else if ([fm fileExistsAtPath:chezScript]) {
-        // Use bundled Chez script
-        executable = @"/opt/homebrew/bin/chez";
-        arguments = @[@"--libdirs", resourcePath, @"--script", chezScript,
-                      [NSString stringWithFormat:@"%d", self.backendPort]];
-        workingDir = resourcePath;
-    } else if ([fm fileExistsAtPath:chickenScript]) {
-        // Use bundled Chicken script
-        executable = @"/opt/homebrew/bin/csi";
-        arguments = @[@"-s", chickenScript,
-                      [NSString stringWithFormat:@"%d", self.backendPort]];
-    } else if ([fm fileExistsAtPath:
-                [chezDir stringByAppendingPathComponent:@"cyberspace/server.sls"]]) {
-        // Development mode: Chez source tree
-        NSString *devScript = [chezDir stringByAppendingPathComponent:@"app/cyberspace-server.sps"];
-        if ([fm fileExistsAtPath:devScript]) {
-            executable = @"/opt/homebrew/bin/chez";
-            arguments = @[@"--libdirs", chezDir, @"--script", devScript,
-                          [NSString stringWithFormat:@"%d", self.backendPort]];
-            workingDir = chezDir;
-        }
-    }
+    // Verify binary exists
+    if (![fm fileExistsAtPath:csScript]) {
+        NSString *msg = [NSString stringWithFormat:@"❌ REPL binary not found\n\nExpected: %@\n", csScript];
+        [self.terminalView appendString:msg];
 
-    if (!executable) {
-        // Fallback: Chicken development mode
-        NSString *devScript = [schemeDir stringByAppendingPathComponent:@"cyberspace-server.scm"];
-        if (![fm fileExistsAtPath:devScript]) {
-            devScript = [schemeDir stringByAppendingPathComponent:@"server.scm"];
-        }
-        if ([fm fileExistsAtPath:devScript]) {
-            executable = @"/opt/homebrew/bin/csi";
-            arguments = @[@"-s", devScript,
-                          [NSString stringWithFormat:@"%d", self.backendPort]];
-        }
-    }
-
-    if (!executable) {
-        NSLog(@"[Cyberspace] No backend found - UI only mode");
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = @"REPL Not Found";
+        alert.informativeText = msg;
+        [alert runModal];
         return;
     }
 
-    NSLog(@"[Cyberspace] Starting backend: %@ %@", executable, arguments);
+    // Check if executable
+    if (![fm isExecutableFileAtPath:csScript]) {
+        NSString *msg = @"❌ REPL binary not executable\n\nRun: chmod +x cs\n";
+        [self.terminalView appendString:msg];
 
-    self.schemeBackend = [[NSTask alloc] init];
-    self.schemeBackend.launchPath = executable;
-    self.schemeBackend.arguments = arguments;
-    self.schemeBackend.currentDirectoryPath = workingDir;
-
-    // Set environment so REPL knows it's running in the app
-    NSMutableDictionary *env = [[[NSProcessInfo processInfo] environment] mutableCopy];
-    env[@"CYBERSPACE_APP"] = @"1";
-    // Chez needs CHEZSCHEMELIBDIRS for bundled libraries
-    if ([executable hasSuffix:@"chez"]) {
-        env[@"CHEZSCHEMELIBDIRS"] = [workingDir stringByAppendingString:@":"];
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = @"REPL Not Executable";
+        alert.informativeText = msg;
+        [alert runModal];
+        return;
     }
-    self.schemeBackend.environment = env;
 
-    // Capture output for logging
+    [self.terminalView appendString:@"🚀 Launching Cyberspace REPL...\n\n"];
+    [self.terminalView appendString:[NSString stringWithFormat:@"Binary: %@\n", csScript]];
+    [self.terminalView appendString:@"Args: --boot=gate\n"];
+    [self.terminalView appendString:@"Working dir: /Users/ddp/cyberspace/spki/scheme\n\n"];
+
+    NSTask *task = [[NSTask alloc] init];
+    [task setLaunchPath:csScript];
+    [task setArguments:@[@"--boot=gate"]];
+    [task setCurrentDirectoryPath:@"/Users/ddp/cyberspace/spki/scheme"];
+
+    // Set up environment
+    NSMutableDictionary *env = [[NSProcessInfo processInfo].environment mutableCopy];
+    env[@"TERM"] = @"xterm-256color";
+    env[@"CYBERSPACE_APP"] = @"1";
+    task.environment = env;
+
+    // Create pipes
+    NSPipe *inputPipe = [NSPipe pipe];
     NSPipe *outputPipe = [NSPipe pipe];
-    self.schemeBackend.standardOutput = outputPipe;
-    self.schemeBackend.standardError = outputPipe;
+    NSPipe *errorPipe = [NSPipe pipe];
 
-    // Read output asynchronously
-    outputPipe.fileHandleForReading.readabilityHandler = ^(NSFileHandle *handle) {
-        NSData *data = handle.availableData;
-        if (data.length > 0) {
-            NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-            NSLog(@"[Backend] %@", output);
-        }
+    task.standardInput = inputPipe;
+    task.standardOutput = outputPipe;
+    task.standardError = errorPipe;
+
+    self.masterHandle = outputPipe.fileHandleForReading;
+
+    // Set up output reading
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(dataAvailable:)
+                                                 name:NSFileHandleReadCompletionNotification
+                                               object:self.masterHandle];
+    [self.masterHandle readInBackgroundAndNotify];
+
+    // Set up error reading
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(errorDataAvailable:)
+                                                 name:NSFileHandleReadCompletionNotification
+                                               object:errorPipe.fileHandleForReading];
+    [errorPipe.fileHandleForReading readInBackgroundAndNotify];
+
+    // Set up termination handler
+    task.terminationHandler = ^(NSTask *t) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSString *msg = [NSString stringWithFormat:@"\n\n❌ REPL exited with code %d\n", t.terminationStatus];
+            [self.terminalView appendString:msg];
+        });
     };
 
+    // Launch
     @try {
-        [self.schemeBackend launch];
-        NSLog(@"[Cyberspace] Backend started (PID %d)", self.schemeBackend.processIdentifier);
+        [task launch];
+        self.replTask = task;
+        self.childPID = task.processIdentifier;
+        self.inputHandle = inputPipe.fileHandleForWriting;
+
+        NSString *msg = [NSString stringWithFormat:@"✓ REPL started (PID %d)\n\n", self.childPID];
+        [self.terminalView appendString:msg];
+        NSLog(@"[Cyberspace] Started cs REPL (PID %d)", self.childPID);
+
     } @catch (NSException *e) {
-        NSLog(@"[Cyberspace] Failed to start backend: %@", e.reason);
+        NSString *msg = [NSString stringWithFormat:@"❌ Launch failed: %@\n\n", e.reason];
+        [self.terminalView appendString:msg];
+
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = @"Failed to Launch REPL";
+        alert.informativeText = e.reason;
+        [alert runModal];
     }
 }
 
-- (void)handleWebMessage:(NSDictionary *)message {
-    NSString *type = message[@"type"];
-    NSString *requestId = message[@"id"];
-    NSLog(@"[Cyberspace] Received message: %@ - %@", type, message);
-
-    if ([type isEqualToString:@"eval"]) {
-        NSString *expr = message[@"expression"];
-        NSLog(@"[Cyberspace] Eval request: %@", expr);
-        // TODO: Send to Scheme backend via WebSocket
-
-    } else if ([type isEqualToString:@"keychain.store"]) {
-        NSString *identifier = message[@"identifier"];
-        NSString *keyBase64 = message[@"key"];
-        NSData *keyData = [[NSData alloc] initWithBase64EncodedString:keyBase64 options:0];
-        BOOL success = [KeychainManager storeKey:keyData forIdentifier:identifier];
-        [self.webView postMessage:@{
-            @"id": requestId ?: @"",
-            @"type": @"keychain.result",
-            @"success": @(success)
-        }];
-
-    } else if ([type isEqualToString:@"keychain.retrieve"]) {
-        NSString *identifier = message[@"identifier"];
-        NSData *keyData = [KeychainManager retrieveKeyForIdentifier:identifier];
-        NSString *keyBase64 = keyData ? [keyData base64EncodedStringWithOptions:0] : @"";
-        [self.webView postMessage:@{
-            @"id": requestId ?: @"",
-            @"type": @"keychain.result",
-            @"success": @(keyData != nil),
-            @"key": keyBase64
-        }];
-
-    } else if ([type isEqualToString:@"keychain.delete"]) {
-        NSString *identifier = message[@"identifier"];
-        BOOL success = [KeychainManager deleteKeyForIdentifier:identifier];
-        [self.webView postMessage:@{
-            @"id": requestId ?: @"",
-            @"type": @"keychain.result",
-            @"success": @(success)
-        }];
-
-    } else if ([type isEqualToString:@"keychain.list"]) {
-        NSArray *identifiers = [KeychainManager listKeyIdentifiers];
-        [self.webView postMessage:@{
-            @"id": requestId ?: @"",
-            @"type": @"keychain.result",
-            @"success": @YES,
-            @"identifiers": identifiers
-        }];
-
-    } else if ([type isEqualToString:@"kerberos.info"]) {
-        NSDictionary *info = [KerberosManager credentialInfo];
-        [self.webView postMessage:@{
-            @"id": requestId ?: @"",
-            @"type": @"kerberos.result",
-            @"info": info
-        }];
-
-    // Notification Center
-    } else if ([type isEqualToString:@"notify"]) {
-        NSString *title = message[@"title"] ?: @"Cyberspace";
-        NSString *body = message[@"body"] ?: @"";
-        NSString *identifier = message[@"identifier"];
-        [NotificationManager sendNotification:title body:body identifier:identifier];
-        [self.webView postMessage:@{
-            @"id": requestId ?: @"",
-            @"type": @"notify.result",
-            @"success": @YES
-        }];
-
-    // AppleScript execution
-    } else if ([type isEqualToString:@"applescript.run"]) {
-        NSString *script = message[@"script"];
-        NSString *language = message[@"language"] ?: @"AppleScript";
-        if (script) {
-            NSDictionary *result = [AppleScriptManager executeScript:script language:language];
-            [self.webView postMessage:@{
-                @"id": requestId ?: @"",
-                @"type": @"applescript.result",
-                @"success": result[@"success"],
-                @"result": result[@"result"] ?: @"",
-                @"error": result[@"error"] ?: @""
-            }];
+- (void)dataAvailable:(NSNotification *)notification {
+    NSData *data = notification.userInfo[NSFileHandleNotificationDataItem];
+    if (data && data.length > 0) {
+        NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        if (output) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.terminalView appendANSI:output];
+            });
         }
+        [self.masterHandle readInBackgroundAndNotify];
+    }
+}
 
-    // AppleScript file execution
-    } else if ([type isEqualToString:@"applescript.runFile"]) {
-        NSString *path = message[@"path"];
-        if (path) {
-            NSDictionary *result = [AppleScriptManager executeScriptFile:path];
-            [self.webView postMessage:@{
-                @"id": requestId ?: @"",
-                @"type": @"applescript.result",
-                @"success": result[@"success"],
-                @"result": result[@"result"] ?: @"",
-                @"error": result[@"error"] ?: @""
-            }];
+- (void)errorDataAvailable:(NSNotification *)notification {
+    NSData *data = notification.userInfo[NSFileHandleNotificationDataItem];
+    if (data && data.length > 0) {
+        NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        if (output) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.terminalView appendString:output];
+            });
         }
+        NSFileHandle *handle = [notification object];
+        [handle readInBackgroundAndNotify];
+    }
+}
 
-    // System info
-    } else if ([type isEqualToString:@"system.info"]) {
-        [self.webView postMessage:@{
-            @"id": requestId ?: @"",
-            @"type": @"system.result",
-            @"hostname": [[NSHost currentHost] localizedName] ?: @"",
-            @"os": [[NSProcessInfo processInfo] operatingSystemVersionString],
-            @"platform": @"macOS"
-        }];
+- (void)handleKeyDown:(NSEvent *)event {
+    NSString *chars = event.characters;
+    if (!chars || chars.length == 0) {
+        return;
+    }
+
+    // Handle special keys
+    if (event.keyCode == 36) { // Return
+        [self.inputBuffer appendString:@"\r"];
+        [self sendInput:self.inputBuffer];
+        self.inputBuffer = [NSMutableString string];
+    } else if (event.keyCode == 51) { // Delete
+        if (self.inputBuffer.length > 0) {
+            [self.inputBuffer deleteCharactersInRange:NSMakeRange(self.inputBuffer.length - 1, 1)];
+            [self sendInput:@"\x7f"]; // DEL
+        }
+    } else if (event.keyCode == 53) { // Escape
+        [self sendInput:@"\x1b"];
+    } else if (event.modifierFlags & NSEventModifierFlagControl) {
+        // Control characters
+        unichar c = [chars characterAtIndex:0];
+        if (c >= 'a' && c <= 'z') {
+            char ctrl = c - 'a' + 1;
+            [self sendInput:[NSString stringWithFormat:@"%c", ctrl]];
+        } else if (c == 'c' || c == 'C') {
+            [self sendInput:@"\x03"]; // ^C
+        } else if (c == 'd' || c == 'D') {
+            [self sendInput:@"\x04"]; // ^D
+        }
+    } else {
+        [self.inputBuffer appendString:chars];
+        [self sendInput:chars];
+    }
+}
+
+- (void)sendInput:(NSString *)input {
+    if (self.inputHandle) {
+        NSData *data = [input dataUsingEncoding:NSUTF8StringEncoding];
+        @try {
+            [self.inputHandle writeData:data];
+        } @catch (NSException *e) {
+            NSLog(@"[Cyberspace] Failed to write input: %@", e);
+        }
     }
 }
 
@@ -937,11 +363,10 @@ didFinishNavigation:(WKNavigation *)navigation {
     appMenuItem.submenu = appMenu;
     [menuBar addItem:appMenuItem];
 
-    // Edit menu (for copy/paste)
+    // Edit menu
     NSMenuItem *editMenuItem = [[NSMenuItem alloc] init];
     NSMenu *editMenu = [[NSMenu alloc] initWithTitle:@"Edit"];
 
-    [editMenu addItemWithTitle:@"Cut" action:@selector(cut:) keyEquivalent:@"x"];
     [editMenu addItemWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@"c"];
     [editMenu addItemWithTitle:@"Paste" action:@selector(paste:) keyEquivalent:@"v"];
     [editMenu addItemWithTitle:@"Select All" action:@selector(selectAll:) keyEquivalent:@"a"];
@@ -949,177 +374,17 @@ didFinishNavigation:(WKNavigation *)navigation {
     editMenuItem.submenu = editMenu;
     [menuBar addItem:editMenuItem];
 
-    // View menu
-    NSMenuItem *viewMenuItem = [[NSMenuItem alloc] init];
-    NSMenu *viewMenu = [[NSMenu alloc] initWithTitle:@"View"];
-
-    [viewMenu addItemWithTitle:@"Reload"
-                        action:@selector(reloadPage:)
-                 keyEquivalent:@"r"];
-    [viewMenu addItemWithTitle:@"Developer Tools"
-                        action:@selector(toggleDevTools:)
-                 keyEquivalent:@"i"];
-    [viewMenu addItem:[NSMenuItem separatorItem]];
-
-    // Theme submenu
-    NSMenuItem *themeMenuItem = [[NSMenuItem alloc] initWithTitle:@"Theme" action:nil keyEquivalent:@""];
-    NSMenu *themeMenu = [[NSMenu alloc] initWithTitle:@"Theme"];
-    [themeMenu addItemWithTitle:@"Dark" action:@selector(setThemeDark:) keyEquivalent:@""];
-    [themeMenu addItemWithTitle:@"Light" action:@selector(setThemeLight:) keyEquivalent:@""];
-    [themeMenu addItemWithTitle:@"Solarized" action:@selector(setThemeSolarized:) keyEquivalent:@""];
-    themeMenuItem.submenu = themeMenu;
-    [viewMenu addItem:themeMenuItem];
-
-    viewMenuItem.submenu = viewMenu;
-    [menuBar addItem:viewMenuItem];
-
-    // Format menu (Font)
-    NSMenuItem *formatMenuItem = [[NSMenuItem alloc] init];
-    NSMenu *formatMenu = [[NSMenu alloc] initWithTitle:@"Format"];
-
-    NSMenuItem *fontMenuItem = [[NSMenuItem alloc] initWithTitle:@"Font" action:nil keyEquivalent:@""];
-    NSMenu *fontMenu = [[NSMenu alloc] initWithTitle:@"Font"];
-    [fontMenu addItemWithTitle:@"SF Mono" action:@selector(setFontSFMono:) keyEquivalent:@""];
-    [fontMenu addItemWithTitle:@"Menlo" action:@selector(setFontMenlo:) keyEquivalent:@""];
-    [fontMenu addItemWithTitle:@"Monaco" action:@selector(setFontMonaco:) keyEquivalent:@""];
-    [fontMenu addItemWithTitle:@"IBM Plex Mono" action:@selector(setFontIBMPlex:) keyEquivalent:@""];
-    [fontMenu addItemWithTitle:@"Bitstream Vera Sans Mono" action:@selector(setFontBitstreamVera:) keyEquivalent:@""];
-    [fontMenu addItemWithTitle:@"Courier New" action:@selector(setFontCourier:) keyEquivalent:@""];
-    [fontMenu addItem:[NSMenuItem separatorItem]];
-    [fontMenu addItemWithTitle:@"Show Fonts..." action:@selector(showFontPanel:) keyEquivalent:@"t"];
-    fontMenuItem.submenu = fontMenu;
-    [formatMenu addItem:fontMenuItem];
-
-    // Font size
-    [formatMenu addItemWithTitle:@"Bigger" action:@selector(increaseFontSize:) keyEquivalent:@"+"];
-    [formatMenu addItemWithTitle:@"Smaller" action:@selector(decreaseFontSize:) keyEquivalent:@"-"];
-
-    formatMenuItem.submenu = formatMenu;
-    [menuBar addItem:formatMenuItem];
-
-    // Window menu
-    NSMenuItem *windowMenuItem = [[NSMenuItem alloc] init];
-    NSMenu *windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
-
-    [windowMenu addItemWithTitle:@"Minimize"
-                          action:@selector(performMiniaturize:)
-                   keyEquivalent:@"m"];
-    [windowMenu addItemWithTitle:@"Zoom"
-                          action:@selector(performZoom:)
-                   keyEquivalent:@""];
-
-    windowMenuItem.submenu = windowMenu;
-    [menuBar addItem:windowMenuItem];
-
     [NSApp setMainMenu:menuBar];
 }
 
 - (void)showAbout:(id)sender {
     NSAlert *alert = [[NSAlert alloc] init];
     alert.messageText = @"Cyberspace";
-    alert.informativeText = @"Library of Cyberspace\n\n"
-                           @"A distributed preservation system with\n"
-                           @"cryptographic audit trails and SPKI authorization.\n\n"
+    alert.informativeText = @"Native Scheme REPL\n\n"
+                           @"PTY-based terminal with direct connection\n"
+                           @"to Chez Scheme. No WebView, no WebSocket.\n\n"
                            @"Copyright 2026 Yoyodyne";
-    alert.alertStyle = NSAlertStyleInformational;
     [alert runModal];
-}
-
-- (void)reloadPage:(id)sender {
-    NSURL *url = [NSURL URLWithString:
-                  [NSString stringWithFormat:@"http://127.0.0.1:%d/", self.backendPort]];
-    [self.webView loadURL:url];
-}
-
-- (void)toggleDevTools:(id)sender {
-    // WebKit inspector can be opened via right-click menu
-    // For programmatic access, would need private API
-    NSLog(@"[Cyberspace] Use right-click > Inspect Element for DevTools");
-}
-
-// Theme actions
-- (void)setThemeDark:(id)sender {
-    [self applyTheme:@"dark"];
-}
-
-- (void)setThemeLight:(id)sender {
-    [self applyTheme:@"light"];
-}
-
-- (void)setThemeSolarized:(id)sender {
-    [self applyTheme:@"solarized"];
-}
-
-- (void)applyTheme:(NSString *)theme {
-    [PreferencesManager setTheme:theme];
-    [self.webView postMessage:@{@"type": @"preferences.theme", @"theme": theme}];
-}
-
-// Font actions
-- (void)setFontSFMono:(id)sender {
-    [self applyFont:@"SF Mono"];
-}
-
-- (void)setFontMenlo:(id)sender {
-    [self applyFont:@"Menlo"];
-}
-
-- (void)setFontMonaco:(id)sender {
-    [self applyFont:@"Monaco"];
-}
-
-- (void)setFontCourier:(id)sender {
-    [self applyFont:@"Courier New"];
-}
-
-- (void)setFontIBMPlex:(id)sender {
-    [self applyFont:@"IBM Plex Mono"];
-}
-
-- (void)setFontBitstreamVera:(id)sender {
-    [self applyFont:@"Bitstream Vera Sans Mono"];
-}
-
-- (void)applyFont:(NSString *)fontName {
-    CGFloat size = [PreferencesManager fontSize];
-    [PreferencesManager setFontName:fontName size:size];
-    [self.webView postMessage:@{
-        @"type": @"preferences.font",
-        @"fontName": fontName,
-        @"fontSize": @(size)
-    }];
-}
-
-- (void)increaseFontSize:(id)sender {
-    CGFloat size = [PreferencesManager fontSize] + 1;
-    if (size > 24) size = 24;
-    NSString *fontName = [PreferencesManager fontName];
-    [PreferencesManager setFontName:fontName size:size];
-    [self.webView postMessage:@{
-        @"type": @"preferences.font",
-        @"fontName": fontName,
-        @"fontSize": @(size)
-    }];
-}
-
-- (void)decreaseFontSize:(id)sender {
-    CGFloat size = [PreferencesManager fontSize] - 1;
-    if (size < 9) size = 9;
-    NSString *fontName = [PreferencesManager fontName];
-    [PreferencesManager setFontName:fontName size:size];
-    [self.webView postMessage:@{
-        @"type": @"preferences.font",
-        @"fontName": fontName,
-        @"fontSize": @(size)
-    }];
-}
-
-- (void)showFontPanel:(id)sender {
-    NSFontManager *fontManager = [NSFontManager sharedFontManager];
-    NSFont *currentFont = [NSFont fontWithName:[PreferencesManager fontName]
-                                          size:[PreferencesManager fontSize]];
-    [fontManager setSelectedFont:currentFont isMultiple:NO];
-    [fontManager orderFrontFontPanel:self];
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
@@ -1127,25 +392,13 @@ didFinishNavigation:(WKNavigation *)navigation {
 }
 
 - (void)applicationWillTerminate:(NSNotification *)notification {
-    // Stop Bonjour publishing
-    [[BonjourService sharedService] stop];
-
-    // Clean up backend process
-    if (self.schemeBackend && self.schemeBackend.isRunning) {
-        [self.schemeBackend terminate];
+    if (self.replTask && self.replTask.isRunning) {
+        [self.replTask terminate];
     }
 }
 
 - (void)windowWillClose:(NSNotification *)notification {
     [NSApp terminate:nil];
-}
-
-- (void)windowDidResize:(NSNotification *)notification {
-    [PreferencesManager saveWindowFrame:self.window.frame];
-}
-
-- (void)windowDidMove:(NSNotification *)notification {
-    [PreferencesManager saveWindowFrame:self.window.frame];
 }
 
 @end
@@ -1157,8 +410,11 @@ didFinishNavigation:(WKNavigation *)navigation {
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         NSApplication *app = [NSApplication sharedApplication];
+        [app setActivationPolicy:NSApplicationActivationPolicyRegular];
+
         AppDelegate *delegate = [[AppDelegate alloc] init];
         app.delegate = delegate;
+
         [app run];
     }
     return 0;

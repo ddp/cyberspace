@@ -23,10 +23,6 @@ mkdir -p "$RESOURCES"
 echo "  Compiling main.m..."
 clang -fobjc-arc \
     -framework Cocoa \
-    -framework WebKit \
-    -framework Security \
-    -framework GSS \
-    -framework UserNotifications \
     -o "$MACOS/$APP_NAME" \
     "$SCRIPT_DIR/main.m"
 
@@ -46,42 +42,17 @@ elif [ ! -f "$RESOURCES/Cyberspace.icns" ]; then
     echo "  Note: No app icon (Cyberspace.icns) - using default"
 fi
 
-# Copy Scheme server — prefer Chez, fall back to Chicken
-SCHEME_DIR="$SCRIPT_DIR/../.."
-CHEZ_DIR="$SCHEME_DIR/chez"
+# Note: App uses PTY connection to Chez REPL, no bundled server needed
+# The REPL is launched from the installed Chez Scheme location
+echo "  Native PTY app - no server bundling needed"
 
-if [ -f "$CHEZ_DIR/app/cyberspace-server.sps" ]; then
-    echo "  Bundling Chez backend..."
-    cp "$CHEZ_DIR/app/cyberspace-server.sps" "$RESOURCES/"
-
-    # Copy Chez libraries
-    mkdir -p "$RESOURCES/cyberspace/chicken-compatibility"
-    cp "$CHEZ_DIR"/cyberspace/*.sls "$RESOURCES/cyberspace/"
-    cp "$CHEZ_DIR"/cyberspace/chicken-compatibility/*.sls "$RESOURCES/cyberspace/chicken-compatibility/"
-
-    # Copy C bridge dylibs
-    for lib in libcrypto-bridge.dylib libtcp-bridge.dylib; do
-        [ -f "$CHEZ_DIR/$lib" ] && cp "$CHEZ_DIR/$lib" "$RESOURCES/"
-    done
-
-elif [ -f "$SCHEME_DIR/server.scm" ]; then
-    echo "  Bundling Chicken backend..."
-    cp "$SCHEME_DIR/server.scm" "$RESOURCES/cyberspace-server.scm"
-
-    # Try to compile if csc is available
-    if command -v csc &> /dev/null; then
-        echo "  Compiling cyberspace-server..."
-        cd "$SCHEME_DIR"
-        csc -O2 -o "$RESOURCES/cyberspace-server" server.scm 2>/dev/null || {
-            echo "  Note: Server compilation skipped (will use interpreted)"
-        }
-        cd "$SCRIPT_DIR"
-    fi
+# Sign for local development (ad-hoc with entitlements)
+echo "  Signing (ad-hoc with entitlements)..."
+if [ -f "$SCRIPT_DIR/Cyberspace.entitlements" ]; then
+    codesign --force --deep --sign - --entitlements "$SCRIPT_DIR/Cyberspace.entitlements" "$APP_BUNDLE" 2>/dev/null || true
+else
+    codesign --force --deep --sign - "$APP_BUNDLE" 2>/dev/null || true
 fi
-
-# Sign for local development (ad-hoc)
-echo "  Signing (ad-hoc)..."
-codesign --force --deep --sign - "$APP_BUNDLE" 2>/dev/null || true
 
 echo "Done. Run with: open $APP_BUNDLE"
 echo ""

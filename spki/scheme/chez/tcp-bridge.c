@@ -46,21 +46,17 @@ int tcp_connect(const char *host, int port) {
 /* tcp_listen(port, backlog) -> listening fd or -1 */
 int tcp_listen(int port, int backlog) {
     int fd, opt = 1;
-    struct sockaddr_in6 addr;
+    struct sockaddr_in addr;
 
-    fd = socket(AF_INET6, SOCK_STREAM, 0);
+    fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) return -1;
 
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    /* Dual-stack: accept both IPv4 and IPv6 */
-    opt = 0;
-    setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt));
-
     memset(&addr, 0, sizeof(addr));
-    addr.sin6_family = AF_INET6;
-    addr.sin6_port = htons(port);
-    addr.sin6_addr = in6addr_any;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         close(fd);
